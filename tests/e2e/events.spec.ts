@@ -111,3 +111,35 @@ test.describe('G13 events and commands', () => {
     }
   });
 });
+
+test('G13 createGraphView mounts the component for hosts without Svelte, with the same commands', async ({ page }) => {
+  await open(page, 'pair');
+  const result = await page.evaluate(async () => {
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;left:0;top:0;width:500px;height:400px';
+    document.body.appendChild(el);
+    const doc = {
+      format: 'graphview-graph/1',
+      vertices: [{ key: 'a' }, { key: 'b' }],
+      edges: [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'a' },
+      ],
+    };
+    let settled = false;
+    const h = (window as any).graphview.createGraphView(el, {
+      graph: doc,
+      look: { motion: 'off' },
+      onlayoutsettled: () => (settled = true),
+    });
+    for (let i = 0; i < 100 && !settled; i++) await new Promise((r) => setTimeout(r, 50));
+    await h.fit('all');
+    const scene = h.getScene();
+    const r2 = h.play();
+    h.destroy();
+    const gone = el.querySelector('.gv') === null;
+    el.remove();
+    return { settled, units: scene.units.map((u: { key: unknown }) => u.key), r2, gone };
+  });
+  expect(result).toEqual({ settled: true, units: ['a', 'b'], r2: { ok: false, reason: 'release-2' }, gone: true });
+});

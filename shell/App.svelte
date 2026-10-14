@@ -2,6 +2,7 @@
 <script lang="ts">
   import {
     GraphView,
+    createGraphView,
     components,
     defaultLook,
     fingerprint,
@@ -334,6 +335,7 @@
       settled: () => settledCount,
       nextSettled,
       setOverlays: (list: Overlay[]) => (overlays = list),
+      createGraphView,
       /** Replaces the graph in place, with stable change (V11). */
       replace: async (next: unknown) => {
         const done = nextSettled();

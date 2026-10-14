@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "vite --config shell/vite.config.ts",
     "check": "svelte-check --tsconfig ./tsconfig.json && prettier --check . && vitest run tests/gates tests/unit",
-    "build:module": "vite build --config module/vite.config.ts",
+    "build:module": "vite build --config module/vite.config.ts && node scripts/build-types.mjs",
     "build:shell": "vite build --config shell/vite.config.ts",
     "build": "npm run build:module && npm run build:shell",
     "e2e": "npm run build:shell && playwright test",
@@ -32,6 +32,7 @@
     "prettier": "3.9.10",
     "prettier-plugin-svelte": "4.1.1",
     "svelte-check": "4.7.6",
+    "svelte2tsx": "0.7.61",
     "typescript": "6.0.3",
     "vite": "8.3.4",
     "vitest": "5.0.4"
