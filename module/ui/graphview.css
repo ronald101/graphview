@@ -1,0 +1,329 @@
+/* graphview: the module's styles. Colours come from the tokens of F2 as --gv-* properties. */
+.gv {
+  --gv-font: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  font-family: var(--gv-font);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--gv-ink-1);
+  background: var(--gv-plane);
+}
+.gv *,
+.gv *::before,
+.gv *::after {
+  box-sizing: border-box;
+}
+.gv-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--gv-surface);
+}
+.gv-engine,
+.gv-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.gv-overlay {
+  touch-action: none;
+  outline: none;
+}
+.gv-overlay:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--gv-ink-1);
+}
+.gv-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.gv-refused {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--gv-ink-1);
+  background: var(--gv-surface);
+}
+.gv-refused p {
+  margin: 0;
+}
+.gv-controls {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 4px;
+}
+.gv-search {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: 260px;
+}
+.gv-tool,
+.gv button {
+  font: inherit;
+  color: var(--gv-ink-1);
+  background: var(--gv-panel);
+  border: 1px solid var(--gv-hairline);
+  border-radius: 4px;
+  cursor: pointer;
+}
+.gv-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+.gv button:hover {
+  border-color: var(--gv-ink-2);
+}
+.gv button:focus-visible,
+.gv input:focus-visible {
+  outline: 2px solid var(--gv-ink-1);
+  outline-offset: 2px;
+}
+.gv button:disabled {
+  color: var(--gv-muted);
+  cursor: default;
+}
+.gv input[type='search'] {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  font: inherit;
+  color: var(--gv-ink-1);
+  background: var(--gv-panel);
+  border: 1px solid var(--gv-ink-2);
+  border-radius: 4px;
+}
+.gv-suggestions {
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--gv-panel);
+  border: 1px solid var(--gv-hairline);
+  border-radius: 4px;
+}
+.gv-suggestions button {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  text-align: left;
+  border: none;
+}
+.gv-panels {
+  flex: 0 0 340px;
+  width: 340px;
+  overflow-y: auto;
+  background: var(--gv-panel);
+  border-left: 1px solid var(--gv-hairline);
+}
+.gv-panels.gv-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  max-width: 100%;
+  transform: translateX(100%);
+  visibility: hidden;
+}
+.gv-panels.gv-drawer.gv-open {
+  transform: none;
+  visibility: visible;
+}
+.gv-drawer-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  height: 32px;
+  padding: 0 10px;
+}
+.gv-panel {
+  padding: 12px 16px 16px;
+  border-bottom: 1px solid var(--gv-hairline);
+}
+.gv-panel h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.gv-panel h3 {
+  margin: 12px 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.gv-panel p {
+  margin: 4px 0;
+}
+.gv-note {
+  font-size: 12px;
+  color: var(--gv-muted);
+}
+.gv-num {
+  font-variant-numeric: tabular-nums;
+}
+.gv-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0;
+}
+.gv-dl dt {
+  color: var(--gv-ink-2);
+}
+.gv-dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.gv-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+.gv-buttons button,
+.gv-panel > button,
+.gv-small {
+  padding: 4px 10px;
+}
+.gv-small {
+  padding: 2px 8px;
+  font-size: 12px;
+}
+.gv-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gv-list li {
+  margin: 2px 0;
+}
+.gv .gv-link {
+  padding: 1px 2px;
+  text-align: left;
+  color: var(--gv-ink-1);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-decoration-color: var(--gv-hairline);
+  text-underline-offset: 2px;
+}
+.gv .gv-link[aria-pressed='true'] {
+  font-weight: 700;
+  text-decoration-color: var(--gv-path);
+}
+.gv-path {
+  font-variant-numeric: tabular-nums;
+}
+.gv-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.gv-col {
+  min-width: 0;
+}
+.gv-col .gv-dl {
+  grid-template-columns: 1fr;
+}
+.gv-col .gv-dl dt {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.gv-current h3 {
+  font-weight: 700;
+}
+.gv-differs {
+  font-weight: 600;
+}
+.gv-mark {
+  margin-left: 4px;
+  color: var(--gv-ink-2);
+}
+.gv-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+.gv-field input[type='range'] {
+  flex: 1 1 120px;
+}
+.gv-length {
+  margin: 8px 0;
+}
+.gv-length h3 {
+  display: inline;
+  margin-right: 8px;
+}
+.gv-key {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gv-key li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 3px 0;
+}
+.gv-issues {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gv-issues li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0;
+}
+.gv-issue-icon {
+  flex: 0 0 12px;
+  margin-top: 4px;
+}
+.gv-refusal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (forced-colors: active) {
+  .gv-tool,
+  .gv button {
+    border-color: ButtonText;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gv-panels.gv-drawer {
+    transition:
+      transform 200ms ease-out,
+      visibility 200ms;
+  }
+}
+.gv-input {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  outline: none;
+}
+.gv-input:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--gv-ink-1);
+}
