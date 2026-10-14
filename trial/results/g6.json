@@ -1,0 +1,60 @@
+{
+  "functions": {
+    "zoom": true,
+    "rotate": true,
+    "hover": true,
+    "halves": false,
+    "hull": true,
+    "rings": true
+  },
+  "notes": {
+    "zoom": "distance ratio 2.000 at zoom 2",
+    "rotate": "turned -90.0 degrees (positive is clockwise on screen)",
+    "hover": "6 lit, 6 expected",
+    "halves": "clicks gave [\"42\\t3\",\"7\\t1\"]",
+    "hull": "drawn",
+    "rings": "4 circles, worst distance error 0.00 px"
+  },
+  "firstPictureDatabaseMs": 200.5,
+  "halvesAccuracy": 0.7,
+  "halvesMisses": [
+    "13\t10 got 3\t47",
+    "17\t24 got 54\t3",
+    "15\t10 got 38\t5",
+    "2\t68 got 2\t72",
+    "7\t10 got 7\t11",
+    "11\t17 got 13\t76",
+    "10\t13 got 10\t16",
+    "5\t33 got 2\t63",
+    "68\t2 got null",
+    "11\t80 got null"
+  ],
+  "firstPictureRandomMs": 10604.5,
+  "heapAfterRandomMB": 398.4,
+  "frames": {
+    "database": {
+      "zoom": {
+        "median": 33.3,
+        "p95": 50,
+        "frames": 64
+      },
+      "rotate": {
+        "median": 33.3,
+        "p95": 49.9,
+        "frames": 68
+      }
+    },
+    "random": {
+      "zoom": {
+        "median": 7566.3,
+        "p95": 7566.3,
+        "frames": 1
+      },
+      "rotate": {
+        "median": 7616.4,
+        "p95": 7616.4,
+        "frames": 1
+      }
+    }
+  }
+}
