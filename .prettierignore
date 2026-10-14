@@ -1,0 +1,7 @@
+fixtures/
+tests/gates/
+docs/graphview-specs.md
+docs/prompt.md
+CLAUDE.md
+.github/
+dist/

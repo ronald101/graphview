@@ -1,0 +1,6 @@
+{
+ "fixture": "load-error-format",
+ "load": "refused",
+ "code": "format",
+ "reason": "\"format\" is not \"graphview-graph/1\""
+}

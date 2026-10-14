@@ -1,0 +1,2253 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Database graph, 24 July 2026",
+  "description": "HoG's system units and test fixtures on 24 July 2026: 81 units, 84 relations. Labels are the units' names; the class tree is the part_of and has_part pairs.",
+  "source": "databasedump.txt, vertex table rows 1-81 and edge table rows 1-168"
+ },
+ "vertices": [
+  {
+   "key": 1,
+   "label": "base",
+   "attrs": {
+    "gist": "Heart of Gold Singularity",
+    "archetype": 1,
+    "class": true
+   }
+  },
+  {
+   "key": 38,
+   "label": "ORIGIN_SYSTEM",
+   "attrs": {
+    "gist": "Seeded system machinery",
+    "archetype": 5,
+    "class": true
+   }
+  },
+  {
+   "key": 41,
+   "label": "cda_archive",
+   "attrs": {
+    "gist": "Archive vertex",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 2,
+   "label": "gui_component",
+   "attrs": {
+    "gist": "Kind root: presentation machinery",
+    "archetype": 1,
+    "class": true
+   }
+  },
+  {
+   "key": 3,
+   "label": "action",
+   "attrs": {
+    "gist": "Kind root: executable logic",
+    "archetype": 1,
+    "class": true
+   }
+  },
+  {
+   "key": 4,
+   "label": "engine",
+   "attrs": {
+    "gist": "Kind root: system processes",
+    "archetype": 1,
+    "class": true
+   }
+  },
+  {
+   "key": 5,
+   "label": "origin",
+   "attrs": {
+    "gist": "Kind root: provenance anchors",
+    "archetype": 1,
+    "class": true
+   }
+  },
+  {
+   "key": 6,
+   "label": "layout",
+   "attrs": {
+    "gist": "Sub-kind root: layout definitions",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 7,
+   "label": "vpt_base",
+   "attrs": {
+    "gist": "Abstract root viewpoint type",
+    "archetype": 1,
+    "class": true
+   }
+  },
+  {
+   "key": 8,
+   "label": "vpt_dashboard",
+   "attrs": {
+    "gist": "Personal command center",
+    "archetype": 7,
+    "class": true
+   }
+  },
+  {
+   "key": 9,
+   "label": "vpt_list",
+   "attrs": {
+    "gist": "Dynamic collection of vertices",
+    "archetype": 7,
+    "class": true
+   }
+  },
+  {
+   "key": 10,
+   "label": "vpt_engagement",
+   "attrs": {
+    "gist": "Abstract base for work items",
+    "archetype": 7,
+    "class": true
+   }
+  },
+  {
+   "key": 11,
+   "label": "vpt_subject",
+   "attrs": {
+    "gist": "A thing in reality worth referencing",
+    "archetype": 7,
+    "class": true
+   }
+  },
+  {
+   "key": 12,
+   "label": "vpt_representation",
+   "attrs": {
+    "gist": "Documentation about subject",
+    "archetype": 7,
+    "class": true
+   }
+  },
+  {
+   "key": 13,
+   "label": "vpt_project",
+   "attrs": {
+    "gist": "Multi-step work about a subject",
+    "archetype": 10,
+    "class": true
+   }
+  },
+  {
+   "key": 14,
+   "label": "vpt_action",
+   "attrs": {
+    "gist": "Single task or action item",
+    "archetype": 10,
+    "class": true
+   }
+  },
+  {
+   "key": 15,
+   "label": "vpt_note",
+   "attrs": {
+    "gist": "Freeform text note",
+    "archetype": 10,
+    "class": true
+   }
+  },
+  {
+   "key": 16,
+   "label": "vpt_idea",
+   "attrs": {
+    "gist": "Quick thought capture",
+    "archetype": 10,
+    "class": true
+   }
+  },
+  {
+   "key": 17,
+   "label": "vpt_subject_immutable",
+   "attrs": {
+    "gist": "Subject that cannot change",
+    "archetype": 11,
+    "class": true
+   }
+  },
+  {
+   "key": 18,
+   "label": "vpt_subject_evolving",
+   "attrs": {
+    "gist": "Subject with state tracking",
+    "archetype": 11,
+    "class": true
+   }
+  },
+  {
+   "key": 19,
+   "label": "vpt_subject_conceptual",
+   "attrs": {
+    "gist": "Abstract concept base",
+    "archetype": 11,
+    "class": true
+   }
+  },
+  {
+   "key": 20,
+   "label": "vpt_description",
+   "attrs": {
+    "gist": "Prose description",
+    "archetype": 12,
+    "class": true
+   }
+  },
+  {
+   "key": 21,
+   "label": "vpt_model",
+   "attrs": {
+    "gist": "Structured model",
+    "archetype": 12,
+    "class": true
+   }
+  },
+  {
+   "key": 22,
+   "label": "vpt_source",
+   "attrs": {
+    "gist": "External reference",
+    "archetype": 12,
+    "class": true
+   }
+  },
+  {
+   "key": 23,
+   "label": "vpt_principle",
+   "attrs": {
+    "gist": "Unchanging truth or rule",
+    "archetype": 17,
+    "class": true
+   }
+  },
+  {
+   "key": 24,
+   "label": "vpt_event",
+   "attrs": {
+    "gist": "Historical occurrence",
+    "archetype": 17,
+    "class": true
+   }
+  },
+  {
+   "key": 25,
+   "label": "vpt_record",
+   "attrs": {
+    "gist": "Fixed document or record",
+    "archetype": 17,
+    "class": true
+   }
+  },
+  {
+   "key": 26,
+   "label": "vpt_system_entity",
+   "attrs": {
+    "gist": "Technical system",
+    "archetype": 18,
+    "class": true
+   }
+  },
+  {
+   "key": 27,
+   "label": "vpt_person",
+   "attrs": {
+    "gist": "Person",
+    "archetype": 18,
+    "class": true
+   }
+  },
+  {
+   "key": 28,
+   "label": "vpt_organization",
+   "attrs": {
+    "gist": "Company or group",
+    "archetype": 18,
+    "class": true
+   }
+  },
+  {
+   "key": 29,
+   "label": "vpt_place",
+   "attrs": {
+    "gist": "Location",
+    "archetype": 18,
+    "class": true
+   }
+  },
+  {
+   "key": 30,
+   "label": "vpt_concept",
+   "attrs": {
+    "gist": "Abstract idea",
+    "archetype": 19,
+    "class": true
+   }
+  },
+  {
+   "key": 31,
+   "label": "vpt_philosophy",
+   "attrs": {
+    "gist": "Worldview or framework",
+    "archetype": 19,
+    "class": true
+   }
+  },
+  {
+   "key": 32,
+   "label": "vpt_pattern",
+   "attrs": {
+    "gist": "Recurring structure",
+    "archetype": 19,
+    "class": true
+   }
+  },
+  {
+   "key": 33,
+   "label": "ORIGIN_IDEA",
+   "attrs": {
+    "gist": "Spontaneous thought",
+    "archetype": 5,
+    "class": true
+   }
+  },
+  {
+   "key": 34,
+   "label": "ORIGIN_DIALOG",
+   "attrs": {
+    "gist": "Emerged from conversation",
+    "archetype": 5,
+    "class": true
+   }
+  },
+  {
+   "key": 35,
+   "label": "ORIGIN_EXTERNAL",
+   "attrs": {
+    "gist": "Imported content",
+    "archetype": 5,
+    "class": true
+   }
+  },
+  {
+   "key": 36,
+   "label": "ORIGIN_OTHER",
+   "attrs": {
+    "gist": "Unclassified origin",
+    "archetype": 5,
+    "class": true
+   }
+  },
+  {
+   "key": 37,
+   "label": "ORIGIN_DERIVED",
+   "attrs": {
+    "gist": "Spawned from context",
+    "archetype": 5,
+    "class": true
+   }
+  },
+  {
+   "key": 39,
+   "label": "cda_delete",
+   "attrs": {
+    "gist": "Delete vertex with confirmation",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 40,
+   "label": "cda_edit",
+   "attrs": {
+    "gist": "Edit vertex fields",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 42,
+   "label": "cda_new_project",
+   "attrs": {
+    "gist": "Create standalone project",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 43,
+   "label": "cda_new_action",
+   "attrs": {
+    "gist": "Create action within project",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 44,
+   "label": "cda_new_note",
+   "attrs": {
+    "gist": "Create freeform note",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 45,
+   "label": "cda_new_idea",
+   "attrs": {
+    "gist": "Capture quick idea",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 46,
+   "label": "cda_new_subject",
+   "attrs": {
+    "gist": "Create standalone subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 47,
+   "label": "cda_add_sub_subject",
+   "attrs": {
+    "gist": "Add sub-subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 48,
+   "label": "cda_link_subject",
+   "attrs": {
+    "gist": "Link to existing subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 49,
+   "label": "cda_new_project_about",
+   "attrs": {
+    "gist": "Create project about subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 50,
+   "label": "cda_new_action_about",
+   "attrs": {
+    "gist": "Create action about subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 51,
+   "label": "cda_new_note_about",
+   "attrs": {
+    "gist": "Create note about subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 52,
+   "label": "cda_add_description",
+   "attrs": {
+    "gist": "Add description to subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 53,
+   "label": "cda_add_model",
+   "attrs": {
+    "gist": "Add model to subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 54,
+   "label": "cda_add_source",
+   "attrs": {
+    "gist": "Add source reference",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 55,
+   "label": "cda_complete_action",
+   "attrs": {
+    "gist": "Mark action complete",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 56,
+   "label": "cda_reopen_action",
+   "attrs": {
+    "gist": "Reopen completed action",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 57,
+   "label": "cda_update_state",
+   "attrs": {
+    "gist": "Update subject state",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 58,
+   "label": "cda_promote_to_project",
+   "attrs": {
+    "gist": "Promote idea to project",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 59,
+   "label": "cda_promote_to_subject",
+   "attrs": {
+    "gist": "Promote idea to subject",
+    "archetype": 3,
+    "class": true
+   }
+  },
+  {
+   "key": 60,
+   "label": "COMPONENT_IDENTITY_HEADER",
+   "attrs": {
+    "gist": "Title Bar",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 61,
+   "label": "COMPONENT_STAGE4_READER",
+   "attrs": {
+    "gist": "HTML Editor",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 62,
+   "label": "COMPONENT_STRUCTURED_DATA_CARD",
+   "attrs": {
+    "gist": "JSON View",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 63,
+   "label": "COMPONENT_CONSTELLATION_MAP",
+   "attrs": {
+    "gist": "Graph View",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 64,
+   "label": "COMPONENT_EDGE_LIST",
+   "attrs": {
+    "gist": "List View",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 65,
+   "label": "COMPONENT_PHYSICS_INDICATOR",
+   "attrs": {
+    "gist": "Physics UI",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 66,
+   "label": "COMPONENT_SPAWN_PAD",
+   "attrs": {
+    "gist": "Action FAB",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 67,
+   "label": "COMPONENT_BTN_SPAWN_IDEA",
+   "attrs": {
+    "gist": "Spawn Idea Button",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 68,
+   "label": "COMPONENT_BTN_SPAWN_TASK",
+   "attrs": {
+    "gist": "Spawn Task Button",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 69,
+   "label": "COMPONENT_QUERY_LIST",
+   "attrs": {
+    "gist": "Dynamic Query Widget",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 70,
+   "label": "COMPONENT_CELL_TITLE",
+   "attrs": {
+    "gist": "Row Title Link",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 71,
+   "label": "COMPONENT_CELL_HEALTH",
+   "attrs": {
+    "gist": "Row Health Badge",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 72,
+   "label": "COMPONENT_CELL_HEAT",
+   "attrs": {
+    "gist": "Row Heat Indicator",
+    "archetype": 2,
+    "class": true
+   }
+  },
+  {
+   "key": 73,
+   "label": "LAYOUT_ROW_STANDARD",
+   "attrs": {
+    "gist": "Standard List Row",
+    "archetype": 6,
+    "class": true
+   }
+  },
+  {
+   "key": 74,
+   "label": "ENGINE_GLOBAL_INBOX",
+   "attrs": {
+    "gist": "Inbox",
+    "archetype": 4,
+    "class": true
+   }
+  },
+  {
+   "key": 75,
+   "label": "ENGINE_ROSETTA",
+   "attrs": {
+    "gist": "AI Processor",
+    "archetype": 4,
+    "class": true
+   }
+  },
+  {
+   "key": 76,
+   "label": "VIEWTEST_PROJECT",
+   "attrs": {
+    "gist": "Project vpt test",
+    "archetype": 13,
+    "class": false
+   }
+  },
+  {
+   "key": 77,
+   "label": "VIEWTEST_ACTION",
+   "attrs": {
+    "gist": "Action vpt test",
+    "archetype": 14,
+    "class": false
+   }
+  },
+  {
+   "key": 78,
+   "label": "VIEWTEST_IDEA",
+   "attrs": {
+    "gist": "Idea vpt test",
+    "archetype": 16,
+    "class": false
+   }
+  },
+  {
+   "key": 79,
+   "label": "VIEWTEST_NOTE",
+   "attrs": {
+    "gist": "Note vpt test",
+    "archetype": 15,
+    "class": false
+   }
+  },
+  {
+   "key": 80,
+   "label": "VIEWTEST_SUBJECT",
+   "attrs": {
+    "gist": "Subject vpt test",
+    "archetype": 11,
+    "class": false
+   }
+  },
+  {
+   "key": 100000,
+   "label": "VIEW_DASHBOARD",
+   "attrs": {
+    "gist": "Heart of Gold Control",
+    "archetype": 8,
+    "class": false
+   }
+  }
+ ],
+ "edges": [
+  {
+   "from": 76,
+   "to": 80,
+   "attrs": {
+    "type": "about",
+    "weight": 1.0,
+    "row": 1
+   }
+  },
+  {
+   "from": 77,
+   "to": 76,
+   "attrs": {
+    "type": "action_of",
+    "weight": 1.0,
+    "row": 2
+   }
+  },
+  {
+   "from": 79,
+   "to": 80,
+   "attrs": {
+    "type": "about",
+    "weight": 1.0,
+    "row": 3
+   }
+  },
+  {
+   "from": 78,
+   "to": 80,
+   "attrs": {
+    "type": "about",
+    "weight": 1.0,
+    "row": 4
+   }
+  },
+  {
+   "from": 80,
+   "to": 76,
+   "attrs": {
+    "type": "has_engagement",
+    "weight": 0.1,
+    "row": 5
+   }
+  },
+  {
+   "from": 80,
+   "to": 79,
+   "attrs": {
+    "type": "has_engagement",
+    "weight": 0.1,
+    "row": 6
+   }
+  },
+  {
+   "from": 80,
+   "to": 78,
+   "attrs": {
+    "type": "has_engagement",
+    "weight": 0.1,
+    "row": 7
+   }
+  },
+  {
+   "from": 76,
+   "to": 77,
+   "attrs": {
+    "type": "has_action",
+    "weight": 0.1,
+    "row": 8
+   }
+  },
+  {
+   "from": 2,
+   "to": 1,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 9
+   }
+  },
+  {
+   "from": 3,
+   "to": 1,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 10
+   }
+  },
+  {
+   "from": 4,
+   "to": 1,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 11
+   }
+  },
+  {
+   "from": 5,
+   "to": 1,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 12
+   }
+  },
+  {
+   "from": 6,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 13
+   }
+  },
+  {
+   "from": 7,
+   "to": 1,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 14
+   }
+  },
+  {
+   "from": 8,
+   "to": 7,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 15
+   }
+  },
+  {
+   "from": 9,
+   "to": 7,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 16
+   }
+  },
+  {
+   "from": 10,
+   "to": 7,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 17
+   }
+  },
+  {
+   "from": 11,
+   "to": 7,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 18
+   }
+  },
+  {
+   "from": 12,
+   "to": 7,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 19
+   }
+  },
+  {
+   "from": 13,
+   "to": 10,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 20
+   }
+  },
+  {
+   "from": 14,
+   "to": 10,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 21
+   }
+  },
+  {
+   "from": 15,
+   "to": 10,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 22
+   }
+  },
+  {
+   "from": 16,
+   "to": 10,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 23
+   }
+  },
+  {
+   "from": 17,
+   "to": 11,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 24
+   }
+  },
+  {
+   "from": 18,
+   "to": 11,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 25
+   }
+  },
+  {
+   "from": 19,
+   "to": 11,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 26
+   }
+  },
+  {
+   "from": 20,
+   "to": 12,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 27
+   }
+  },
+  {
+   "from": 21,
+   "to": 12,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 28
+   }
+  },
+  {
+   "from": 22,
+   "to": 12,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 29
+   }
+  },
+  {
+   "from": 23,
+   "to": 17,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 30
+   }
+  },
+  {
+   "from": 24,
+   "to": 17,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 31
+   }
+  },
+  {
+   "from": 25,
+   "to": 17,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 32
+   }
+  },
+  {
+   "from": 26,
+   "to": 18,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 33
+   }
+  },
+  {
+   "from": 27,
+   "to": 18,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 34
+   }
+  },
+  {
+   "from": 28,
+   "to": 18,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 35
+   }
+  },
+  {
+   "from": 29,
+   "to": 18,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 36
+   }
+  },
+  {
+   "from": 30,
+   "to": 19,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 37
+   }
+  },
+  {
+   "from": 31,
+   "to": 19,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 38
+   }
+  },
+  {
+   "from": 32,
+   "to": 19,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 39
+   }
+  },
+  {
+   "from": 33,
+   "to": 5,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 40
+   }
+  },
+  {
+   "from": 34,
+   "to": 5,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 41
+   }
+  },
+  {
+   "from": 35,
+   "to": 5,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 42
+   }
+  },
+  {
+   "from": 36,
+   "to": 5,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 43
+   }
+  },
+  {
+   "from": 37,
+   "to": 5,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 44
+   }
+  },
+  {
+   "from": 38,
+   "to": 5,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 45
+   }
+  },
+  {
+   "from": 39,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 46
+   }
+  },
+  {
+   "from": 40,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 47
+   }
+  },
+  {
+   "from": 41,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 48
+   }
+  },
+  {
+   "from": 42,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 49
+   }
+  },
+  {
+   "from": 43,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 50
+   }
+  },
+  {
+   "from": 44,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 51
+   }
+  },
+  {
+   "from": 45,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 52
+   }
+  },
+  {
+   "from": 46,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 53
+   }
+  },
+  {
+   "from": 47,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 54
+   }
+  },
+  {
+   "from": 48,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 55
+   }
+  },
+  {
+   "from": 49,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 56
+   }
+  },
+  {
+   "from": 50,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 57
+   }
+  },
+  {
+   "from": 51,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 58
+   }
+  },
+  {
+   "from": 52,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 59
+   }
+  },
+  {
+   "from": 53,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 60
+   }
+  },
+  {
+   "from": 54,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 61
+   }
+  },
+  {
+   "from": 55,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 62
+   }
+  },
+  {
+   "from": 56,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 63
+   }
+  },
+  {
+   "from": 57,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 64
+   }
+  },
+  {
+   "from": 58,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 65
+   }
+  },
+  {
+   "from": 59,
+   "to": 3,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 66
+   }
+  },
+  {
+   "from": 60,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 67
+   }
+  },
+  {
+   "from": 61,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 68
+   }
+  },
+  {
+   "from": 62,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 69
+   }
+  },
+  {
+   "from": 63,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 70
+   }
+  },
+  {
+   "from": 64,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 71
+   }
+  },
+  {
+   "from": 65,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 72
+   }
+  },
+  {
+   "from": 66,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 73
+   }
+  },
+  {
+   "from": 67,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 74
+   }
+  },
+  {
+   "from": 68,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 75
+   }
+  },
+  {
+   "from": 69,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 76
+   }
+  },
+  {
+   "from": 70,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 77
+   }
+  },
+  {
+   "from": 71,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 78
+   }
+  },
+  {
+   "from": 72,
+   "to": 2,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 79
+   }
+  },
+  {
+   "from": 73,
+   "to": 6,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 80
+   }
+  },
+  {
+   "from": 74,
+   "to": 4,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 81
+   }
+  },
+  {
+   "from": 75,
+   "to": 4,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 82
+   }
+  },
+  {
+   "from": 76,
+   "to": 13,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 83
+   }
+  },
+  {
+   "from": 77,
+   "to": 14,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 84
+   }
+  },
+  {
+   "from": 78,
+   "to": 16,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 85
+   }
+  },
+  {
+   "from": 79,
+   "to": 15,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 86
+   }
+  },
+  {
+   "from": 80,
+   "to": 11,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 87
+   }
+  },
+  {
+   "from": 100000,
+   "to": 8,
+   "attrs": {
+    "type": "part_of",
+    "weight": 0.0,
+    "row": 88
+   }
+  },
+  {
+   "from": 1,
+   "to": 2,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 89
+   }
+  },
+  {
+   "from": 1,
+   "to": 3,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 90
+   }
+  },
+  {
+   "from": 1,
+   "to": 4,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 91
+   }
+  },
+  {
+   "from": 1,
+   "to": 5,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 92
+   }
+  },
+  {
+   "from": 2,
+   "to": 6,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 93
+   }
+  },
+  {
+   "from": 1,
+   "to": 7,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 94
+   }
+  },
+  {
+   "from": 7,
+   "to": 8,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 95
+   }
+  },
+  {
+   "from": 7,
+   "to": 9,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 96
+   }
+  },
+  {
+   "from": 7,
+   "to": 10,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 97
+   }
+  },
+  {
+   "from": 7,
+   "to": 11,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 98
+   }
+  },
+  {
+   "from": 7,
+   "to": 12,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 99
+   }
+  },
+  {
+   "from": 10,
+   "to": 13,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 100
+   }
+  },
+  {
+   "from": 10,
+   "to": 14,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 101
+   }
+  },
+  {
+   "from": 10,
+   "to": 15,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 102
+   }
+  },
+  {
+   "from": 10,
+   "to": 16,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 103
+   }
+  },
+  {
+   "from": 11,
+   "to": 17,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 104
+   }
+  },
+  {
+   "from": 11,
+   "to": 18,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 105
+   }
+  },
+  {
+   "from": 11,
+   "to": 19,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 106
+   }
+  },
+  {
+   "from": 12,
+   "to": 20,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 107
+   }
+  },
+  {
+   "from": 12,
+   "to": 21,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 108
+   }
+  },
+  {
+   "from": 12,
+   "to": 22,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 109
+   }
+  },
+  {
+   "from": 17,
+   "to": 23,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 110
+   }
+  },
+  {
+   "from": 17,
+   "to": 24,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 111
+   }
+  },
+  {
+   "from": 17,
+   "to": 25,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 112
+   }
+  },
+  {
+   "from": 18,
+   "to": 26,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 113
+   }
+  },
+  {
+   "from": 18,
+   "to": 27,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 114
+   }
+  },
+  {
+   "from": 18,
+   "to": 28,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 115
+   }
+  },
+  {
+   "from": 18,
+   "to": 29,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 116
+   }
+  },
+  {
+   "from": 19,
+   "to": 30,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 117
+   }
+  },
+  {
+   "from": 19,
+   "to": 31,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 118
+   }
+  },
+  {
+   "from": 19,
+   "to": 32,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 119
+   }
+  },
+  {
+   "from": 5,
+   "to": 33,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 120
+   }
+  },
+  {
+   "from": 5,
+   "to": 34,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 121
+   }
+  },
+  {
+   "from": 5,
+   "to": 35,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 122
+   }
+  },
+  {
+   "from": 5,
+   "to": 36,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 123
+   }
+  },
+  {
+   "from": 5,
+   "to": 37,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 124
+   }
+  },
+  {
+   "from": 5,
+   "to": 38,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 125
+   }
+  },
+  {
+   "from": 3,
+   "to": 39,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 126
+   }
+  },
+  {
+   "from": 3,
+   "to": 40,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 127
+   }
+  },
+  {
+   "from": 3,
+   "to": 41,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 128
+   }
+  },
+  {
+   "from": 3,
+   "to": 42,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 129
+   }
+  },
+  {
+   "from": 3,
+   "to": 43,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 130
+   }
+  },
+  {
+   "from": 3,
+   "to": 44,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 131
+   }
+  },
+  {
+   "from": 3,
+   "to": 45,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 132
+   }
+  },
+  {
+   "from": 3,
+   "to": 46,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 133
+   }
+  },
+  {
+   "from": 3,
+   "to": 47,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 134
+   }
+  },
+  {
+   "from": 3,
+   "to": 48,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 135
+   }
+  },
+  {
+   "from": 3,
+   "to": 49,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 136
+   }
+  },
+  {
+   "from": 3,
+   "to": 50,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 137
+   }
+  },
+  {
+   "from": 3,
+   "to": 51,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 138
+   }
+  },
+  {
+   "from": 3,
+   "to": 52,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 139
+   }
+  },
+  {
+   "from": 3,
+   "to": 53,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 140
+   }
+  },
+  {
+   "from": 3,
+   "to": 54,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 141
+   }
+  },
+  {
+   "from": 3,
+   "to": 55,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 142
+   }
+  },
+  {
+   "from": 3,
+   "to": 56,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 143
+   }
+  },
+  {
+   "from": 3,
+   "to": 57,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 144
+   }
+  },
+  {
+   "from": 3,
+   "to": 58,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 145
+   }
+  },
+  {
+   "from": 3,
+   "to": 59,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 146
+   }
+  },
+  {
+   "from": 2,
+   "to": 60,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 147
+   }
+  },
+  {
+   "from": 2,
+   "to": 61,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 148
+   }
+  },
+  {
+   "from": 2,
+   "to": 62,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 149
+   }
+  },
+  {
+   "from": 2,
+   "to": 63,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 150
+   }
+  },
+  {
+   "from": 2,
+   "to": 64,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 151
+   }
+  },
+  {
+   "from": 2,
+   "to": 65,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 152
+   }
+  },
+  {
+   "from": 2,
+   "to": 66,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 153
+   }
+  },
+  {
+   "from": 2,
+   "to": 67,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 154
+   }
+  },
+  {
+   "from": 2,
+   "to": 68,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 155
+   }
+  },
+  {
+   "from": 2,
+   "to": 69,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 156
+   }
+  },
+  {
+   "from": 2,
+   "to": 70,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 157
+   }
+  },
+  {
+   "from": 2,
+   "to": 71,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 158
+   }
+  },
+  {
+   "from": 2,
+   "to": 72,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 159
+   }
+  },
+  {
+   "from": 6,
+   "to": 73,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 160
+   }
+  },
+  {
+   "from": 4,
+   "to": 74,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 161
+   }
+  },
+  {
+   "from": 4,
+   "to": 75,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 162
+   }
+  },
+  {
+   "from": 13,
+   "to": 76,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 163
+   }
+  },
+  {
+   "from": 14,
+   "to": 77,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 164
+   }
+  },
+  {
+   "from": 16,
+   "to": 78,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 165
+   }
+  },
+  {
+   "from": 15,
+   "to": 79,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 166
+   }
+  },
+  {
+   "from": 11,
+   "to": 80,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 167
+   }
+  },
+  {
+   "from": 8,
+   "to": 100000,
+   "attrs": {
+    "type": "has_part",
+    "weight": 0.0,
+    "row": 168
+   }
+  }
+ ]
+}

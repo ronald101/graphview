@@ -1,0 +1,6 @@
+{
+ "fixture": "load-error-vertices",
+ "load": "refused",
+ "code": "vertices",
+ "reason": "\"vertices\" is not a list"
+}

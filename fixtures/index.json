@@ -1,0 +1,191 @@
+[
+ {
+  "fixture": "pair",
+  "load": "ok",
+  "units": 2,
+  "issues": 0,
+  "fingerprint": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0"
+ },
+ {
+  "fixture": "path-4",
+  "load": "ok",
+  "units": 4,
+  "issues": 0,
+  "fingerprint": "sha256:bf0f949938036aa72bc55717e7e8463c9120b14878856b0e8d854f155cf3f078"
+ },
+ {
+  "fixture": "triangle",
+  "load": "ok",
+  "units": 3,
+  "issues": 0,
+  "fingerprint": "sha256:960f15e28a167679d5c31802701904a7913090217d22ab79132dac6085493d01"
+ },
+ {
+  "fixture": "cycle-5",
+  "load": "ok",
+  "units": 5,
+  "issues": 0,
+  "fingerprint": "sha256:e2539b09b65d943134370463e9d02e59239c696eaf30e94627c915f1cca677e7"
+ },
+ {
+  "fixture": "cycle-6",
+  "load": "ok",
+  "units": 6,
+  "issues": 0,
+  "fingerprint": "sha256:cd2bc61737ead974a2054530ce2b2dd22646ea69e478d7745693e76591bf6db8"
+ },
+ {
+  "fixture": "star-6",
+  "load": "ok",
+  "units": 6,
+  "issues": 0,
+  "fingerprint": "sha256:d1342d9e9120ee4a540215f2b1b1895a119d2db2dfe373b79b062b76a36ca433"
+ },
+ {
+  "fixture": "complete-4",
+  "load": "ok",
+  "units": 4,
+  "issues": 0,
+  "fingerprint": "sha256:1ab2798dbee16da1fbecf0a0eb324d476b33899eb8e1bd8f01ea4218916091ae"
+ },
+ {
+  "fixture": "two-pairs",
+  "load": "ok",
+  "units": 4,
+  "issues": 0,
+  "fingerprint": "sha256:6572b65c1acdaff77e4013cf57e8af85556dc17a1d13b85a9b8976842f6491de"
+ },
+ {
+  "fixture": "grid-3x3",
+  "load": "ok",
+  "units": 9,
+  "issues": 0,
+  "fingerprint": "sha256:6ceba538434222176397f2023dd6d0a614a8048aa4927b8c2bea20cd067dd2f0"
+ },
+ {
+  "fixture": "petersen",
+  "load": "ok",
+  "units": 10,
+  "issues": 0,
+  "fingerprint": "sha256:2b34e3bf9b66e6f76032e1bf8d094c0b9148fba58204d7c8d95a25b2f200b22d"
+ },
+ {
+  "fixture": "complete-9",
+  "load": "ok",
+  "units": 9,
+  "issues": 0,
+  "fingerprint": "sha256:54602617c601d2839dafc4ef43af16a8ba1d5487aa906e806035acf42af6394b"
+ },
+ {
+  "fixture": "text-keys",
+  "load": "ok",
+  "units": 9,
+  "issues": 0,
+  "fingerprint": "sha256:524adca9736c304cb6757edd84bbbfc69bee935cf44202774fc99ad7766d30d8"
+ },
+ {
+  "fixture": "superseded",
+  "load": "ok",
+  "units": 6,
+  "issues": 0,
+  "fingerprint": "sha256:8ee3fe62ac896bc78535e756b55c1e1b2c20edb219c843cf93a48dbba1037404"
+ },
+ {
+  "fixture": "database-2026-07-24",
+  "load": "ok",
+  "units": 81,
+  "issues": 0,
+  "fingerprint": "sha256:820d619bd86297cf1b1167a67a22d1dbe8d7903c9609f13e091319fc4be27952"
+ },
+ {
+  "fixture": "random-10k",
+  "load": "ok",
+  "units": 10000,
+  "issues": 0,
+  "fingerprint": "sha256:fb087c8f913f21e80e471a44bf42af1daba2f25883a72af4623e7d64818a84f1"
+ },
+ {
+  "fixture": "broken-missing-reverse",
+  "load": "ok",
+  "units": 3,
+  "issues": 1,
+  "fingerprint": "sha256:b585375e0a110f86bed7c2841cc4d256632a5d4dee403f737877dd3fa50a93e1"
+ },
+ {
+  "fixture": "broken-loop",
+  "load": "ok",
+  "units": 2,
+  "issues": 1,
+  "fingerprint": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0"
+ },
+ {
+  "fixture": "broken-repeated-keypair",
+  "load": "ok",
+  "units": 2,
+  "issues": 1,
+  "fingerprint": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0"
+ },
+ {
+  "fixture": "broken-unknown-unit",
+  "load": "ok",
+  "units": 2,
+  "issues": 2,
+  "fingerprint": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0"
+ },
+ {
+  "fixture": "broken-repeated-key",
+  "load": "ok",
+  "units": 2,
+  "issues": 1,
+  "fingerprint": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0"
+ },
+ {
+  "fixture": "broken-orphan",
+  "load": "ok",
+  "units": 3,
+  "issues": 1,
+  "fingerprint": "sha256:debdf4ccdd28f9d487c69403a091fed7e97ae37b7db3e4ff2bca9075cd287c08"
+ },
+ {
+  "fixture": "broken-bad-rows",
+  "load": "ok",
+  "units": 2,
+  "issues": 9,
+  "fingerprint": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0"
+ },
+ {
+  "fixture": "broken-mixed",
+  "load": "ok",
+  "units": 5,
+  "issues": 7,
+  "fingerprint": "sha256:919eb9177c83534327dc56b591a7108b78d66383e558db13749d797199a83418"
+ },
+ {
+  "fixture": "load-error-not-object",
+  "load": "refused",
+  "units": null,
+  "issues": 0,
+  "fingerprint": null
+ },
+ {
+  "fixture": "load-error-format",
+  "load": "refused",
+  "units": null,
+  "issues": 0,
+  "fingerprint": null
+ },
+ {
+  "fixture": "load-error-vertices",
+  "load": "refused",
+  "units": null,
+  "issues": 0,
+  "fingerprint": null
+ },
+ {
+  "fixture": "load-error-edges",
+  "load": "refused",
+  "units": null,
+  "issues": 0,
+  "fingerprint": null
+ }
+]

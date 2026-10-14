@@ -1,0 +1,57 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Bad rows",
+  "description": "Rows that cannot be read.",
+  "rosetta": false
+ },
+ "vertices": [
+  {
+   "key": 1
+  },
+  {
+   "key": 2
+  },
+  {
+   "label": "no key"
+  },
+  {
+   "key": true
+  },
+  {
+   "key": 1.5
+  },
+  {
+   "key": ""
+  },
+  "not an object",
+  {
+   "key": [
+    3
+   ]
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  },
+  {
+   "from": 1
+  },
+  {
+   "from": 1,
+   "to": [
+    2
+   ]
+  },
+  {
+   "from": null,
+   "to": 2
+  }
+ ]
+}

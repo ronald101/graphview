@@ -1,0 +1,29 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Repeated key",
+  "description": "Key 2 occurs twice.",
+  "rosetta": false
+ },
+ "vertices": [
+  {
+   "key": 1
+  },
+  {
+   "key": 2
+  },
+  {
+   "key": 2
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  }
+ ]
+}

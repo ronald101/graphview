@@ -1,0 +1,112 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Keys that look alike",
+  "description": "Number 1 and text \"1\" are different units. Code-point order matters for the fingerprint: U+1F600 sorts after U+FB00."
+ },
+ "vertices": [
+  {
+   "key": 1,
+   "label": "one (number)"
+  },
+  {
+   "key": "1",
+   "label": "one (text)"
+  },
+  {
+   "key": "I"
+  },
+  {
+   "key": "l"
+  },
+  {
+   "key": "O"
+  },
+  {
+   "key": "0"
+  },
+  {
+   "key": "é"
+  },
+  {
+   "key": "ﬀ"
+  },
+  {
+   "key": "😀"
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": "1"
+  },
+  {
+   "from": "1",
+   "to": 1
+  },
+  {
+   "from": "1",
+   "to": "I"
+  },
+  {
+   "from": "I",
+   "to": "1"
+  },
+  {
+   "from": "I",
+   "to": "l"
+  },
+  {
+   "from": "l",
+   "to": "I"
+  },
+  {
+   "from": "l",
+   "to": "O"
+  },
+  {
+   "from": "O",
+   "to": "l"
+  },
+  {
+   "from": "O",
+   "to": "0"
+  },
+  {
+   "from": "0",
+   "to": "O"
+  },
+  {
+   "from": "0",
+   "to": "é"
+  },
+  {
+   "from": "é",
+   "to": "0"
+  },
+  {
+   "from": "é",
+   "to": "ﬀ"
+  },
+  {
+   "from": "ﬀ",
+   "to": "é"
+  },
+  {
+   "from": "ﬀ",
+   "to": "😀"
+  },
+  {
+   "from": "😀",
+   "to": "ﬀ"
+  },
+  {
+   "from": "😀",
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": "😀"
+  }
+ ]
+}

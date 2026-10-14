@@ -1,0 +1,6 @@
+{
+ "fixture": "load-error-not-object",
+ "load": "refused",
+ "code": "not-object",
+ "reason": "the file is not a JSON object"
+}

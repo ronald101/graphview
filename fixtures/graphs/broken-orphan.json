@@ -1,0 +1,29 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Orphan unit",
+  "description": "Unit 3 takes part in no relation.",
+  "rosetta": false
+ },
+ "vertices": [
+  {
+   "key": 1
+  },
+  {
+   "key": 2
+  },
+  {
+   "key": 3
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  }
+ ]
+}

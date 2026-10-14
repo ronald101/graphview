@@ -1,0 +1,50 @@
+{
+ "fixture": "broken-orphan",
+ "load": "ok",
+ "counts": {
+  "units": 3,
+  "keypairs": 2,
+  "relations": 1
+ },
+ "fingerprint": {
+  "stored": "sha256:debdf4ccdd28f9d487c69403a091fed7e97ae37b7db3e4ff2bca9075cd287c08",
+  "current": "sha256:debdf4ccdd28f9d487c69403a091fed7e97ae37b7db3e4ff2bca9075cd287c08"
+ },
+ "issues": [
+  {
+   "code": "orphan",
+   "key": 3
+  }
+ ],
+ "components": {
+  "stored": [
+   2,
+   1
+  ],
+  "current": [
+   2,
+   1
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 2,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 3,
+   "relations": 0,
+   "outgoing": 0,
+   "incoming": 0
+  }
+ ],
+ "rosetta": false
+}
