@@ -96,3 +96,51 @@
 - **Choice.** ForceAtlas2 from graphology runs in batches of 25 iterations. It stops when the mean step per iteration falls below 0.02 percent of the layout's size, or after 1,500 iterations; above 2,000 units, after 300 iterations, with a Barnes–Hut θ of 1 instead of 0.5. Pinned units are fixed.
 - **Reason.** V06 asks that 10,000 units settle within 30 seconds. With θ 0.5 one iteration took 118 ms in Node; with θ 1 it took 35 ms. The stop rule uses no clock, so the result stays deterministic.
 - **Alternative.** A time limit. It would make the positions depend on the machine's speed.
+
+## D16. What a click picks
+
+- **Choice.** A click inside a unit's circle picks the unit. Outside it, the nearer wins: a unit's edge within 3 pixels, or a line within 12 pixels. On a line, the half is the one on the click's side of the middle. Where a half is shorter than 24 pixels, the click picks the whole relation.
+- **Reason.** In dense force layouts, units sit close to other units' lines. Picking what lies under the pointer gave the right keypair in every G11 click.
+- **Alternative.** Units always first, within 9 pixels. It picked a neighbouring unit instead of the line in the database graph.
+
+## D17. The shell starts a new view for each new source
+
+- **Choice.** Loading an example, a file, an address or a generated graph mounts a fresh component. Replacing the graph in place, as `window.graphview.replace` does, keeps the places of the units that stay (V11).
+- **Reason.** Two examples share keys such as 1 to 4 without being the same units. Stable change between them would carry positions over by accident.
+- **Alternative.** Stable change for every new graph. That is what D2 says for the component's `graph` input, and the component still does it.
+
+## D18. Line widths and unit sizes are calibrated to pixels
+
+- **Choice.** The sigma.js adapter passes each line's width times 2 as sigma's edge size, and the unit radius, 6, as sigma's node size.
+- **Reason.** Measured in a screenshot, sigma draws an edge of size s about s / 2 pixels thick, and a node of size 6 with a radius of 6 pixels.
+- **Alternative.** A custom edge program. It would add code for no gain.
+
+## D19. Labels keep clear of units, ring numbers and controls
+
+- **Choice.** Label placement treats every visible unit's circle, the ring numbers, the camera controls and the search button as obstacles, with the same 2-pixel gap as between labels.
+- **Reason.** Labels drawn over other units and over the controls failed the visual review (F1: crisp type).
+- **Alternative.** Labels against labels only, as V19 requires at the least.
+
+## D20. Ring 1 starts half a step from north
+
+- **Choice.** In the rings layout, ring 1's units start half an angle step clockwise from north. Outer rings turn to follow their parents.
+- **Reason.** The ring numbers sit where each ring crosses north (F4); a unit there would hide behind its number.
+- **Alternative.** Start at north and move the numbers. F4 fixes their place.
+
+## D21. Type declarations come from svelte2tsx
+
+- **Choice.** `npm run build:module` runs Vite in library mode, then writes declarations with svelte2tsx 0.7.61, a pinned development dependency.
+- **Reason.** Vite does not write declarations for Svelte components; svelte2tsx is the tool svelte-check itself uses.
+- **Alternative.** @sveltejs/package. It ships uncompiled components and rewrites imports, which the workers' `new URL(...)` references do not survive.
+
+## D22. Browser tests that measure run alone
+
+- **Choice.** playwright.config.ts has two projects. "chromium" runs the browser tests on 4 workers. "speed" runs G17 and the two tests on 10,000 units afterwards, on 1 worker.
+- **Reason.** In software rendering, four tests at once share four processors. The 10,000-unit tests then took twice as long, and the speed numbers would not describe one viewer.
+- **Alternative.** All tests on 1 worker. The run would take about four times as long.
+
+## D23. How G11 reaches its zoom levels
+
+- **Choice.** For the long-half clicks, each tested relation is centred and drawn 600 pixels long, so each half is 294 pixels. For the short-half clicks, it is drawn 40 pixels long in a window 280 pixels wide.
+- **Reason.** J2 asks for halves of at least 40 pixels; at 200 pixels another unit of the dense database graph lay under one click point. For the pair and the triangle, no zoom within V02's limits makes a half shorter than 24 pixels in the 660-pixel canvas of a 1280-pixel window; in a 280-pixel window it does.
+- **Alternative.** Leave the short-half check out for the pair and the triangle.
