@@ -33,6 +33,8 @@ export function forceLayout(input: ForceInput): ForceOutput {
   const settings = {
     ...forceAtlas2.inferSettings(g),
     barnesHutOptimize: n > 500,
+    // A coarser Barnes–Hut grid for large graphs: about a third of the time per iteration (docs/decisions.md, D15).
+    ...(n > 2000 ? { barnesHutTheta: 1 } : {}),
     ...pick(input.settings, [
       'gravity',
       'scalingRatio',
@@ -66,6 +68,8 @@ export function forceLayout(input: ForceInput): ForceOutput {
     const size = Math.max(maxX - minX, maxY - minY, 1e-9);
     if (move / Math.max(1, n) / batch < size * 2e-4) break;
   }
+  // ForceAtlas2 keeps positions as 32-bit floats; pinned units keep their exact places.
+  for (const i of input.pinned) prev[i] = { ...input.start[i] };
   return { positions: prev, iterations };
 }
 

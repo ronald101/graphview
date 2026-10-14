@@ -90,3 +90,9 @@
 - **Choice.** sigma.js draws units and relation lines. The module computes every position on screen through the adapter, picks units and halves from that geometry, and draws rings, chevrons, labels, issue marks and state marks on a 2D canvas over the engine.
 - **Reason.** Engine picking missed overlapping lines in the trial, and the scene must match what is drawn. One geometry serves the scene, the clicks and the tests.
 - **Alternative.** sigma.js's own edge picking and labels. They cannot give the 24-pixel click width, the label boxes, or the 2-pixel label gap the specification asks for.
+
+## D15. The force layout: when it settles, and large graphs
+
+- **Choice.** ForceAtlas2 from graphology runs in batches of 25 iterations. It stops when the mean step per iteration falls below 0.02 percent of the layout's size, or after 1,500 iterations; above 2,000 units, after 300 iterations, with a Barnes–Hut θ of 1 instead of 0.5. Pinned units are fixed.
+- **Reason.** V06 asks that 10,000 units settle within 30 seconds. With θ 0.5 one iteration took 118 ms in Node; with θ 1 it took 35 ms. The stop rule uses no clock, so the result stays deterministic.
+- **Alternative.** A time limit. It would make the positions depend on the machine's speed.
