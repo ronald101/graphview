@@ -41,8 +41,7 @@ export type Issue =
 export type RefusalCode = 'not-object' | 'format' | 'vertices' | 'edges';
 
 export type LoadResult =
-  | { ok: true; graph: Graph; issues: Issue[] }
-  | { ok: false; code: RefusalCode; message: string };
+  { ok: true; graph: Graph; issues: Issue[] } | { ok: false; code: RefusalCode; message: string };
 
 export interface PathSetLength {
   length: number;

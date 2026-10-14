@@ -5,3 +5,7 @@ docs/prompt.md
 CLAUDE.md
 .github/
 dist/
+package-lock.json
+test-results/
+playwright-report/
+docs/screenshots/

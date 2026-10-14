@@ -52,17 +52,29 @@
 ## D8. The core's imports carry the .ts extension
 
 - **Choice.** Files import each other as `./load.ts`, with `allowImportingTsExtensions` in tsconfig.json.
-- **Reason.** Node 22 can then run the core directly, which the stand-in test runner needs (D9). Vite and Vitest accept it too.
+- **Reason.** Node 22 can then run the core directly, as the stand-in runner of D9 did. Vite and Vitest accept it too.
 - **Alternative.** Extensionless imports. They need a bundler or a loader to run.
 
-## D9. A stand-in test runner while the npm registry is refused
+## D9. A stand-in test runner, used once and removed
 
-- **Choice.** scripts/offline/ holds a small runner that runs the unchanged gate and unit test files with Node's own TypeScript support. It maps `vitest` to a stand-in with the same `test`, `describe` and `expect` calls.
-- **Reason.** The network policy refuses registry.npmjs.org, so Vitest cannot be installed (see docs/report.md). The runner gives evidence for the core without changing any test.
-- **Alternative.** Report the gates as "not testable" without running them.
-- **Remove.** Delete scripts/offline/ once `npm run check` runs with Vitest.
+- **Choice.** While the npm registry was refused, a small runner in scripts/offline/ ran the unchanged gate and unit tests with Node's own TypeScript support. It was removed as soon as Vitest installed, and Vitest gave the same result: 210 passed.
+- **Reason.** It gave evidence for the core without changing any test.
+- **Alternative.** Report the gates as "not testable" until packages install.
 
 ## D10. Small interface choices in the core
 
 - **Graph.** Besides `units` and `keypairs`, a graph carries `unitInfo`, `keypairInfo` and `meta` as read-only fields, so the user interface can show labels, attributes and positions.
 - **CSS variables.** `cssVariables(theme)` writes the tokens as `--gv-<token>`, for example `--gv-surface`.
+
+## D11. Versions, pinned exactly on 14 October 2026
+
+- **Runtime.** svelte 5.57.2; sigma 4.0.2, graphology 0.26.0 and graphology-layout-forceatlas2 0.10.1; @fontsource/atkinson-hyperlegible-next 5.3.0.
+- **Tools.** vite 8.3.4, @sveltejs/vite-plugin-svelte 7.3.1, typescript 6.0.3, vitest 5.0.4, @playwright/test 1.64.1, svelte-check 4.7.6, prettier 3.9.10, prettier-plugin-svelte 4.1.1, @axe-core/playwright 4.13.0, @types/node 26.6.5, graphology-types 0.24.8.
+- **TypeScript 6, not 7.** TypeScript 7.0.2 is the latest, but svelte-check 4.7.6 accepts only TypeScript 5 or 6. 6.0.3 is the latest version that works with it.
+- **graphology-types.** The peer dependency of the ForceAtlas2 package, needed for its types.
+
+## D12. The browser tests use the preinstalled Chromium in cloud sessions
+
+- **Choice.** playwright.config.ts launches /opt/pw-browsers/chromium (Chromium 141) when it exists and the run is not on CI. On CI, Playwright's own browser is used.
+- **Reason.** Playwright 1.64.1 downloads its browser from storage.googleapis.com, which the network policy refuses. The preinstalled browser needs no download, and Playwright 1.64.1 drives it.
+- **Alternative.** Pin @playwright/test 1.56.1, the version the preinstalled browser belongs to. That would break the rule of the latest stable versions.

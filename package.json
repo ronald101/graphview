@@ -15,5 +15,26 @@
     "build": "npm run build:module && npm run build:shell",
     "e2e": "npm run build:shell && playwright test",
     "test": "npm run check && npm run e2e"
+  },
+  "dependencies": {
+    "@fontsource/atkinson-hyperlegible-next": "5.3.0",
+    "graphology": "0.26.0",
+    "graphology-layout-forceatlas2": "0.10.1",
+    "sigma": "4.0.2",
+    "svelte": "5.57.2"
+  },
+  "devDependencies": {
+    "@antv/g6": "5.1.1",
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.1",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@types/node": "26.6.5",
+    "graphology-types": "0.24.8",
+    "prettier": "3.9.10",
+    "prettier-plugin-svelte": "4.1.1",
+    "svelte-check": "4.7.6",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
   }
 }
