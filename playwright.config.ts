@@ -19,13 +19,14 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: /speed\.spec\.ts/,
+      testIgnore: /(speed|large)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
-    // Speed is measured alone, after the other tests, so that they do not share the processors (G17).
+    // Speed and the largest graph run alone, after the other tests, so that they do not share the processors (G17).
     {
       name: 'speed',
-      testMatch: /speed\.spec\.ts/,
+      workers: 1,
+      testMatch: /(speed|large)\.spec\.ts/,
       dependencies: ['chromium'],
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },

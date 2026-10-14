@@ -43,18 +43,6 @@ test.describe('arrange', () => {
     expect(c).not.toEqual(a);
   });
 
-  test('V06 force layout: the random graph of 10,000 units settles within 30 seconds', async ({ page }) => {
-    test.setTimeout(120000);
-    await open(page, 'random-10k');
-    const t0 = Date.now();
-    const p = await force(page, 1);
-    const ms = Date.now() - t0;
-    expect(p.length).toBe(10000);
-    expect(p.every((q) => Number.isFinite(q.x) && Number.isFinite(q.y))).toBe(true);
-    expect(ms).toBeLessThan(30000);
-    test.info().annotations.push({ type: 'force-10k-ms', description: String(ms) });
-  });
-
   // Every ring entry in fixtures/expected.
   const entries: {
     name: string;
@@ -75,7 +63,6 @@ test.describe('arrange', () => {
     'pair',
     'path-4',
     'petersen',
-    'random-10k',
     'star-6',
     'superseded',
     'text-keys',
