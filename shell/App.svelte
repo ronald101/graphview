@@ -24,6 +24,8 @@
     | { kind: 'file'; name: string };
 
   let doc: unknown = $state.raw(null);
+  /** Changes for each new source, so that a new example starts fresh; a replacement keeps places (V11). */
+  let generation = $state(0);
   let source: Source | null = $state(null);
   let look: Look = $state(defaultLook());
   let viewState: ViewState | null = $state(null);
@@ -91,7 +93,9 @@
   async function loadExample(id: string, view?: Partial<ViewState>) {
     message = '';
     initialView = view;
-    doc = await exampleDoc(id);
+    const next = await exampleDoc(id);
+    generation++;
+    doc = next;
     source = { kind: 'example', id };
     reached = null;
   }
@@ -99,7 +103,9 @@
   function loadText(text: string, name: string) {
     try {
       initialView = undefined;
-      doc = JSON.parse(text);
+      const next = JSON.parse(text);
+      generation++;
+      doc = next;
       source = { kind: 'file', name };
       message = '';
       reached = null;
@@ -126,7 +132,9 @@
       const res = await fetch(url);
       if (!res.ok) throw new Error(String(res.status));
       initialView = view;
-      doc = await res.json();
+      const next = await res.json();
+      generation++;
+      doc = next;
       source = { kind: 'url', url };
       message = '';
       reached = null;
@@ -142,6 +150,7 @@
       const p = paramsValue(params);
       const g = generate(family, p, seed);
       initialView = view;
+      generation++;
       doc = breakRules(g.doc, breaks, seed);
       reached = g.reached ?? null;
       source = { kind: 'generated', family, params: p, seed, breaks: { ...breaks } };
@@ -300,11 +309,39 @@
     else document.documentElement.dataset.theme = look.theme;
   });
 
-  // For browser tests and the console: the component's commands.
+  // For browser tests and the console: the component's commands, and a log of its events.
+  const log: { name: string; payload: unknown }[] = [];
+  let settledCount = 0;
+  let waiters: (() => void)[] = [];
+  const record = (name: string) => (payload: unknown) => {
+    log.push({ name, payload: JSON.parse(JSON.stringify(payload ?? null)) });
+    if (name === 'layoutsettled') {
+      settledCount++;
+      viewState = gv?.getViewState() ?? viewState;
+      const w = waiters;
+      waiters = [];
+      w.forEach((f) => f());
+    }
+    if (name === 'viewstate') viewState = payload as ViewState;
+  };
+  const nextSettled = () => new Promise<void>((r) => waiters.push(r));
   $effect(() => {
     (window as unknown as Record<string, unknown>).graphview = {
       view: gv,
-      loadExample,
+      log,
+      settled: () => settledCount,
+      nextSettled,
+      /** Replaces the graph in place, with stable change (V11). */
+      replace: async (next: unknown) => {
+        const done = nextSettled();
+        doc = next;
+        await done;
+      },
+      loadExample: async (id: string, view?: Partial<ViewState>) => {
+        const done = nextSettled();
+        await loadExample(id, view);
+        if (examples.find((e) => e.id === id)?.group !== 'refused') await done;
+      },
       setLook,
       generate: (f: Family, p: Params, s: number, b: BreakOptions = NO_BREAKS) => {
         family = f;
@@ -691,14 +728,24 @@
     </aside>
     <main class="main">
       {#if doc !== null}
-        <GraphView
-          bind:this={gv}
-          graph={doc}
-          view={initialView}
-          {look}
-          onviewstate={(v) => (viewState = v)}
-          onlayoutsettled={() => (viewState = gv?.getViewState() ?? viewState)}
-        />
+        {#key generation}
+          <GraphView
+            bind:this={gv}
+            graph={doc}
+            view={initialView}
+            {look}
+            onselect={record('select')}
+            onhover={record('hover')}
+            onactivate={record('activate')}
+            onfocus={record('focus')}
+            oncamera={record('camera')}
+            onviewstate={record('viewstate')}
+            onlayoutsettled={record('layoutsettled')}
+            onpathset={record('pathset')}
+            onexpandrequest={record('expandrequest')}
+            onissues={record('issues')}
+          />
+        {/key}
       {/if}
     </main>
   </div>

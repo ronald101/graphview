@@ -227,6 +227,8 @@ export class Controller {
 
   /** True once a host has given a layout through the view state. */
   viewGiven = false;
+  /** A camera given before the first layout finished; it wins over fitting. */
+  pendingCamera: ViewState['camera'] | null = null;
 
   issueItems(): IssueItem[] {
     const items: IssueItem[] = [...this.issues];
@@ -339,7 +341,8 @@ export class Controller {
     if (first) {
       this.positions = new Map(target);
       this.pushItems();
-      this.view.camera = this.fitCamera(this.visibleIds());
+      this.view.camera = this.pendingCamera ?? this.fitCamera(this.visibleIds());
+      this.pendingCamera = null;
       this.applyCamera();
     } else {
       this.pushItems();
@@ -1178,6 +1181,9 @@ export class Controller {
     if (layoutChanged && this.graph) await this.runLayout(false);
     if (partial.camera) {
       this.view.camera = { ...this.view.camera, ...partial.camera };
+      this.view.camera.zoom = clamp(this.view.camera.zoom, ZOOM_MIN, ZOOM_MAX);
+      this.view.camera.angle = normAngle(this.view.camera.angle);
+      if (this.positions.size === 0) this.pendingCamera = { ...this.view.camera };
       this.applyCamera();
     }
     if (partial.paths?.ends)

@@ -43,10 +43,8 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
     settings: {
       renderLabels: false,
       enableEdgeEvents: false,
-      enableCameraZooming: false,
-      enableCameraPanning: false,
-      enableCameraRotation: false,
-      enableCameraMouseRotation: false,
+      // The module's input layer covers sigma's, so sigma's own gestures never fire.
+      // Its camera settings stay on: turning them off would block setState as well.
       enableNodeDrag: false,
       zoomToSizeRatioFunction: () => 1,
       itemSizesReference: 'screen',
@@ -90,6 +88,7 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
         } else graph.addEdgeWithKey(s.id, s.from, s.to, attrs);
       }
       sigma.setCustomBBox(bbox());
+      sigma.refresh();
     },
     setPositions(positions) {
       for (const [id, p] of positions) if (graph.hasNode(id)) graph.mergeNodeAttributes(id, toSigma(p.x, p.y));
@@ -105,6 +104,7 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
     setExtent(e) {
       extent = e;
       sigma.setCustomBBox(bbox());
+      sigma.refresh();
     },
     setCamera(c: EngineCamera) {
       const f = framed(c.x, c.y);
@@ -126,7 +126,8 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
       sigma.resize();
     },
     render() {
-      sigma.refresh();
+      // sigma's own render() draws now, processing pending changes; refresh() would re-index everything.
+      (sigma as unknown as { render(): void }).render();
     },
     onRender(callback) {
       callbacks.push(callback);
@@ -149,7 +150,7 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
   }
   /** Graph coordinates to sigma's framed coordinates, which its camera uses. */
   function framed(x: number, y: number) {
-    return sigma.viewportToFramedGraph(sigma.graphToViewport(toSigma(x, y)));
+    return sigma.graphToFramedGraph(toSigma(x, y));
   }
 
   return engine;

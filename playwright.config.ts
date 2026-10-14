@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 
-// Cloud sessions cannot download Playwright's browser; they use the preinstalled one (docs/decisions.md).
+// Cloud sessions cannot download Playwright's browser; they use the preinstalled one (docs/decisions.md, D12).
 const local = '/opt/pw-browsers/chromium';
 const executablePath = process.env.CI ? undefined : existsSync(local) ? local : undefined;
 
