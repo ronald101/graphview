@@ -23,28 +23,28 @@
 
 ## 2. Gates
 
-| Gate | Result | Evidence                                                                                                                                                |
-| ---- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G0   | pass   | tests/gates/core.gate.test.ts, "G0 the fixture set is complete"                                                                                         |
-| G1   | pass   | tests/gates/manifest.gate.test.ts: 58 files match                                                                                                       |
-| G2   | pass   | 27 of 27 fixtures, "G2 loading and issues"                                                                                                              |
-| G3   | pass   | 23 of 23 loaded fixtures, stored and current fingerprints                                                                                               |
-| G4   | pass   | 23 of 23                                                                                                                                                |
-| G5   | pass   | 22 of 22                                                                                                                                                |
-| G6   | pass   | 25 of 25 ring entries                                                                                                                                   |
-| G7   | pass   | 29 path entries and "G7 default limits"                                                                                                                 |
-| G8   | pass   | 2,628 of 3,240 pairs                                                                                                                                    |
-| G9   | pass   | tests/unit/generate.test.ts (14 tests) and tests/unit/layout.test.ts (4 tests); browser test "V06 force layout: the same seed gives the same positions" |
-| G10  | pass   | tests/unit/generate.test.ts: 12 families, 200 seeds each, plus 2 tests                                                                                  |
-| G11  | pass   | tests/e2e/halves.spec.ts: 16 tests; pair, triangle and path-4, every relation; 20 seeded relations of the database graph; angles 0, 90 and 215          |
-| G12  | pass   | every function V01 to V23 has passing browser tests; section 3                                                                                          |
-| G13  | pass   | tests/e2e/events.spec.ts: 6 tests; ten events, ten commands, release-2 answers, createGraphView                                                         |
-| G14  | pass   | tests/e2e/a11y.spec.ts: axe finds no serious or critical violation, light and dark, two graphs each; keyboard map; live region                          |
-| G15  | pass   | tests/gates/tokens.gate.test.ts, 4 tests; V22 checks the computed properties                                                                            |
-| G16  | pass   | tests/gates/boundaries.gate.test.ts, 4 tests                                                                                                            |
-| G17  | pass   | section 5                                                                                                                                               |
-| G18  | pass   | `npm run build` builds dist/module and dist/shell; `npm run e2e` serves dist/shell with `vite preview` under /graphview/                                |
-| G19  | pass   | section 6; docs/screenshots/                                                                                                                            |
+| Gate | Result | Evidence                                                                                                                                                               |
+| ---- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| G0   | pass   | tests/gates/core.gate.test.ts, "G0 the fixture set is complete"                                                                                                        |
+| G1   | pass   | tests/gates/manifest.gate.test.ts: 58 files match                                                                                                                      |
+| G2   | pass   | 27 of 27 fixtures, "G2 loading and issues"                                                                                                                             |
+| G3   | pass   | 23 of 23 loaded fixtures, stored and current fingerprints                                                                                                              |
+| G4   | pass   | 23 of 23                                                                                                                                                               |
+| G5   | pass   | 22 of 22                                                                                                                                                               |
+| G6   | pass   | 25 of 25 ring entries                                                                                                                                                  |
+| G7   | pass   | 29 path entries and "G7 default limits"                                                                                                                                |
+| G8   | pass   | 2,628 of 3,240 pairs                                                                                                                                                   |
+| G9   | pass   | tests/unit/generate.test.ts (14 tests) and tests/unit/layout.test.ts (4 tests); browser test "V06 force layout: the same seed gives the same positions"                |
+| G10  | pass   | tests/unit/generate.test.ts: 12 families, 200 seeds each, plus 2 tests                                                                                                 |
+| G11  | pass   | tests/e2e/halves.spec.ts: 16 tests; pair, triangle and path-4, every relation; 20 seeded relations of the database graph; angles 0, 90 and 215                         |
+| G12  | pass   | every function V01 to V23 has passing browser tests; section 3                                                                                                         |
+| G13  | pass   | tests/e2e/events.spec.ts: 6 tests; ten events, ten commands, release-2 answers, createGraphView                                                                        |
+| G14  | pass   | tests/e2e/a11y.spec.ts: axe finds no serious or critical violation, light and dark, two graphs each; keyboard map; live region                                         |
+| G15  | pass   | tests/gates/tokens.gate.test.ts, 4 tests; V22 checks the computed properties                                                                                           |
+| G16  | pass   | tests/gates/boundaries.gate.test.ts, 4 tests                                                                                                                           |
+| G17  | pass   | section 5                                                                                                                                                              |
+| G18  | pass   | `npm run build` builds dist/module and dist/shell; `npm run e2e` serves dist/shell with `vite preview` under /graphview/; the checks workflow on GitHub Actions passed |
+| G19  | pass   | section 6; docs/screenshots/                                                                                                                                           |
 
 No gate is disputed. The core matched the reference and the expected files everywhere.
 
