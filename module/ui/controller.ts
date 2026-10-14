@@ -1398,7 +1398,25 @@ export class Controller {
       });
       if (cands.length > 4000) break;
     }
-    this.labels = placeLabels(cands, (t) => this.measureCached(t), this.width, this.height);
+    const obstacles: { x: number; y: number; w: number; h: number; owner?: number }[] = [];
+    this.graph.units.forEach((k, i) => {
+      const id = keyId(k);
+      const p = pts.get(id);
+      if (!p || !vis.get(id)) return;
+      if (p.x < -20 || p.y < -20 || p.x > this.width + 20 || p.y > this.height + 20) return;
+      obstacles.push({ x: p.x - UNIT_RADIUS, y: p.y - UNIT_RADIUS, w: 2 * UNIT_RADIUS, h: 2 * UNIT_RADIUS, owner: i });
+    });
+    // Ring numbers, where each ring crosses north.
+    if (this.ring && this.view.layout.name === 'rings' && this.view.focus !== null) {
+      const c = pts.get(keyId(this.view.focus));
+      const s = this.pixelScale();
+      if (c)
+        for (let k = 1; k <= this.ring.depth; k++)
+          obstacles.push({ x: c.x - 9, y: c.y - k * SPACING * s - 9, w: 18, h: 18 });
+    }
+    // The camera controls in the bottom right corner, and the search button in the top left.
+    obstacles.push({ x: this.width - 230, y: this.height - 50, w: 230, h: 50 }, { x: 0, y: 0, w: 52, h: 52 });
+    this.labels = placeLabels(cands, (t) => this.measureCached(t), this.width, this.height, 400, obstacles);
   }
 
   private labelOrderCache: { graph: Graph | null; order: number[] } = { graph: null, order: [] };

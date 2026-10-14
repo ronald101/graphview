@@ -25,6 +25,7 @@ export function placeLabels(
   width: number,
   height: number,
   limit = 400,
+  obstacles: { x: number; y: number; w: number; h: number; owner?: number }[] = [],
 ): PlacedLabel[] {
   const grid = new Map<string, { x: number; y: number; w: number; h: number }[]>();
   const placed: PlacedLabel[] = [];
@@ -36,9 +37,10 @@ export function placeLabels(
     }
     return out;
   };
-  const clashes = (b: { x: number; y: number; w: number; h: number }) => {
+  const clashes = (b: { x: number; y: number; w: number; h: number }, self = -1) => {
     for (const c of cells(b)) {
       for (const o of grid.get(c) ?? []) {
+        if ((o as { owner?: number }).owner === self) continue;
         if (
           b.x < o.x + o.w + LABEL_GAP &&
           o.x < b.x + b.w + LABEL_GAP &&
@@ -57,6 +59,13 @@ export function placeLabels(
     }
     placed.push({ index, box: b });
   };
+  // Units and controls are obstacles too: a label never covers another unit's circle.
+  for (const o of obstacles) {
+    for (const c of cells(o)) {
+      if (!grid.has(c)) grid.set(c, []);
+      grid.get(c)!.push(o);
+    }
+  }
   const ordered = [...candidates.filter((c) => c.forced), ...candidates.filter((c) => !c.forced)];
   for (const c of ordered) {
     if (!c.forced && placed.length >= limit) break;
@@ -71,7 +80,7 @@ export function placeLabels(
     let done = false;
     for (const b of options) {
       if (!c.forced && (b.x < 0 || b.y < 0 || b.x + b.w > width || b.y + b.h > height)) continue;
-      if (clashes(b)) continue;
+      if (clashes(b, c.index)) continue;
       add(c.index, b);
       done = true;
       break;

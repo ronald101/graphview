@@ -67,9 +67,7 @@ test.describe('shell', () => {
     await open(page, 'pair');
     await page.locator('#generate select').first().selectOption('small-world');
     await page.locator('#generate').getByRole('button', { name: 'Generate' }).click();
-    await expect(page.getByTestId('headline')).toContainText(
-      'Small world, 30 units, 30 units, 60 relations, no issues',
-    );
+    await expect(page.getByTestId('headline')).toContainText('Small world, seed 1, 30 units, 60 relations, no issues');
   });
 
   test('G3 generate: random by degrees shows the degrees reached next to the ones asked', async ({ page }) => {

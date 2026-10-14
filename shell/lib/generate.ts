@@ -321,7 +321,7 @@ export function generate(family: Family, params: Params, seed: number): Generate
   const { r, reached } = build(family, params, mulberry32(seed));
   const doc: GraphDoc = {
     format: 'graphview-graph/1',
-    meta: { name: `${info!.name}, ${r.n} units`, generator: GENERATOR, family, params, seed },
+    meta: { name: `${info!.name}, seed ${seed}`, generator: GENERATOR, family, params, seed },
     vertices: Array.from({ length: r.n }, (_, i) => ({ key: i + 1 })),
     edges: r.edges(),
   };

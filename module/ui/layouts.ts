@@ -73,8 +73,9 @@ export function ringLayout(graph: Graph, focus: Key): RingLayout {
       .map((key, i) => ({ id: keyId(key), want: parentAngle.get(keyId(key)) ?? 0, i }))
       .sort((a, b) => a.want - b.want || a.i - b.i);
     const n = ordered.length;
-    // Even spread, turned so that units sit as near their parents as possible.
-    let shift = 0;
+    // Even spread, turned so that units sit as near their parents as possible. Ring 1 starts
+    // half a step from north, where the ring numbers are.
+    let shift = Math.PI / n;
     if (k > 1) {
       let sx = 0;
       let sy = 0;

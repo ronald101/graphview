@@ -5,6 +5,8 @@ import { extremityArrow, layerPlain, pathCurved, pathLine } from 'sigma/renderin
 import type { Engine, EngineCamera, EngineSegment, EngineUnit, Extent } from './types.ts';
 
 const UNIT_RADIUS = 6;
+// sigma draws an edge of size s about s / 2 pixels thick (measured); the module speaks in pixels.
+const EDGE_SIZE = 2;
 const MID = 'm:';
 
 export function createSigmaEngine(container: HTMLElement, surface: () => string): Engine {
@@ -79,7 +81,7 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
       }
       for (const s of segments) {
         const attrs = {
-          size: s.width,
+          size: s.width * EDGE_SIZE,
           color: s.color,
           hidden: s.hidden,
           path: s.shape === 'arc' ? 'curved' : 'line',
@@ -102,7 +104,8 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
     setStyles(units, segments) {
       for (const [id, s] of units) if (graph.hasNode(id)) graph.mergeNodeAttributes(id, s);
       for (const [id, s] of segments)
-        if (graph.hasEdge(id)) graph.mergeEdgeAttributes(id, { color: s.color, size: s.width, hidden: s.hidden });
+        if (graph.hasEdge(id))
+          graph.mergeEdgeAttributes(id, { color: s.color, size: s.width * EDGE_SIZE, hidden: s.hidden });
     },
     setExtent(e) {
       extent = e;
