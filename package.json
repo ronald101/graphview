@@ -1,0 +1,19 @@
+{
+  "name": "graphview",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A graph viewer for Rosetta graphs: a reusable Svelte 5 module and a static shell around it.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite --config shell/vite.config.ts",
+    "check": "svelte-check --tsconfig ./tsconfig.json && prettier --check . && vitest run tests/gates tests/unit",
+    "build:module": "vite build --config module/vite.config.ts",
+    "build:shell": "vite build --config shell/vite.config.ts",
+    "build": "npm run build:module && npm run build:shell",
+    "e2e": "npm run build:shell && playwright test",
+    "test": "npm run check && npm run e2e"
+  }
+}
