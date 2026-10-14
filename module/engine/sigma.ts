@@ -2,7 +2,7 @@
 import Graph from 'graphology';
 import Sigma from 'sigma';
 import { extremityArrow, layerPlain, pathCurved, pathLine } from 'sigma/rendering';
-import type { Engine, EngineCamera, EngineSegment, EngineUnit } from './types.ts';
+import type { Engine, EngineCamera, EngineSegment, EngineUnit, Extent } from './types.ts';
 
 const UNIT_RADIUS = 6;
 const MID = 'm:';
@@ -70,7 +70,8 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
   }
 
   const engine: Engine = {
-    setItems(units: EngineUnit[], segments: EngineSegment[]) {
+    setItems(units: EngineUnit[], segments: EngineSegment[], e: Extent) {
+      extent = e;
       graph.clear();
       for (const u of units) {
         const p = toSigma(u.x, u.y);

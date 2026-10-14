@@ -16,7 +16,7 @@ import {
   type RefusalCode,
   type TokenName,
 } from '../core/index.ts';
-import type { Engine } from '../engine/index.ts';
+import type { Engine, EngineSegment } from '../engine/index.ts';
 import { runForce, runPathSet } from '../workers/index.ts';
 import type {
   DeepPartial,
@@ -377,7 +377,8 @@ export class Controller {
     // A single point or a line still needs an area.
     const pad = Math.max(maxX - minX, maxY - minY) * 0.0 + (maxX - minX < 1e-9 && maxY - minY < 1e-9 ? 50 : 0);
     this.extent = { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad };
-    this.engine?.setExtent(this.extent);
+    // On the first layout, pushItems hands the extent over together with the items.
+    if (this.positions.size > 0) this.engine?.setExtent(this.extent);
   }
 
   /** Moves units to new places over a duration, or at once. */
@@ -442,39 +443,45 @@ export class Controller {
     const e = this.engine;
     if (!e) return;
     if (!this.graph) {
-      e.setItems([], []);
+      e.setItems([], [], this.extent);
       e.render();
       return;
     }
-    {
-      const units = this.graph.units.map((k) => {
-        const id = keyId(k);
-        const p = this.positions.get(id) ?? { x: 0, y: 0 };
-        return { id, x: p.x, y: p.y, color: '#000', hidden: false };
-      });
-      const segs = [];
-      const draw = this.look.relations.draw;
-      for (const r of this.relations) {
-        if (draw === 'lines') {
-          segs.push({
+    // Styles go in with the items, so that the engine indexes everything once.
+    const st = this.styles();
+    const units = this.graph.units.map((k) => {
+      const id = keyId(k);
+      const p = this.positions.get(id) ?? { x: 0, y: 0 };
+      const u = st.units.get(id)!;
+      return { id, x: p.x, y: p.y, color: u.color, hidden: u.hidden };
+    });
+    const segs: EngineSegment[] = [];
+    const draw = this.look.relations.draw;
+    const styled = (seg: EngineSegment) => {
+      const v = st.segments.get(seg.id);
+      return v ? { ...seg, color: v.color, width: v.width, hidden: v.hidden } : seg;
+    };
+    for (const r of this.relations) {
+      if (draw === 'lines') {
+        segs.push(
+          styled({
             id: r.id,
             from: r.ia,
             to: r.ib,
-            shape: 'line' as const,
+            shape: 'line',
             relation: r.id,
             color: '#000',
             width: 1.5,
             hidden: false,
-          });
-          continue;
-        }
-        if (r.ab) segs.push(this.seg(r, r.a, r.b, draw));
-        if (r.ba) segs.push(this.seg(r, r.b, r.a, draw));
+          }),
+        );
+        continue;
       }
-      e.setItems(units, segs);
-      e.setExtent(this.extent);
+      if (r.ab) segs.push(styled(this.seg(r, r.a, r.b, draw)));
+      if (r.ba) segs.push(styled(this.seg(r, r.b, r.a, draw)));
     }
-    this.restyle();
+    e.setItems(units, segs, this.extent);
+    e.render();
   }
 
   private seg(r: Relation, from: Key, to: Key, draw: Look['relations']['draw']) {
@@ -1170,6 +1177,12 @@ export class Controller {
   }
 
   async setViewState(partial: Partial<ViewState>): Promise<void> {
+    // A change of the camera alone is the common case while animating: draw once and return.
+    const keys = Object.keys(partial).filter((k) => partial[k as keyof ViewState] !== undefined);
+    if (keys.length === 1 && keys[0] === 'camera' && this.positions.size > 0) {
+      this.setCamera(partial.camera!);
+      return;
+    }
     const before = this.view;
     const next = merge(before, partial as DeepPartial<ViewState>);
     // Lists replace, they do not merge.

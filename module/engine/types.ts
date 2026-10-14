@@ -22,6 +22,13 @@ export interface EngineSegment {
   hidden: boolean;
 }
 
+export interface Extent {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
 export interface EngineCamera {
   /** Graph coordinates of the view's centre, y pointing down. */
   x: number;
@@ -33,8 +40,8 @@ export interface EngineCamera {
 }
 
 export interface Engine {
-  /** Replaces everything drawn. */
-  setItems(units: EngineUnit[], segments: EngineSegment[]): void;
+  /** Replaces everything drawn, and the extent that zoom 1 shows. */
+  setItems(units: EngineUnit[], segments: EngineSegment[], extent: Extent): void;
   /** Moves units; middle points follow. */
   setPositions(positions: Map<string, { x: number; y: number }>): void;
   /** Changes colours, widths and visibility without moving anything. */
@@ -43,7 +50,7 @@ export interface Engine {
     segments: Map<string, Pick<EngineSegment, 'color' | 'width' | 'hidden'>>,
   ): void;
   /** Sets the extent that zoom 1 shows, in graph coordinates. */
-  setExtent(extent: { minX: number; minY: number; maxX: number; maxY: number }): void;
+  setExtent(extent: Extent): void;
   setCamera(camera: EngineCamera): void;
   /** Graph coordinates to CSS pixels in the canvas. */
   project(x: number, y: number): { x: number; y: number };

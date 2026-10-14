@@ -16,7 +16,20 @@ export default defineConfig({
     viewport: { width: 1280, height: 800 },
     launchOptions: { executablePath, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] },
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } } }],
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: /speed\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+    },
+    // Speed is measured alone, after the other tests, so that they do not share the processors (G17).
+    {
+      name: 'speed',
+      testMatch: /speed\.spec\.ts/,
+      dependencies: ['chromium'],
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+    },
+  ],
   webServer: {
     command: 'npx vite preview --config shell/vite.config.ts --port 4173 --strictPort',
     url: 'http://localhost:4173/graphview/',

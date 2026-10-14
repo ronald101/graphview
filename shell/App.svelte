@@ -725,7 +725,8 @@
         <button type="button" onclick={resetAll}>Reset to defaults</button>
         <details>
           <summary>All inputs as JSON</summary>
-          <pre class="json" data-testid="json">{json}</pre>
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <pre class="json" data-testid="json" tabindex="0" aria-label="All inputs as JSON">{json}</pre>
         </details>
       </section>
     </aside>
