@@ -78,3 +78,15 @@
 - **Choice.** playwright.config.ts launches /opt/pw-browsers/chromium (Chromium 141) when it exists and the run is not on CI. On CI, Playwright's own browser is used.
 - **Reason.** Playwright 1.64.1 downloads its browser from storage.googleapis.com, which the network policy refuses. The preinstalled browser needs no download, and Playwright 1.64.1 drives it.
 - **Alternative.** Pin @playwright/test 1.56.1, the version the preinstalled browser belongs to. That would break the rule of the latest stable versions.
+
+## D13. The engine is sigma.js, by step 3 of the trial's rule
+
+- **Choice.** sigma.js 4.0.2 with graphology. @antv/g6 5.1.1 stayed on the branch engine-trial and left package.json.
+- **Reason.** docs/engine-trial.md gives the numbers and the step.
+- **Alternative.** None: the rule decides.
+
+## D14. The module does its own hit-testing and draws its own marks
+
+- **Choice.** sigma.js draws units and relation lines. The module computes every position on screen through the adapter, picks units and halves from that geometry, and draws rings, chevrons, labels, issue marks and state marks on a 2D canvas over the engine.
+- **Reason.** Engine picking missed overlapping lines in the trial, and the scene must match what is drawn. One geometry serves the scene, the clicks and the tests.
+- **Alternative.** sigma.js's own edge picking and labels. They cannot give the 24-pixel click width, the label boxes, or the 2-pixel label gap the specification asks for.
