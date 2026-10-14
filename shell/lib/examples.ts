@@ -25,6 +25,14 @@ const meta = (doc: unknown) =>
     ? ((doc as { meta: Record<string, unknown> }).meta ?? {})
     : {};
 
+// The random graph is not bundled as data, so its name and description are written here.
+const LARGE: Record<string, { name: string; description: string }> = {
+  'random-10k': {
+    name: 'Random graph of 10,000 units',
+    description: 'A random spanning tree plus random relations, with random positions. Loads on demand.',
+  },
+};
+
 const REFUSED: Record<string, string> = {
   'load-error-not-object': 'The file is not a JSON object.',
   'load-error-format': 'The format field is wrong.',
