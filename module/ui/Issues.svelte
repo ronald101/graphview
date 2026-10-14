@@ -2,6 +2,7 @@
 <script lang="ts">
   import { keyId, type Key } from '../core/index.ts';
   import type { Controller } from './controller.ts';
+  import type { IssueItem } from '../types.ts';
   import IssueIcon from './IssueIcon.svelte';
   import { issueWords, refusalWords } from './words.ts';
 
@@ -9,11 +10,11 @@
 
   let items = $derived.by(() => {
     void version;
-    return c.refused ? [] : c.issueItems();
+    return c.refused ? [] : c.issueItems().map((i) => ({ i, to: target(i) }));
   });
 
   /** The unit an issue can fly to, if something of it is drawn. */
-  function target(i: (typeof items)[number]): Key | null {
+  function target(i: IssueItem): Key | null {
     const drawn = (k: Key) => c.positions.has(keyId(k));
     if (i.code === 'orphan') return drawn(i.key) ? i.key : null;
     if (i.code === 'missing-reverse') return drawn(i.keypair[0]) ? i.keypair[0] : null;
@@ -36,8 +37,7 @@
     <p class="gv-note">No issues.</p>
   {:else}
     <ol class="gv-issues">
-      {#each items as i, n (n)}
-        {@const to = target(i)}
+      {#each items as { i, to }, n (n)}
         <li data-code={i.code}>
           <IssueIcon />
           {#if to !== null}

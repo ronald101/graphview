@@ -27,7 +27,7 @@
   let input: HTMLDivElement;
   let searchInput: HTMLInputElement | undefined = $state();
   let engine: Engine | null = null;
-  let narrow = $state(false);
+  let narrow = $state(typeof innerWidth === 'number' && innerWidth < 960);
   let drawerOpen = $state(false);
   let searchOpen = $state(false);
   let query = $state('');
@@ -85,6 +85,7 @@
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     c.systemDark = dark.matches;
     c.reducedMotion = reduced.matches;
+    applyTheme();
     const onDark = () => ((c.systemDark = dark.matches), applyTheme(), c.restyle(), c.notify());
     const onReduced = () => (c.reducedMotion = reduced.matches);
     dark.addEventListener('change', onDark);
@@ -392,6 +393,10 @@
     if (!c.graph) return 'Graph';
     return `Graph: ${count(c.graph.units.length, 'unit', 'units')}, ${count(c.relations.filter((r) => r.ab && r.ba).length, 'relation', 'relations')}`;
   });
+  let refused = $derived.by(() => {
+    void version;
+    return c.refused;
+  });
   let announcement = $derived.by(() => {
     void version;
     return c.announcement;
@@ -441,10 +446,10 @@
       Arrows pan, plus and minus zoom, brackets rotate, 0 returns to north, F sets the focus, Shift with plus and minus
       sets the radius, Escape clears, Tab steps through keypairs, Enter activates, slash opens the search.
     </p>
-    {#if c.refused}
-      <div class="gv-refused" role="alert" data-testid="refused" data-code={c.refused.code}>
+    {#if refused}
+      <div class="gv-refused" role="alert" data-testid="refused" data-code={refused.code}>
         <p><strong>This file was refused.</strong></p>
-        <p>{refusalWords(c.refused.code)}</p>
+        <p>{refusalWords(refused.code)}</p>
       </div>
     {/if}
     <div class="gv-search">

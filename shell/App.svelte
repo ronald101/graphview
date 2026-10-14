@@ -10,6 +10,7 @@
     type DeepPartial,
     type Key,
     type LayoutName,
+    type Overlay,
     type Look,
     type ViewState,
   } from '../module/index.ts';
@@ -26,6 +27,7 @@
   let doc: unknown = $state.raw(null);
   /** Changes for each new source, so that a new example starts fresh; a replacement keeps places (V11). */
   let generation = $state(0);
+  let overlays: Overlay[] = $state.raw([]);
   let source: Source | null = $state(null);
   let look: Look = $state(defaultLook());
   let viewState: ViewState | null = $state(null);
@@ -331,6 +333,7 @@
       log,
       settled: () => settledCount,
       nextSettled,
+      setOverlays: (list: Overlay[]) => (overlays = list),
       /** Replaces the graph in place, with stable change (V11). */
       replace: async (next: unknown) => {
         const done = nextSettled();
@@ -734,6 +737,7 @@
             graph={doc}
             view={initialView}
             {look}
+            {overlays}
             onselect={record('select')}
             onhover={record('hover')}
             onactivate={record('activate')}

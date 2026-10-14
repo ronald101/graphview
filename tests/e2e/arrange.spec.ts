@@ -8,7 +8,6 @@ import {
   expected,
   frames,
   graphFile,
-  load,
   open,
   scene,
   setLook,

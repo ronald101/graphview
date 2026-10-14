@@ -46,6 +46,8 @@ export function createSigmaEngine(container: HTMLElement, surface: () => string)
       // The module's input layer covers sigma's, so sigma's own gestures never fire.
       // Its camera settings stay on: turning them off would block setState as well.
       enableNodeDrag: false,
+      // A host may mount the module in a container that has no size yet.
+      allowInvalidContainer: true,
       zoomToSizeRatioFunction: () => 1,
       itemSizesReference: 'screen',
       stagePadding: 24,

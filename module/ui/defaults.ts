@@ -1,5 +1,5 @@
 // Defaults of the view state and the look (specification D3 and D5), and how partial values merge.
-import { PATH_DEFAULTS, tokens } from '../core/index.ts';
+import { PATH_DEFAULTS } from '../core/index.ts';
 import type { DeepPartial, Look, ViewState } from '../types.ts';
 
 export function defaultViewState(): ViewState {
@@ -24,7 +24,7 @@ export const DEFAULT_FONT = "'Atkinson Hyperlegible Next', system-ui, sans-serif
 export function defaultLook(): Look {
   return {
     theme: 'system',
-    tokens: { ...tokens.light },
+    tokens: {},
     font: DEFAULT_FONT,
     labels: { field: 'label', show: 'auto' },
     relations: { draw: 'halves', icons: 'by-zoom', colour: 'around-selection' },

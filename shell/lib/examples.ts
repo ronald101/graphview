@@ -48,8 +48,12 @@ export const examples: Example[] = (index as { fixture: string; load: string; un
     return {
       id: e.fixture,
       group,
-      name: typeof m.name === 'string' ? m.name : e.fixture.replace(/-/g, ' ').replace(/^./, (x) => x.toUpperCase()),
-      description: typeof m.description === 'string' ? m.description : (REFUSED[e.fixture] ?? ''),
+      name:
+        typeof m.name === 'string'
+          ? m.name
+          : (LARGE[e.fixture]?.name ?? e.fixture.replace(/-/g, ' ').replace(/^./, (x) => x.toUpperCase())),
+      description:
+        typeof m.description === 'string' ? m.description : (LARGE[e.fixture]?.description ?? REFUSED[e.fixture] ?? ''),
       units: e.units,
     };
   },

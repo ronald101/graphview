@@ -849,19 +849,21 @@ export class Controller {
     if (!this.graph) return null;
     const pts = this.projectAll();
     const vis = this.visibility();
+    // A click inside a unit's circle picks the unit. Outside it, the nearer of a unit's edge
+    // (within 3 pixels) and a line (within 12 pixels) wins.
     let best: Key | null = null;
-    let bestD = UNIT_RADIUS + 3;
+    let bestD = 3;
     for (const k of this.graph.units) {
       const id = keyId(k);
       if (!vis.get(id)) continue;
       const p = pts.get(id)!;
-      const d = Math.hypot(p.x - x, p.y - y);
+      const d = Math.hypot(p.x - x, p.y - y) - UNIT_RADIUS;
+      if (d <= 0) return { unit: k };
       if (d <= bestD) {
         bestD = d;
         best = k;
       }
     }
-    if (best !== null) return { unit: best };
     let line: ReturnType<Controller['relationGeometry']>[number] | null = null;
     let lineD = CLICK_HALF_WIDTH;
     let lineT = 0;
@@ -878,6 +880,7 @@ export class Controller {
         lineT = t;
       }
     }
+    if (best !== null && (!line || bestD <= lineD)) return { unit: best };
     if (!line) return null;
     const r = line.r;
     const both: [Key, Key][] = [];
