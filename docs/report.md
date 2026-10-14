@@ -1,6 +1,6 @@
 # graphview release 1: report
 
-**Release 1 is built, and every gate passes.** The module, the shell, the engine trial and all twenty gates are done. `npm test` passed from a clean install: 214 unit and gate tests, and 204 browser tests against the production build under /graphview/. Run of 14 October 2026, branch `claude/stoic-hawking-4oe10d`.
+**Release 1 is built, and every gate passes.** The module, the shell, the engine trial and all twenty gates are done. `npm test` passed from a clean install: 214 unit and gate tests, and 204 browser tests against the production build under /graphview/. On GitHub Actions, the checks workflow also passed on the pull request, with Playwright's own browser. Run of 14 October 2026, branch `claude/stoic-hawking-4oe10d`.
 
 **The run met two network refusals, and stopped both paths.** First, the npm registry was refused; the run stopped after the core. Ronald then allowed registry.npmjs.org, and the run continued. Second, Playwright 1.64.1 could not download its browser: the proxy answered 403 for storage.googleapis.com. The browser tests use the Chromium that the cloud machine has preinstalled (decision D12).
 
@@ -161,7 +161,7 @@ docs/decisions.md holds the details.
 3. **Look at the picture on real graphics hardware.** The review here used software rendering. Check the 10,000-unit view (08) and the zoom frame times there.
 4. **Forced colours in the canvas.** A later change can map the tokens to system colours when the system asks for forced colours (deviation 5).
 5. **The session environment.** New cloud sessions need registry.npmjs.org allowed, as Ronald set it. In this container, npm also needed `NO_PROXY=localhost,127.0.0.1`, because the proxy bypass list named the registry while the container had no DNS. The session start hook runs `npm ci` without that setting and may fail the same way; check .session-start.log.
-6. **Workflows need no change.** checks.yml and pages.yml start working once package-lock.json exists, which this pull request adds.
+6. **Workflows need no change.** checks.yml ran `npm test` on the pull request and passed. pages.yml publishes after the merge.
 
 ## 10. How to run
 
