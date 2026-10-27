@@ -1,0 +1,2 @@
+# Fixture bytes are hashed in fixtures/MANIFEST.sha256: never convert line endings.
+fixtures/** -text

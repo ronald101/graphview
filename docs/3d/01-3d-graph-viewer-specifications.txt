@@ -1,0 +1,36 @@
+# Technical Specification: Custom 3D Graph Viewer with Egocentric Depth Projection and Pathfinding
+# Environment: Svelte Frontend & GPU-Accelerated 3D Engine (WebGL/WebGPU)
+
+## 1. Data Input & Parsing Specifications
+- **Input Format**: The viewer must accept a single JSON file containing two root arrays: `vertices` and `edges`.
+- **Bidirectional Consolidation**: The parser must process two distinct directed edge records (Source A -> Target B and Source B -> Target A) and consolidate them into a single visual 3D line entity with two separate underlying records.
+- **Dynamic Type Mapping**: The engine must extract all unique `type` attributes from both vertices and edges upon loading to dynamically build the color-mapping registry.
+
+## 2. Dynamic Depth Projection (Egocentric Filtering)
+- **Root Focus Calculation**: Upon selection of any vertex (designated as the "Root"), the system must immediately calculate the shortest path distance (Degree of Separation) from the Root to all other vertices.
+- **Z-Axis Depth Displacement**: Vertices must be physically repositioned along the Z-axis based on their Degree of Separation:
+  - **1st Degree (Direct Connections)**: Positioned at the foreground plane (Z = 0), maximum scale (100%), full opacity (1.0).
+  - **2nd Degree**: Displaced further away along the negative Z-axis, reduced scale (60%), lower opacity (0.6).
+  - **3rd Degree and Higher**: Displaced deep into the background Z-planes, minimal scale/point-representation, low opacity (0.15).
+- **Linear Edge Fading**: Edges connecting vertices of higher degrees must linearly fade in opacity and thickness matching the destination vertex properties to eliminate background noise.
+
+## 3. Pathfinding & Surface Elevation Mode
+- **Algorithm Constraints**: The engine must execute a simple pathfinding algorithm (e.g., Breadth-First Search or Dijkstra) to find the shortest path, as well as alternative paths defined as (Shortest Path + 1 step) and (Shortest Path + 2 steps).
+- **Path Unicities**: The system must enforce a "Simple Path" rule where no vertex can be visited more than once within a single path trajectory (cycle prevention).
+- **Surface Elevation (Z-Override)**: All vertices and edges belonging to the active path must be elevated to the absolute foreground layer (Z = Global Foreground Offset), overwriting any degree-based depth displacement.
+- **Ambient Occlusion/Dimming**: All vertices and edges *not* included in the selected path must be instantly dimmed to a minimum opacity threshold (e.g., 0.05) to highlight the active route.
+
+## 4. Visual Representation & Clickable Chevron Logic
+- **Opposing Chevrons**: Each consolidated edge must render two distinct 3D chevrons pointing toward each other along the single path line.
+- **Positional Anchoring**: Chevrons must be anchored at static structural intervals (e.g., 33% and 66% of the line length) to prevent overlapping regardless of distance.
+- **Independent Raycasting**: The 3D engine must partition hitboxes to enable three distinct click targets per visual edge:
+  - **Chevron A -> B**: Triggers the inspector overlay for the forward record.
+  - **Chevron B -> A**: Triggers the inspector overlay for the backward record.
+  - **The Line Mesh**: Triggers a unified summary of the overall connection.
+- **Hitbox Expansion**: Dun 3D lines and chevrons must be wrapped in invisible, wider capsule meshes to expand the interactive raycasting zone for effortless mouse selection.
+- **Directional Flow Alignment**: When a path is active, the chevron aligning with the flow direction (Start -> End) must remain fully illuminated, while the opposing chevron must be visually deactivated or dimmed.
+
+## 5. Performance & Shader-Level Implementation
+- **Instanced Mesh Attributes**: Vertex positions, scales, opacities, and path states must be managed using instanced attributes on the GPU (`currentDegree` and `isOnActivePath`).
+- **Shader-Level Transformations**: The Vertex and Fragment shaders must compute the Z-axis displacement, opacity, and scale reductions dynamically in real-time to maintain a steady 60+ FPS performance during camera transitions and selections.
+- **WebWorker Offloading**: Graph distance calculations and pathfinding operations must run inside a WebWorker thread to prevent blocking the Svelte main UI loop.

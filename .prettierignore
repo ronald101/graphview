@@ -1,0 +1,9 @@
+fixtures/
+tests/gates/
+.github/
+dist/
+package-lock.json
+test-results/
+playwright-report/
+docs/screenshots/
+docs/specifications.html

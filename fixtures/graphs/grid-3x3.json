@@ -1,0 +1,170 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Grid of three by three",
+  "description": "A bipartite grid: several shortest paths, never one step longer."
+ },
+ "vertices": [
+  {
+   "key": 1,
+   "pos": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "key": 2,
+   "pos": {
+    "x": 100,
+    "y": 0
+   }
+  },
+  {
+   "key": 3,
+   "pos": {
+    "x": 200,
+    "y": 0
+   }
+  },
+  {
+   "key": 4,
+   "pos": {
+    "x": 0,
+    "y": 100
+   }
+  },
+  {
+   "key": 5,
+   "pos": {
+    "x": 100,
+    "y": 100
+   }
+  },
+  {
+   "key": 6,
+   "pos": {
+    "x": 200,
+    "y": 100
+   }
+  },
+  {
+   "key": 7,
+   "pos": {
+    "x": 0,
+    "y": 200
+   }
+  },
+  {
+   "key": 8,
+   "pos": {
+    "x": 100,
+    "y": 200
+   }
+  },
+  {
+   "key": 9,
+   "pos": {
+    "x": 200,
+    "y": 200
+   }
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  },
+  {
+   "from": 2,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 2
+  },
+  {
+   "from": 4,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 4
+  },
+  {
+   "from": 5,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 5
+  },
+  {
+   "from": 7,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 7
+  },
+  {
+   "from": 8,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 8
+  },
+  {
+   "from": 1,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 1
+  },
+  {
+   "from": 2,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 2
+  },
+  {
+   "from": 3,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 3
+  },
+  {
+   "from": 4,
+   "to": 7
+  },
+  {
+   "from": 7,
+   "to": 4
+  },
+  {
+   "from": 5,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 5
+  },
+  {
+   "from": 6,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 6
+  }
+ ]
+}

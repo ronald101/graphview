@@ -1,0 +1,6 @@
+{
+ "fixture": "load-error-edges",
+ "load": "refused",
+ "code": "edges",
+ "reason": "\"edges\" is not a list"
+}

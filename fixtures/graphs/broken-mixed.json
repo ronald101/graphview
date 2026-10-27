@@ -1,0 +1,62 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Mixed issues",
+  "description": "Several issues at once, and a wrong fingerprint.",
+  "fingerprint": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+ },
+ "vertices": [
+  {
+   "key": 1
+  },
+  {
+   "key": 2
+  },
+  {
+   "key": 3
+  },
+  {
+   "key": 4
+  },
+  {
+   "key": 5
+  },
+  {
+   "key": 4
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  },
+  {
+   "from": 2,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 3
+  },
+  {
+   "from": 4,
+   "to": 8
+  },
+  {
+   "from": 3,
+   "to": 4
+  }
+ ]
+}

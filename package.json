@@ -1,0 +1,41 @@
+{
+  "name": "graphview",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A graph viewer in 2D and 3D: a reusable Svelte 5 module and a static shell with a graph generator.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite --config shell/vite.config.ts",
+    "check": "svelte-check --tsconfig ./tsconfig.json && prettier --check . && vitest run tests/gates tests/unit",
+    "build:module": "vite build --config module/vite.config.ts && node scripts/build-types.mjs",
+    "build:shell": "vite build --config shell/vite.config.ts",
+    "build": "npm run build:module && npm run build:shell",
+    "e2e": "npm run build:shell && playwright test",
+    "test": "npm run check && npm run e2e"
+  },
+  "dependencies": {
+    "@fontsource/atkinson-hyperlegible-next": "5.3.0",
+    "graphology": "0.26.0",
+    "graphology-layout-forceatlas2": "0.10.1",
+    "svelte": "5.57.2",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.64.1",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@types/node": "26.6.5",
+    "@types/three": "0.186.0",
+    "graphology-types": "0.24.8",
+    "prettier": "3.9.10",
+    "prettier-plugin-svelte": "4.1.1",
+    "svelte-check": "4.7.6",
+    "svelte2tsx": "0.7.61",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}

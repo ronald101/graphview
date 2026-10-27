@@ -1,0 +1,33 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Pair",
+  "description": "The smallest valid graph: two units, one relation."
+ },
+ "vertices": [
+  {
+   "key": 1,
+   "pos": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "key": 2,
+   "pos": {
+    "x": 400,
+    "y": 0
+   }
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  }
+ ]
+}

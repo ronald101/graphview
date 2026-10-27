@@ -1,0 +1,58 @@
+================================================================================
+ENGINEERING SPECIFICATION: ADVANCED HIGH-QUALITY 3D GRAPH VIEWER WITH SVELTE
+================================================================================
+
+1. DATA INGESTION & ARCHITECTURE (JSON INPUT)
+--------------------------------------------------------------------------------
+- The system must ingest a JSON payload defining "vertices" (nodes) and "edges" (links).
+- Unique Identifier Mapping: Enforce strict ID uniqueness for all vertices.
+- Dynamic Schema Reflection: Automatically extract unique vertex types, edge types, timestamps, and numerical weight metrics upon ingestion to drive the UI.
+- Orphan Edge Validation: Flag edge records where 'source' or 'target' do not map to an existing vertex.
+
+2. VISUAL REPRESENTATION & CUSTOM SHADERS (WEBGL / GPU)
+--------------------------------------------------------------------------------
+- GPU-Accelerated Instancing: Vertices and edges must be rendered using GPU-instanced meshes to maintain 60+ FPS at scale.
+- Type-Based Palette System: Assign distinct, user-configurable hex colors to vertex and edge types reactively mapped from Svelte state variables to GPU uniforms.
+- Dynamic Shader Overrides: Allow modifications to size, opacity, and color parameters directly inside the vertex/fragment shaders without rebuilding the scene graph.
+
+3. ADVANCED BIDIRECTIONAL EDGE & CHEVRON RENDERING
+--------------------------------------------------------------------------------
+- Single-Path Consolidation: If two edge records exist as counter-facets (A -> B and B -> A), the engine must compress them into a single physical 3D tube or line mesh.
+- Dual Opposing Chevrons: Render two distinct 3D directional arrow/chevron sub-elements along the single edge path pointing toward each other.
+  - Positioning: Constrain chevrons structurally (e.g., at 33% and 66% of the edge vector length) to guarantee zero visual collision regardless of node distance.
+  - Independent Material Assignment: Color each chevron independently using the palette mapping corresponding to its respective directional edge record type.
+- Tri-Object Raycasting & Click-Hitboxes: 
+  - The single edge path and both chevrons must act as three independent interactive targets.
+  - Implement an invisible capsule overlay (padding hitbox) around the edge and chevrons to significantly increase the cursor capture area.
+
+4. EGOCENTRIC DEPTH-PROJECTION (GRADES OF REMOVAL)
+--------------------------------------------------------------------------------
+- Proximity-Based Spatial Scaling: When a vertex is selected (the Root), calculate the shortest distance (degrees of separation) from the Root to all other vertices.
+- Z-Axis Depth Translation: Push vertices and edges backwards into the 3D viewport based linearly on their degree of removal.
+  - 1st-Degree (Direct): Max scale (100%), opacity 1.0, positioned on the foreground plane.
+  - 2nd-Degree: Reduced scale (60%), opacity 0.6, translated backward along the Z-axis.
+  - 3rd-Degree+: Minimal scale (point/sprite visualization), opacity 0.15, pushed deep into the background plane.
+
+5. SURFACE-ELEVATION PATHFINDING MODE
+--------------------------------------------------------------------------------
+- Asynchronous Path Resolution: Compute the shortest path between Vertex A and Vertex B on a background thread using an unweighted BFS/Dijkstra loop.
+- Path Multiplicity Options: Compute alternatives matching "Shortest Path + 1 Step" and "Shortest Path + 2 Steps". 
+- Loop Prevention (Simple Paths): Enforce strict node-uniqueness constraints; vertices are blocked from appearing more than once within any resolved path array.
+- Foreground Surface Elevation: Vertices and edges comprising the active selected path must immediately override standard layout metrics, shifting to the absolute foreground layer (Z = 0) with a 1.2x scale factor and glowing highlight modifier.
+- Ambient Network Attenuation: Drop the opacity of all elements not associated with the active path to 0.05.
+- Path-Directional Flow Filter: Deactivate and dim chevrons opposing the travel direction (A -> B) over the isolated path.
+
+6. VOLUMETRIC HULL CLUSTERING
+--------------------------------------------------------------------------------
+- Micro-Topology Isolation: Generate semi-transparent 3D boundary shapes (convex hulls/metaballs) around subsets of vertices sharing uniform metadata properties (e.g., matching types or cluster regions).
+- Spatial Culling: Hulls must expand and track node coordinates fluidly during layout settling, providing visual macro-group contexts when viewed from far distances.
+
+7. MULTI-VARIABLE ATTRIBUTE FILTERING (MATRIX SLIDERS)
+--------------------------------------------------------------------------------
+- Chronological Time-Travel Slider: Filter active graph states based on timestamp attributes in the JSON records. New elements must interpolate smoothly (fade-in) upon matching slider steps.
+- Context-Retaining Weight Sliders: Provide continuous threshold controls over numerical properties (e.g., edge weights).
+  - Sub-Threshold Behavior: Edges below the active threshold must transform to thin (1-pixel), neutral gray lines without chevrons, maintaining macro-topological context.
+  - Super-Threshold Behavior: Edges meeting or exceeding the threshold scale dynamically in line thickness and emmissive brightness proportional to their raw value.
+- Multidimensional Cross-Filtering Matrix: Svelte UI sliders must compound criteria interactively (e.g., [Weight > X] AND [Timestamp within Range Y]).
+- State Change Trace-Effects (Ghosting): Retain a brief visual trail or alpha-fade latency when nodes shift coordinates or exit active filtering thresholds to assist cognitive continuity.
+

@@ -1,0 +1,1035 @@
+{
+ "fixture": "database-2026-07-24",
+ "load": "ok",
+ "counts": {
+  "units": 81,
+  "keypairs": 168,
+  "relations": 84
+ },
+ "fingerprint": {
+  "stored": "sha256:820d619bd86297cf1b1167a67a22d1dbe8d7903c9609f13e091319fc4be27952",
+  "current": "sha256:820d619bd86297cf1b1167a67a22d1dbe8d7903c9609f13e091319fc4be27952"
+ },
+ "issues": [],
+ "components": {
+  "stored": [
+   81
+  ],
+  "current": [
+   81
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 5,
+   "outgoing": 5,
+   "incoming": 5
+  },
+  {
+   "key": 38,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 41,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 2,
+   "relations": 15,
+   "outgoing": 15,
+   "incoming": 15
+  },
+  {
+   "key": 3,
+   "relations": 22,
+   "outgoing": 22,
+   "incoming": 22
+  },
+  {
+   "key": 4,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 5,
+   "relations": 7,
+   "outgoing": 7,
+   "incoming": 7
+  },
+  {
+   "key": 6,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 7,
+   "relations": 6,
+   "outgoing": 6,
+   "incoming": 6
+  },
+  {
+   "key": 8,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 9,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 10,
+   "relations": 5,
+   "outgoing": 5,
+   "incoming": 5
+  },
+  {
+   "key": 11,
+   "relations": 5,
+   "outgoing": 5,
+   "incoming": 5
+  },
+  {
+   "key": 12,
+   "relations": 4,
+   "outgoing": 4,
+   "incoming": 4
+  },
+  {
+   "key": 13,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 14,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 15,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 16,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 17,
+   "relations": 4,
+   "outgoing": 4,
+   "incoming": 4
+  },
+  {
+   "key": 18,
+   "relations": 5,
+   "outgoing": 5,
+   "incoming": 5
+  },
+  {
+   "key": 19,
+   "relations": 4,
+   "outgoing": 4,
+   "incoming": 4
+  },
+  {
+   "key": 20,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 21,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 22,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 23,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 24,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 25,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 26,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 27,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 28,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 29,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 30,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 31,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 32,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 33,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 34,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 35,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 36,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 37,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 39,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 40,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 42,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 43,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 44,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 45,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 46,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 47,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 48,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 49,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 50,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 51,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 52,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 53,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 54,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 55,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 56,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 57,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 58,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 59,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 60,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 61,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 62,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 63,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 64,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 65,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 66,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 67,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 68,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 69,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 70,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 71,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 72,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 73,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 74,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 75,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 76,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 77,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 78,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 79,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 80,
+   "relations": 4,
+   "outgoing": 4,
+   "incoming": 4
+  },
+  {
+   "key": 100000,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  }
+ ],
+ "rings": [
+  {
+   "focus": 1,
+   "graph": "stored",
+   "rings": [
+    [
+     1
+    ],
+    [
+     2,
+     3,
+     4,
+     5,
+     7
+    ],
+    [
+     6,
+     60,
+     61,
+     62,
+     63,
+     64,
+     65,
+     66,
+     67,
+     68,
+     69,
+     70,
+     71,
+     72,
+     39,
+     40,
+     41,
+     42,
+     43,
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53,
+     54,
+     55,
+     56,
+     57,
+     58,
+     59,
+     74,
+     75,
+     33,
+     34,
+     35,
+     36,
+     37,
+     38,
+     8,
+     9,
+     10,
+     11,
+     12
+    ],
+    [
+     73,
+     100000,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     80,
+     20,
+     21,
+     22
+    ],
+    [
+     76,
+     77,
+     79,
+     78,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29,
+     30,
+     31,
+     32
+    ]
+   ],
+   "beyond": []
+  },
+  {
+   "focus": 79,
+   "graph": "stored",
+   "rings": [
+    [
+     79
+    ],
+    [
+     80,
+     15
+    ],
+    [
+     76,
+     78,
+     11,
+     10
+    ],
+    [
+     77,
+     13,
+     16,
+     7,
+     17,
+     18,
+     19,
+     14
+    ],
+    [
+     1,
+     8,
+     9,
+     12,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29,
+     30,
+     31,
+     32
+    ],
+    [
+     2,
+     3,
+     4,
+     5,
+     100000,
+     20,
+     21,
+     22
+    ],
+    [
+     6,
+     60,
+     61,
+     62,
+     63,
+     64,
+     65,
+     66,
+     67,
+     68,
+     69,
+     70,
+     71,
+     72,
+     39,
+     40,
+     41,
+     42,
+     43,
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53,
+     54,
+     55,
+     56,
+     57,
+     58,
+     59,
+     74,
+     75,
+     33,
+     34,
+     35,
+     36,
+     37,
+     38
+    ],
+    [
+     73
+    ]
+   ],
+   "beyond": []
+  },
+  {
+   "focus": 100000,
+   "graph": "stored",
+   "rings": [
+    [
+     100000
+    ],
+    [
+     8
+    ],
+    [
+     7
+    ],
+    [
+     1,
+     9,
+     10,
+     11,
+     12
+    ],
+    [
+     2,
+     3,
+     4,
+     5,
+     13,
+     14,
+     15,
+     16,
+     17,
+     18,
+     19,
+     80,
+     20,
+     21,
+     22
+    ],
+    [
+     6,
+     60,
+     61,
+     62,
+     63,
+     64,
+     65,
+     66,
+     67,
+     68,
+     69,
+     70,
+     71,
+     72,
+     39,
+     40,
+     41,
+     42,
+     43,
+     44,
+     45,
+     46,
+     47,
+     48,
+     49,
+     50,
+     51,
+     52,
+     53,
+     54,
+     55,
+     56,
+     57,
+     58,
+     59,
+     74,
+     75,
+     33,
+     34,
+     35,
+     36,
+     37,
+     38,
+     76,
+     77,
+     79,
+     78,
+     23,
+     24,
+     25,
+     26,
+     27,
+     28,
+     29,
+     30,
+     31,
+     32
+    ],
+    [
+     73
+    ]
+   ],
+   "beyond": []
+  }
+ ],
+ "paths": [
+  {
+   "from": 79,
+   "to": 77,
+   "extra": 4,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 3,
+   "reason": null,
+   "stopped": false,
+   "total": 10,
+   "lengths": [
+    {
+     "length": 3,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       79,
+       80,
+       76,
+       77
+      ]
+     ]
+    },
+    {
+     "length": 4,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       79,
+       15,
+       10,
+       14,
+       77
+      ]
+     ]
+    },
+    {
+     "length": 5,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       79,
+       15,
+       10,
+       13,
+       76,
+       77
+      ]
+     ]
+    },
+    {
+     "length": 6,
+     "count": 3,
+     "exact": true,
+     "paths": [
+      [
+       79,
+       80,
+       76,
+       13,
+       10,
+       14,
+       77
+      ],
+      [
+       79,
+       80,
+       78,
+       16,
+       10,
+       14,
+       77
+      ],
+      [
+       79,
+       80,
+       11,
+       7,
+       10,
+       14,
+       77
+      ]
+     ]
+    },
+    {
+     "length": 7,
+     "count": 4,
+     "exact": true,
+     "paths": [
+      [
+       79,
+       80,
+       78,
+       16,
+       10,
+       13,
+       76,
+       77
+      ],
+      [
+       79,
+       80,
+       11,
+       7,
+       10,
+       13,
+       76,
+       77
+      ],
+      [
+       79,
+       15,
+       10,
+       7,
+       11,
+       80,
+       76,
+       77
+      ],
+      [
+       79,
+       15,
+       10,
+       16,
+       78,
+       80,
+       76,
+       77
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "from": 1,
+   "to": 100000,
+   "extra": 2,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 3,
+   "reason": null,
+   "stopped": false,
+   "total": 1,
+   "lengths": [
+    {
+     "length": 3,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       7,
+       8,
+       100000
+      ]
+     ]
+    },
+    {
+     "length": 4,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 5,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    }
+   ]
+  },
+  {
+   "from": 76,
+   "to": 80,
+   "extra": 2,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 1,
+   "reason": null,
+   "stopped": false,
+   "total": 1,
+   "lengths": [
+    {
+     "length": 1,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       76,
+       80
+      ]
+     ]
+    },
+    {
+     "length": 2,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 3,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    }
+   ]
+  }
+ ],
+ "summary": {
+  "unorderedPairs": 3240,
+  "pairsWithExactlyOnePathWithinTwoExtraSteps": 2628
+ }
+}

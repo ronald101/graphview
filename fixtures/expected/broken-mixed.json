@@ -1,0 +1,105 @@
+{
+ "fixture": "broken-mixed",
+ "load": "ok",
+ "counts": {
+  "units": 5,
+  "keypairs": 5,
+  "relations": 2
+ },
+ "fingerprint": {
+  "stored": "sha256:919eb9177c83534327dc56b591a7108b78d66383e558db13749d797199a83418",
+  "current": "sha256:919eb9177c83534327dc56b591a7108b78d66383e558db13749d797199a83418"
+ },
+ "issues": [
+  {
+   "code": "repeated-key",
+   "list": "vertices",
+   "row": 5,
+   "key": 4
+  },
+  {
+   "code": "loop",
+   "list": "edges",
+   "row": 3,
+   "keypair": [
+    3,
+    3
+   ]
+  },
+  {
+   "code": "unknown-unit",
+   "list": "edges",
+   "row": 6,
+   "keypair": [
+    4,
+    8
+   ]
+  },
+  {
+   "code": "repeated-keypair",
+   "list": "edges",
+   "row": 7,
+   "keypair": [
+    3,
+    4
+   ]
+  },
+  {
+   "code": "missing-reverse",
+   "keypair": [
+    2,
+    3
+   ]
+  },
+  {
+   "code": "orphan",
+   "key": 5
+  },
+  {
+   "code": "fingerprint-mismatch",
+   "stated": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  }
+ ],
+ "components": {
+  "stored": [
+   4,
+   1
+  ],
+  "current": [
+   4,
+   1
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 2,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 1
+  },
+  {
+   "key": 3,
+   "relations": 2,
+   "outgoing": 1,
+   "incoming": 2
+  },
+  {
+   "key": 4,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 5,
+   "relations": 0,
+   "outgoing": 0,
+   "incoming": 0
+  }
+ ]
+}

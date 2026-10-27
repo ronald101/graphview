@@ -1,0 +1,326 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Complete graph of nine",
+  "description": "Its 13,700 paths between two units exceed the default counting limit."
+ },
+ "vertices": [
+  {
+   "key": 1
+  },
+  {
+   "key": 2
+  },
+  {
+   "key": 3
+  },
+  {
+   "key": 4
+  },
+  {
+   "key": 5
+  },
+  {
+   "key": 6
+  },
+  {
+   "key": 7
+  },
+  {
+   "key": 8
+  },
+  {
+   "key": 9
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 7
+  },
+  {
+   "from": 7,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 1
+  },
+  {
+   "from": 2,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 7
+  },
+  {
+   "from": 7,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 2
+  },
+  {
+   "from": 3,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 7
+  },
+  {
+   "from": 7,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 3
+  },
+  {
+   "from": 4,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 7
+  },
+  {
+   "from": 7,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 4
+  },
+  {
+   "from": 5,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 7
+  },
+  {
+   "from": 7,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 5
+  },
+  {
+   "from": 6,
+   "to": 7
+  },
+  {
+   "from": 7,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 6
+  },
+  {
+   "from": 6,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 6
+  },
+  {
+   "from": 7,
+   "to": 8
+  },
+  {
+   "from": 8,
+   "to": 7
+  },
+  {
+   "from": 7,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 7
+  },
+  {
+   "from": 8,
+   "to": 9
+  },
+  {
+   "from": 9,
+   "to": 8
+  }
+ ]
+}

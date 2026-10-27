@@ -1,0 +1,282 @@
+{
+ "fixture": "petersen",
+ "load": "ok",
+ "counts": {
+  "units": 10,
+  "keypairs": 30,
+  "relations": 15
+ },
+ "fingerprint": {
+  "stored": "sha256:2b34e3bf9b66e6f76032e1bf8d094c0b9148fba58204d7c8d95a25b2f200b22d",
+  "current": "sha256:2b34e3bf9b66e6f76032e1bf8d094c0b9148fba58204d7c8d95a25b2f200b22d"
+ },
+ "issues": [],
+ "components": {
+  "stored": [
+   10
+  ],
+  "current": [
+   10
+  ]
+ },
+ "degrees": [
+  {
+   "key": 0,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 1,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 2,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 3,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 4,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 5,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 6,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 7,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 8,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 9,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  }
+ ],
+ "rings": [
+  {
+   "focus": 0,
+   "graph": "stored",
+   "rings": [
+    [
+     0
+    ],
+    [
+     1,
+     4,
+     5
+    ],
+    [
+     2,
+     6,
+     3,
+     9,
+     7,
+     8
+    ]
+   ],
+   "beyond": []
+  }
+ ],
+ "paths": [
+  {
+   "from": 0,
+   "to": 2,
+   "extra": 2,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 2,
+   "reason": null,
+   "stopped": false,
+   "total": 5,
+   "lengths": [
+    {
+     "length": 2,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       0,
+       1,
+       2
+      ]
+     ]
+    },
+    {
+     "length": 3,
+     "count": 2,
+     "exact": true,
+     "paths": [
+      [
+       0,
+       4,
+       3,
+       2
+      ],
+      [
+       0,
+       5,
+       7,
+       2
+      ]
+     ]
+    },
+    {
+     "length": 4,
+     "count": 2,
+     "exact": true,
+     "paths": [
+      [
+       0,
+       4,
+       9,
+       7,
+       2
+      ],
+      [
+       0,
+       5,
+       8,
+       3,
+       2
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "from": 0,
+   "to": 7,
+   "extra": 3,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 2,
+   "reason": null,
+   "stopped": false,
+   "total": 9,
+   "lengths": [
+    {
+     "length": 2,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       0,
+       5,
+       7
+      ]
+     ]
+    },
+    {
+     "length": 3,
+     "count": 2,
+     "exact": true,
+     "paths": [
+      [
+       0,
+       1,
+       2,
+       7
+      ],
+      [
+       0,
+       4,
+       9,
+       7
+      ]
+     ]
+    },
+    {
+     "length": 4,
+     "count": 2,
+     "exact": true,
+     "paths": [
+      [
+       0,
+       1,
+       6,
+       9,
+       7
+      ],
+      [
+       0,
+       4,
+       3,
+       2,
+       7
+      ]
+     ]
+    },
+    {
+     "length": 5,
+     "count": 4,
+     "exact": true,
+     "paths": [
+      [
+       0,
+       1,
+       6,
+       8,
+       5,
+       7
+      ],
+      [
+       0,
+       4,
+       3,
+       8,
+       5,
+       7
+      ],
+      [
+       0,
+       5,
+       8,
+       3,
+       2,
+       7
+      ],
+      [
+       0,
+       5,
+       8,
+       6,
+       9,
+       7
+      ]
+     ]
+    }
+   ]
+  }
+ ]
+}

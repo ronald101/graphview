@@ -1,0 +1,119 @@
+{
+  "format": "graphview-graph/1",
+  "meta": {
+    "name": "Fully interfaced graph",
+    "description": "Three units, each two of them joined through an interface: every relation runs through one."
+  },
+  "vertices": [
+    {
+      "key": 1,
+      "label": "A",
+      "attrs": {
+        "type": "type_1"
+      },
+      "pos": {
+        "x": 0,
+        "y": 346
+      }
+    },
+    {
+      "key": 2,
+      "label": "B",
+      "attrs": {
+        "type": "type_2"
+      },
+      "pos": {
+        "x": 400,
+        "y": 346
+      }
+    },
+    {
+      "key": 3,
+      "label": "C",
+      "attrs": {
+        "type": "type_3"
+      },
+      "pos": {
+        "x": 200,
+        "y": 0
+      }
+    },
+    {
+      "key": 10,
+      "label": "i",
+      "interface": true,
+      "pos": {
+        "x": 200,
+        "y": 346
+      }
+    },
+    {
+      "key": 11,
+      "label": "j",
+      "interface": true,
+      "pos": {
+        "x": 300,
+        "y": 173
+      }
+    },
+    {
+      "key": 12,
+      "label": "k",
+      "interface": true,
+      "pos": {
+        "x": 100,
+        "y": 173
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": 1,
+      "to": 10
+    },
+    {
+      "from": 10,
+      "to": 2
+    },
+    {
+      "from": 2,
+      "to": 10
+    },
+    {
+      "from": 10,
+      "to": 1
+    },
+    {
+      "from": 2,
+      "to": 11
+    },
+    {
+      "from": 11,
+      "to": 3
+    },
+    {
+      "from": 3,
+      "to": 11
+    },
+    {
+      "from": 11,
+      "to": 2
+    },
+    {
+      "from": 1,
+      "to": 12
+    },
+    {
+      "from": 12,
+      "to": 3
+    },
+    {
+      "from": 3,
+      "to": 12
+    },
+    {
+      "from": 12,
+      "to": 1
+    }
+  ]
+}

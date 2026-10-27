@@ -1,0 +1,89 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Superseded parts",
+  "description": "Units 3 and 6 and the relation between 1 and 4 are superseded."
+ },
+ "vertices": [
+  {
+   "key": 1
+  },
+  {
+   "key": 2
+  },
+  {
+   "key": 3,
+   "superseded": true
+  },
+  {
+   "key": 4
+  },
+  {
+   "key": 5
+  },
+  {
+   "key": 6,
+   "superseded": true
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  },
+  {
+   "from": 2,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 2
+  },
+  {
+   "from": 3,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 3
+  },
+  {
+   "from": 2,
+   "to": 5
+  },
+  {
+   "from": 5,
+   "to": 2
+  },
+  {
+   "from": 5,
+   "to": 4
+  },
+  {
+   "from": 4,
+   "to": 5
+  },
+  {
+   "from": 1,
+   "to": 4,
+   "superseded": true
+  },
+  {
+   "from": 4,
+   "to": 1,
+   "superseded": true
+  },
+  {
+   "from": 6,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 6
+  }
+ ]
+}

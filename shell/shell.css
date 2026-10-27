@@ -1,0 +1,247 @@
+/* The shell's layout: a top bar, controls on the left, the canvas, panels on the right. Colours are
+   the module's tokens, which App.svelte sets as --gv-* properties for the theme in use. */
+@import '@fontsource/atkinson-hyperlegible-next/400.css';
+@import '@fontsource/atkinson-hyperlegible-next/600.css';
+@import '@fontsource/atkinson-hyperlegible-next/700.css';
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  font-family: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--gv-ink-1);
+  background: var(--gv-plane);
+}
+#app {
+  height: 100%;
+}
+.shell,
+.bench {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: var(--gv-ink-1);
+  background: var(--gv-panel);
+  border: 1px solid var(--gv-hairline);
+  border-radius: 4px;
+}
+button {
+  padding: 4px 10px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) {
+  border-color: var(--gv-ink-2);
+}
+:focus-visible {
+  outline: 2px solid var(--gv-ink-1);
+  outline-offset: 2px;
+}
+
+/* The top bar. */
+.top {
+  display: flex;
+  flex: 0 0 48px;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  padding: 0 12px;
+  background: var(--gv-panel);
+  border-bottom: 1px solid var(--gv-hairline);
+}
+.top h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.toggle[aria-expanded='true'] {
+  border-color: var(--gv-ink-2);
+}
+.modes {
+  display: inline-flex;
+}
+.modes button {
+  border-radius: 0;
+}
+.modes button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+.modes button:last-child {
+  margin-left: -1px;
+  border-radius: 0 4px 4px 0;
+}
+.modes button[aria-pressed='true'] {
+  position: relative;
+  font-weight: 700;
+  border-color: var(--gv-ink-1);
+}
+.headline {
+  margin: 0 0 0 auto;
+  overflow: hidden;
+  color: var(--gv-ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.banner {
+  margin: 0;
+  padding: 6px 16px;
+  background: var(--gv-panel);
+  border-bottom: 2px dashed var(--gv-issue);
+}
+
+/* The body: sidebars that open and close around the canvas. */
+.body {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.side {
+  flex: 0 0 auto;
+  overflow-y: auto;
+  background: var(--gv-panel);
+}
+.side[hidden] {
+  display: none;
+}
+.left {
+  width: 300px;
+  border-right: 1px solid var(--gv-hairline);
+}
+.right {
+  width: 360px;
+  border-left: 1px solid var(--gv-hairline);
+}
+.main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.shell.dragging .main {
+  outline: 2px dashed var(--gv-ink-2);
+  outline-offset: -8px;
+}
+@media (max-width: 900px) {
+  .side {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 3;
+    max-width: 92%;
+    box-shadow: 0 0 0 1px var(--gv-hairline);
+  }
+  .left {
+    left: 0;
+  }
+  .right {
+    right: 0;
+  }
+}
+
+/* Controls inside the sections. */
+.side h3 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gv-ink-2);
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+}
+.grow {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+.param {
+  width: 110px;
+  margin-left: auto;
+}
+.file-name {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.message {
+  margin: 6px 0;
+}
+.link {
+  width: 100%;
+  font-size: 12px;
+}
+.primary {
+  margin: 8px 0 4px;
+  font-weight: 600;
+  border-color: var(--gv-ink-1);
+}
+details {
+  margin: 8px 0;
+}
+summary {
+  cursor: pointer;
+}
+.explain h4 {
+  margin: 10px 0 2px;
+  font-size: 13px;
+}
+.explain p {
+  margin: 2px 0 6px;
+}
+.explain .gv-dl {
+  grid-template-columns: 1fr;
+  gap: 0 0;
+}
+.explain dt {
+  margin-top: 6px;
+}
+.explain .name {
+  font-weight: 600;
+  color: var(--gv-ink-1);
+}
+
+/* The bench page. */
+.bench-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.bench-body section {
+  flex: 0 0 420px;
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--gv-panel);
+}
+.bench-view {
+  flex: 1 1 auto;
+}
+.info {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+}
+.info dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+th,
+td {
+  padding: 4px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--gv-hairline);
+}

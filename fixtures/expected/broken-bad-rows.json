@@ -1,0 +1,82 @@
+{
+ "fixture": "broken-bad-rows",
+ "load": "ok",
+ "counts": {
+  "units": 2,
+  "keypairs": 2,
+  "relations": 1
+ },
+ "fingerprint": {
+  "stored": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0",
+  "current": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0"
+ },
+ "issues": [
+  {
+   "code": "bad-row",
+   "list": "vertices",
+   "row": 2
+  },
+  {
+   "code": "bad-key",
+   "list": "vertices",
+   "row": 3
+  },
+  {
+   "code": "bad-key",
+   "list": "vertices",
+   "row": 4
+  },
+  {
+   "code": "bad-key",
+   "list": "vertices",
+   "row": 5
+  },
+  {
+   "code": "bad-row",
+   "list": "vertices",
+   "row": 6
+  },
+  {
+   "code": "bad-key",
+   "list": "vertices",
+   "row": 7
+  },
+  {
+   "code": "bad-row",
+   "list": "edges",
+   "row": 2
+  },
+  {
+   "code": "bad-key",
+   "list": "edges",
+   "row": 3
+  },
+  {
+   "code": "bad-key",
+   "list": "edges",
+   "row": 4
+  }
+ ],
+ "components": {
+  "stored": [
+   2
+  ],
+  "current": [
+   2
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 2,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  }
+ ]
+}

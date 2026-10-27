@@ -1,0 +1,55 @@
+{
+ "fixture": "broken-unknown-unit",
+ "load": "ok",
+ "counts": {
+  "units": 2,
+  "keypairs": 2,
+  "relations": 1
+ },
+ "fingerprint": {
+  "stored": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0",
+  "current": "sha256:96a576fab450b52c4c183d8ea58a5b1706722dca0e30502bb975e6e31189d9e0"
+ },
+ "issues": [
+  {
+   "code": "unknown-unit",
+   "list": "edges",
+   "row": 2,
+   "keypair": [
+    2,
+    9
+   ]
+  },
+  {
+   "code": "unknown-unit",
+   "list": "edges",
+   "row": 3,
+   "keypair": [
+    9,
+    2
+   ]
+  }
+ ],
+ "components": {
+  "stored": [
+   2
+  ],
+  "current": [
+   2
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 2,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  }
+ ]
+}

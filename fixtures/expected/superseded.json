@@ -1,0 +1,196 @@
+{
+ "fixture": "superseded",
+ "load": "ok",
+ "counts": {
+  "units": 6,
+  "keypairs": 14,
+  "relations": 7,
+  "current": {
+   "units": 4,
+   "keypairs": 6,
+   "relations": 3
+  }
+ },
+ "fingerprint": {
+  "stored": "sha256:8ee3fe62ac896bc78535e756b55c1e1b2c20edb219c843cf93a48dbba1037404",
+  "current": "sha256:51bfbbfc55e4875021d183f0caeaf20955d3ed78cae99a3aaaa88c87c03c23c7"
+ },
+ "issues": [],
+ "components": {
+  "stored": [
+   6
+  ],
+  "current": [
+   4
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 2,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 3,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 4,
+   "relations": 3,
+   "outgoing": 3,
+   "incoming": 3
+  },
+  {
+   "key": 5,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 6,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  }
+ ],
+ "rings": [
+  {
+   "focus": 1,
+   "graph": "stored",
+   "rings": [
+    [
+     1
+    ],
+    [
+     2,
+     4,
+     6
+    ],
+    [
+     3,
+     5
+    ]
+   ],
+   "beyond": []
+  },
+  {
+   "focus": 1,
+   "graph": "current",
+   "rings": [
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     5
+    ],
+    [
+     4
+    ]
+   ],
+   "beyond": []
+  }
+ ],
+ "paths": [
+  {
+   "from": 1,
+   "to": 4,
+   "extra": 2,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 1,
+   "reason": null,
+   "stopped": false,
+   "total": 3,
+   "lengths": [
+    {
+     "length": 1,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       4
+      ]
+     ]
+    },
+    {
+     "length": 2,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 3,
+     "count": 2,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       2,
+       3,
+       4
+      ],
+      [
+       1,
+       2,
+       5,
+       4
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "from": 1,
+   "to": 4,
+   "extra": 2,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "current",
+   "shortest": 3,
+   "reason": null,
+   "stopped": false,
+   "total": 1,
+   "lengths": [
+    {
+     "length": 3,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       2,
+       5,
+       4
+      ]
+     ]
+    },
+    {
+     "length": 4,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 5,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    }
+   ]
+  }
+ ]
+}

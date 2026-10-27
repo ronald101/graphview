@@ -1,0 +1,286 @@
+{
+ "fixture": "text-keys",
+ "load": "ok",
+ "counts": {
+  "units": 9,
+  "keypairs": 18,
+  "relations": 9
+ },
+ "fingerprint": {
+  "stored": "sha256:524adca9736c304cb6757edd84bbbfc69bee935cf44202774fc99ad7766d30d8",
+  "current": "sha256:524adca9736c304cb6757edd84bbbfc69bee935cf44202774fc99ad7766d30d8"
+ },
+ "issues": [],
+ "components": {
+  "stored": [
+   9
+  ],
+  "current": [
+   9
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": "1",
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": "I",
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": "l",
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": "O",
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": "0",
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": "é",
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": "ﬀ",
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": "😀",
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  }
+ ],
+ "rings": [
+  {
+   "focus": 1,
+   "graph": "stored",
+   "rings": [
+    [
+     1
+    ],
+    [
+     "1",
+     "😀"
+    ],
+    [
+     "I",
+     "ﬀ"
+    ],
+    [
+     "l",
+     "é"
+    ],
+    [
+     "O",
+     "0"
+    ]
+   ],
+   "beyond": []
+  },
+  {
+   "focus": "😀",
+   "graph": "stored",
+   "rings": [
+    [
+     "😀"
+    ],
+    [
+     "ﬀ",
+     1
+    ],
+    [
+     "é",
+     "1"
+    ],
+    [
+     "0",
+     "I"
+    ],
+    [
+     "O",
+     "l"
+    ]
+   ],
+   "beyond": []
+  }
+ ],
+ "paths": [
+  {
+   "from": 1,
+   "to": "1",
+   "extra": 8,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 1,
+   "reason": null,
+   "stopped": false,
+   "total": 2,
+   "lengths": [
+    {
+     "length": 1,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       "1"
+      ]
+     ]
+    },
+    {
+     "length": 2,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 3,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 4,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 5,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 6,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 7,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 8,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       "😀",
+       "ﬀ",
+       "é",
+       "0",
+       "O",
+       "l",
+       "I",
+       "1"
+      ]
+     ]
+    },
+    {
+     "length": 9,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    }
+   ]
+  },
+  {
+   "from": "l",
+   "to": "ﬀ",
+   "extra": 5,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 4,
+   "reason": null,
+   "stopped": false,
+   "total": 2,
+   "lengths": [
+    {
+     "length": 4,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       "l",
+       "O",
+       "0",
+       "é",
+       "ﬀ"
+      ]
+     ]
+    },
+    {
+     "length": 5,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       "l",
+       "I",
+       "1",
+       1,
+       "😀",
+       "ﬀ"
+      ]
+     ]
+    },
+    {
+     "length": 6,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 7,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 8,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 9,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    }
+   ]
+  }
+ ]
+}

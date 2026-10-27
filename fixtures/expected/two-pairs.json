@@ -1,0 +1,130 @@
+{
+ "fixture": "two-pairs",
+ "load": "ok",
+ "counts": {
+  "units": 4,
+  "keypairs": 4,
+  "relations": 2
+ },
+ "fingerprint": {
+  "stored": "sha256:6572b65c1acdaff77e4013cf57e8af85556dc17a1d13b85a9b8976842f6491de",
+  "current": "sha256:6572b65c1acdaff77e4013cf57e8af85556dc17a1d13b85a9b8976842f6491de"
+ },
+ "issues": [],
+ "components": {
+  "stored": [
+   2,
+   2
+  ],
+  "current": [
+   2,
+   2
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 2,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 3,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  },
+  {
+   "key": 4,
+   "relations": 1,
+   "outgoing": 1,
+   "incoming": 1
+  }
+ ],
+ "rings": [
+  {
+   "focus": 1,
+   "graph": "stored",
+   "rings": [
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ],
+   "beyond": [
+    3,
+    4
+   ]
+  },
+  {
+   "focus": 3,
+   "graph": "stored",
+   "rings": [
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ],
+   "beyond": [
+    1,
+    2
+   ]
+  }
+ ],
+ "paths": [
+  {
+   "from": 1,
+   "to": 3,
+   "extra": 2,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": null,
+   "reason": "unreachable",
+   "stopped": false,
+   "total": 0,
+   "lengths": []
+  },
+  {
+   "from": 1,
+   "to": 2,
+   "extra": 1,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 1,
+   "reason": null,
+   "stopped": false,
+   "total": 1,
+   "lengths": [
+    {
+     "length": 1,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       2
+      ]
+     ]
+    },
+    {
+     "length": 2,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    }
+   ]
+  }
+ ]
+}

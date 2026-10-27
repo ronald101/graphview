@@ -1,0 +1,56 @@
+{
+ "format": "graphview-graph/1",
+ "meta": {
+  "name": "Triangle",
+  "description": "The smallest odd cycle."
+ },
+ "vertices": [
+  {
+   "key": 1,
+   "pos": {
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "key": 2,
+   "pos": {
+    "x": 200,
+    "y": 0
+   }
+  },
+  {
+   "key": 3,
+   "pos": {
+    "x": 100,
+    "y": 173.2
+   }
+  }
+ ],
+ "edges": [
+  {
+   "from": 1,
+   "to": 2
+  },
+  {
+   "from": 2,
+   "to": 1
+  },
+  {
+   "from": 2,
+   "to": 3
+  },
+  {
+   "from": 3,
+   "to": 2
+  },
+  {
+   "from": 3,
+   "to": 1
+  },
+  {
+   "from": 1,
+   "to": 3
+  }
+ ]
+}

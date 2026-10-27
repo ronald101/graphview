@@ -1,0 +1,85 @@
+{
+  "format": "graphview-graph/1",
+  "meta": {
+    "name": "Partly interfaced graph",
+    "description": "Three units: A and B joined through the interface i, the other two relations direct."
+  },
+  "vertices": [
+    {
+      "key": 1,
+      "label": "A",
+      "attrs": {
+        "type": "type_1"
+      },
+      "pos": {
+        "x": 0,
+        "y": 346
+      }
+    },
+    {
+      "key": 2,
+      "label": "B",
+      "attrs": {
+        "type": "type_2"
+      },
+      "pos": {
+        "x": 400,
+        "y": 346
+      }
+    },
+    {
+      "key": 3,
+      "label": "C",
+      "attrs": {
+        "type": "type_3"
+      },
+      "pos": {
+        "x": 200,
+        "y": 0
+      }
+    },
+    {
+      "key": 10,
+      "label": "i",
+      "interface": true,
+      "pos": {
+        "x": 200,
+        "y": 346
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": 1,
+      "to": 10
+    },
+    {
+      "from": 10,
+      "to": 2
+    },
+    {
+      "from": 2,
+      "to": 10
+    },
+    {
+      "from": 10,
+      "to": 1
+    },
+    {
+      "from": 2,
+      "to": 3
+    },
+    {
+      "from": 3,
+      "to": 2
+    },
+    {
+      "from": 1,
+      "to": 3
+    },
+    {
+      "from": 3,
+      "to": 1
+    }
+  ]
+}

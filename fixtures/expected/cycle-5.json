@@ -1,0 +1,184 @@
+{
+ "fixture": "cycle-5",
+ "load": "ok",
+ "counts": {
+  "units": 5,
+  "keypairs": 10,
+  "relations": 5
+ },
+ "fingerprint": {
+  "stored": "sha256:e2539b09b65d943134370463e9d02e59239c696eaf30e94627c915f1cca677e7",
+  "current": "sha256:e2539b09b65d943134370463e9d02e59239c696eaf30e94627c915f1cca677e7"
+ },
+ "issues": [],
+ "components": {
+  "stored": [
+   5
+  ],
+  "current": [
+   5
+  ]
+ },
+ "degrees": [
+  {
+   "key": 1,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 2,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 3,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 4,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  },
+  {
+   "key": 5,
+   "relations": 2,
+   "outgoing": 2,
+   "incoming": 2
+  }
+ ],
+ "rings": [
+  {
+   "focus": 1,
+   "graph": "stored",
+   "rings": [
+    [
+     1
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     3,
+     4
+    ]
+   ],
+   "beyond": []
+  }
+ ],
+ "paths": [
+  {
+   "from": 1,
+   "to": 3,
+   "extra": 3,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 2,
+   "reason": null,
+   "stopped": false,
+   "total": 2,
+   "lengths": [
+    {
+     "length": 2,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       2,
+       3
+      ]
+     ]
+    },
+    {
+     "length": 3,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       5,
+       4,
+       3
+      ]
+     ]
+    },
+    {
+     "length": 4,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 5,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    }
+   ]
+  },
+  {
+   "from": 1,
+   "to": 2,
+   "extra": 4,
+   "countLimit": 10000,
+   "listLimit": 200,
+   "graph": "stored",
+   "shortest": 1,
+   "reason": null,
+   "stopped": false,
+   "total": 2,
+   "lengths": [
+    {
+     "length": 1,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       2
+      ]
+     ]
+    },
+    {
+     "length": 2,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 3,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    },
+    {
+     "length": 4,
+     "count": 1,
+     "exact": true,
+     "paths": [
+      [
+       1,
+       5,
+       4,
+       3,
+       2
+      ]
+     ]
+    },
+    {
+     "length": 5,
+     "count": 0,
+     "exact": true,
+     "paths": []
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,115 @@
+{
+  "format": "graphview-graph/1",
+  "meta": {
+    "name": "Broken interfaces",
+    "description": "An interface that joins three units, one that joins one, and two interfaces related directly."
+  },
+  "vertices": [
+    {
+      "key": 1,
+      "label": "A",
+      "attrs": {
+        "type": "type_1"
+      }
+    },
+    {
+      "key": 2,
+      "label": "B",
+      "attrs": {
+        "type": "type_2"
+      }
+    },
+    {
+      "key": 3,
+      "label": "C",
+      "attrs": {
+        "type": "type_3"
+      }
+    },
+    {
+      "key": 4,
+      "label": "D",
+      "attrs": {
+        "type": "type_4"
+      }
+    },
+    {
+      "key": 10,
+      "label": "i",
+      "interface": true
+    },
+    {
+      "key": 11,
+      "label": "j",
+      "interface": true
+    },
+    {
+      "key": 12,
+      "label": "k",
+      "interface": true
+    },
+    {
+      "key": 13,
+      "label": "l",
+      "interface": true
+    }
+  ],
+  "edges": [
+    {
+      "from": 1,
+      "to": 10
+    },
+    {
+      "from": 10,
+      "to": 1
+    },
+    {
+      "from": 2,
+      "to": 10
+    },
+    {
+      "from": 10,
+      "to": 2
+    },
+    {
+      "from": 3,
+      "to": 10
+    },
+    {
+      "from": 10,
+      "to": 3
+    },
+    {
+      "from": 4,
+      "to": 11
+    },
+    {
+      "from": 11,
+      "to": 4
+    },
+    {
+      "from": 1,
+      "to": 12
+    },
+    {
+      "from": 12,
+      "to": 1
+    },
+    {
+      "from": 12,
+      "to": 13
+    },
+    {
+      "from": 13,
+      "to": 12
+    },
+    {
+      "from": 13,
+      "to": 4
+    },
+    {
+      "from": 4,
+      "to": 13
+    }
+  ]
+}
