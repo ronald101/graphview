@@ -84,6 +84,11 @@ export class Scene {
   private onChange(a: ReadonlySet<Aspect>) {
     const m = this.model;
     if (a.has('settings')) this.settings();
+    // Another drawing draws other chevrons and shapes: the buffers start again, and nothing moves.
+    if (a.has('settings') && !a.has('graph') && m.changedSettings.some((k) => k.startsWith('drawing.'))) {
+      this.redraw();
+      return;
+    }
     if (a.has('graph')) {
       this.ready = false;
       this.allocate();
@@ -182,6 +187,15 @@ export class Scene {
     this.labelLayer.clear();
   }
 
+  /** The graph drawn again from the start, where it stands, with the camera where it is. */
+  private redraw() {
+    const m = this.model;
+    this.allocate();
+    if (!m.graph || !m.laidOut) return;
+    this.hulls.measure(this.state);
+    this.apply(false);
+  }
+
   private upload() {
     const m = this.model;
     const s = this.state;
@@ -191,7 +205,7 @@ export class Scene {
       s.l,
       m.relations.length,
       s.c,
-      m.chevrons.length,
+      s.chevrons.length,
       s.looks.shapes,
       m.types.look.slots,
     );

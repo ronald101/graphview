@@ -1,11 +1,12 @@
-// The inspector's sections (specification 7.4): one for each kind of unit, one for a keypair and
-// one for a relation. A host adds sections for its own kinds; the panel looks them up by kind and
+// The inspector's sections (specification 7.4 and 6.18): one for each kind of unit, one for a keypair,
+// one for a relation and one for a perspective. A host adds sections for its own kinds; the panel looks them up by kind and
 // never switches on kinds.
 import type { Component } from 'svelte';
 import type { Inspected } from '../../model/contracts.ts';
 import type { GraphModel } from '../../model/model.ts';
 import InterfaceSection from './InterfaceSection.svelte';
 import KeypairSection from './KeypairSection.svelte';
+import PerspectiveSection from './PerspectiveSection.svelte';
 import RelationSection from './RelationSection.svelte';
 import UnitSection from './UnitSection.svelte';
 
@@ -28,6 +29,7 @@ export const UNIT_SECTIONS: UnitSections = { plain: UnitSection, interface: Inte
 export function sectionFor(m: GraphModel, i: Shown, sections: UnitSections = {}): Component<SectionProps> {
   if (i.kind === 'keypair') return KeypairSection as Component<SectionProps>;
   if (i.kind === 'relation') return RelationSection as Component<SectionProps>;
+  if (i.kind === 'perspective') return PerspectiveSection as Component<SectionProps>;
   const kind = m.kindOf(i.key);
   return (sections[kind] ?? UNIT_SECTIONS[kind] ?? UNIT_SECTIONS.plain) as Component<SectionProps>;
 }

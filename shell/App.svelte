@@ -73,6 +73,7 @@
         bind:this={view}
         source={shell.graphSource ?? undefined}
         view={shell.view}
+        settings={shell.base}
         settingsStore={store}
         theme={shell.theme}
         motion={shell.motion}

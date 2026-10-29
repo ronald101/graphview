@@ -23,6 +23,10 @@ export const UNIT_SHAPES: UnitShape[] = [
     col = mix(col, uCutColour, (1.0 - smoothstep(uCut.x - w, uCut.x + w, abs(s))) * uCut.y);
     return length(uv);`,
   },
+  // A square with rounded corners, for class units in the perspective drawing (6.18).
+  { name: 'box', glsl: 'vec2 q = abs(uv); return pow(pow(q.x, 4.0) + pow(q.y, 4.0), 0.25);' },
+  // A disc twice as wide as high, for interfaces in the perspective drawing (6.18).
+  { name: 'oval', glsl: 'return length(vec2(uv.x, 2.0 * uv.y));' },
 ];
 
 /** The value of a unit's shape attribute: the slot of its shape, or the first shape's for an unknown one. */

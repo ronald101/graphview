@@ -52,6 +52,8 @@ export interface Profile {
   pairOf?: (info: UnitInfo | undefined) => { type: string | null; perspectives: Perspective[] } | null;
   /** A keypair's pair type: the type of the perspective it belongs to (3.9). */
   pairTypeOf?: (info: KeypairInfo | undefined) => string | null;
+  /** The attribute that holds a keypair's type when keypairs carry it, ahead of the type field the schema finds (6.6). */
+  keypairTypeField?: string;
   /** An interface with one end, a unit's self-relation: allowed, or an interface-ends issue (3.8). Default "issue". */
   selfRelations?: 'allowed' | 'issue';
   /** Two plain units related directly: allowed, or a direct-relation issue (3.8). Default "allowed". */

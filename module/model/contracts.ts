@@ -73,8 +73,13 @@ export interface Overrides {
 }
 
 /** What the inspector shows: a unit, one keypair (a chevron), or a relation (its line). */
+/** What the inspector shows: a unit, a keypair (a chevron), a relation (a line), a perspective (a chevron of the perspective drawing, 6.18), or nothing. */
 export type Inspected =
-  { kind: 'unit'; key: Key } | { kind: 'keypair'; from: Key; to: Key } | { kind: 'relation'; a: Key; b: Key } | null;
+  | { kind: 'unit'; key: Key }
+  | { kind: 'keypair'; from: Key; to: Key }
+  | { kind: 'relation'; a: Key; b: Key }
+  | { kind: 'perspective'; iface: Key; from: Key; to: Key }
+  | null;
 
 /** One path of the path set, by its length and its place in that length's list. */
 export interface PathChoice {

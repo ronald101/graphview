@@ -102,6 +102,7 @@ export function announce(m: GraphModel, a: ReadonlySet<Aspect>): Message | null 
     if (i.kind === 'unit')
       return say(m.kindOf(i.key) === 'interface' ? 'inspectInterface' : 'inspectUnit', { unit: m.label(i.key) }, true);
     if (i.kind === 'keypair') return say('inspectKeypair', { from: m.label(i.from), to: m.label(i.to) }, true);
+    if (i.kind === 'perspective') return say('inspectPerspective', { from: m.label(i.from), to: m.label(i.to) }, true);
     return say('inspectRelation', { a: m.label(i.a), b: m.label(i.b) }, true);
   }
   return null;

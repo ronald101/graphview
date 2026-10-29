@@ -1,6 +1,6 @@
 // Labels on their own canvas over the picture (specification 6.12): where they fit, forced ones first,
 // by the settings of the group "Labels".
-import { keyId, keyJson, type Key } from '../core/index.ts';
+import { keyId, type Key } from '../core/index.ts';
 import { plane } from '../model/depth.ts';
 import type { FrameState } from './frame.ts';
 import { placeLabels, type LabelPosition } from './labels.ts';
@@ -82,7 +82,7 @@ export class LabelLayer {
       x: snap.screen[i].x,
       y: snap.screen[i].y,
       r: Math.max(clear, s.unitReach(i, snap) - extra),
-      text: showKey ? keyJson(m.graph!.units[i]) : m.label(m.graph!.units[i]),
+      text: s.labelText(i, showKey),
       forced: forced.has(m.ids[i]),
     }));
     const measure = (t: string) => {

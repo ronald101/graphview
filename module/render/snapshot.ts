@@ -2,16 +2,18 @@
 // CSS pixels, so that tests need no knowledge of the shaders.
 import { keyId, type Key } from '../core/index.ts';
 import { plane } from '../model/depth.ts';
+import type { Drawing } from '../model/drawing.ts';
 import { along } from '../model/picking.ts';
 import { paletteOf } from '../model/typeRegistry.ts';
 import type { FrameState } from './frame.ts';
-import { lookOf } from './looks.ts';
 
 export interface SceneSnapshot {
   width: number;
   height: number;
   settled: boolean;
   mode: '2d' | '3d';
+  /** The relation drawing (6.18). */
+  drawing: Drawing;
   root: Key | null;
   target: Key | null;
   hasPath: boolean;
@@ -19,7 +21,7 @@ export interface SceneSnapshot {
     key: Key;
     /** Plain, or an interface, or a kind of the profile (model/kinds.ts). */
     kind: string;
-    /** The name of the shape its kind's look gives it (render/looks.ts). */
+    /** The name of the shape it is drawn with: its kind's look's (render/looks.ts), or the perspective drawing's (6.18). */
     shape: string;
     /** An interface's ends, in the order of its relations; null for a plain unit. */
     ends: Key[] | null;
@@ -65,6 +67,10 @@ export interface SceneSnapshot {
     colour: string;
     sx: number;
     sy: number;
+    /** The perspective it carries in the perspective drawing: from the unit it starts at to the other end. */
+    perspective: { from: Key; to: Key } | null;
+    /** The unit it points at. */
+    points: Key;
   }[];
   hulls: { type: string; members: number; opacity: number }[];
   labels: { key: Key; text: string }[];
@@ -93,7 +99,7 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
     return {
       key: k,
       kind: m.kinds.of[i],
-      shape: lookOf(s.looks, m.kinds.of[i]).shape,
+      shape: s.shapes[i],
       ends: m.endsOf(k),
       halves: [palette[s.u.halves[2 * i]], palette[s.u.halves[2 * i + 1]]],
       degree: d,
@@ -127,12 +133,17 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
       sy: p.y,
     };
   });
-  const chevrons: SceneSnapshot['chevrons'] = m.chevrons.map((ch, i) => {
+  const chevrons: SceneSnapshot['chevrons'] = s.chevrons.map((ch, i) => {
     const rel = m.relations[ch.rel];
     const at = s.chevronAt(i);
     const p = g ? g.project(along(snap.st[rel.a].p, snap.st[rel.b].p, at)) : { x: 0, y: 0 };
-    const [from, to] = ch.forward ? [rel.ka, rel.kb] : [rel.kb, rel.ka];
-    const type = m.keypairType(from, to);
+    const { from, to, perspective } = ch;
+    // A perspective's chevron is named and coloured by its pair type (6.18).
+    const type = perspective
+      ? perspective.type === null
+        ? null
+        : (m.types.keypair.find((t) => t.id === perspective.type) ?? { id: perspective.type, colour: undefined })
+      : m.keypairType(from, to);
     return {
       from,
       to,
@@ -144,6 +155,8 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
       colour: type?.colour ?? m.types.look.other,
       sx: p.x,
       sy: p.y,
+      perspective: perspective ? { from: perspective.from, to: perspective.to } : null,
+      points: ch.points,
     };
   });
   return {
@@ -151,6 +164,7 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
     height: g?.height ?? 0,
     settled: extras.settled,
     mode: m.mode,
+    drawing: s.drawing,
     root: m.root,
     target: m.target,
     hasPath: m.activePath() !== null,

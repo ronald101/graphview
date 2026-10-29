@@ -81,6 +81,7 @@ export function profileFromJson(json: ProfileJson): Profile {
     classUnit: (info) => info?.attrs?.[field.classUnit] === true,
     pairOf,
     pairTypeOf,
+    keypairTypeField: field.pairType,
     pairs: json.pairs ?? [],
     checks: [],
     ...(json.supersededBy?.length ? { superseded: (g: Graph, key: Key) => supersededIn(g).has(keyId(key)) } : {}),

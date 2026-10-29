@@ -23,6 +23,7 @@ import { throughInterfaces } from './interfaces.ts';
 import { SAMPLE_ID } from './sample.ts';
 import { LINK_GRAPH_ERROR, makeLink, readLink, type Source } from './share.ts';
 import { wearTokens } from './theme.ts';
+import { hostSettings } from './twin.ts';
 
 /** What the shell needs of the viewer: its model and its canvas. */
 export interface Viewer {
@@ -82,9 +83,10 @@ export class Shell {
   open = $state({ data: true, generate: true });
 
   // ---------------------------------------------------------------- what the viewer is handed
-  /** The graph's source, the view to apply to it, and the base values of the viewer's look. */
+  /** The graph's source, the view to apply to it, the viewer's base values for it, and those of its look. */
   graphSource: GraphSource | null = $state.raw(null);
   view: Partial<ViewSettings> = $state.raw({});
+  base: Record<string, unknown> = $state.raw({});
   theme: 'light' | 'dark' | 'system' | undefined = $state();
   motion: 'on' | 'off' | 'system' | undefined = $state();
 
@@ -165,6 +167,8 @@ export class Shell {
     this.source = from;
     this.shareLink = '';
     const shown = new Promise<void>((r) => this.waiters.push(r));
+    // The invented family opens with its profile and by perspectives, as its host would set them (8.10).
+    this.base = hostSettings(from.kind === 'example' ? from.id : null);
     this.view = view;
     this.graphSource = source;
     return shown;

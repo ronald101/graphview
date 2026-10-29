@@ -271,3 +271,45 @@
 - **Choice.** When `extensions.profile` holds a profile as JSON, each load builds the model's profile from it; when it is empty, the profile given to the model serves. The rules of 3.8 that a profile may change act where the kinds are found, so the issues follow the profile of the load.
 - **Reason.** The profile decides the kinds, the issues and the superseded units of the stored graph, which a load computes; the setting applies with the next graph, as its mark says.
 - **Alternative.** Recompute the kinds of the open graph at once. That would repeat the load's work outside a load.
+
+## D100. The drawing chooses among the model's chevrons
+
+- **Choice.** The model keeps one chevron per keypair, as 5.2 says. A pure function, `drawnChevrons` in module/model/drawing.ts, gives the chevrons a drawing draws, each with its keypair, the unit it points at and, by perspectives, the perspective it carries; the renderer's buffers, picking and snapshot read that list.
+- **Reason.** The drawing is a way of looking at the same graph: the paths, filters, issues and inspector keep working on keypairs, and a switch rebuilds only the picture.
+- **Alternative.** A second set of chevrons in the model for each drawing. Every listener would then need to know which set is current.
+
+## D101. What the perspective drawing leaves to the keypairs
+
+- **Choice.** A relation between two interfaces, and an interface with no end or more than two ends, draw by keypairs; an interface with one end keeps only the chevron of (i, A), and draws none when that keypair is missing.
+- **Reason.** A perspective runs between the two ends of one interface; these cases have no such pair, and they are the issues of 3.8, which the keypairs show as they are.
+- **Alternative.** Guess a perspective for broken interfaces. The picture would then show relations the data does not have.
+
+## D102. A profile may name the keypairs' type field
+
+- **Choice.** `Profile.keypairTypeField` names the attribute that holds a keypair's type; when any keypair carries it, it replaces the type field the schema finds. A profile from JSON names its pair type field.
+- **Reason.** In the form of 3.9 the pair type is the keypair's type: it colours the chevrons in both drawings, fills the Types panel and pairs the complements, through the same type registry as before.
+- **Alternative.** A second registry for pair types. The panel, the inspector and the colours would then each need two sources of types.
+
+## D103. Every profile's perspectives fall back to the keypair's type
+
+- **Choice.** `perspectiveType(interface, from, to)` is the profile's perspective type, else the type of the keypair from that end into the interface, for any profile.
+- **Reason.** 3.9 states the fallback for data; it applies just as well to graphs that carry only keypair types, so that their perspective drawing is named and coloured.
+- **Alternative.** Only a profile from JSON falls back. The public profile's perspectives would then stay unnamed.
+
+## D104. The box is a rounded square and the oval half as high as a disc
+
+- **Choice.** `box` measures `(x⁴ + y⁴)^¼`, a square with rounded corners; `oval` measures `length(x, 2y)`, as wide as a disc and half as high. Both fit the unit's square, so its size, reach and picking stay those of a disc.
+- **Reason.** Both measures grow evenly from the centre, so the ring, the outline and the glow follow their edges as they follow a disc's.
+- **Alternative.** A wider quad for ovals. The unit shader, the picker and the labels would then each need the shape's proportions.
+
+## D105. The shell opens the invented family with base values
+
+- **Choice.** The shell gives the viewer `extensions.profile` and `drawing.relations` as base values with the examples of shell/lib/twin.ts, and none with other graphs.
+- **Reason.** A host with interface graphs sets its profile and drawing as base values; the shell simulates such a host for that family, while the fixtures keep the public profile, whose types come from their type field.
+- **Alternative.** One profile for every graph. A profile from JSON reads classes from `class`, so the fixtures would lose their types.
+
+## D106. The drawing's settings form a group of their own
+
+- **Choice.** The group Drawing, after Root and depth, holds the drawing, the two shapes and the class labels: 28 groups in all.
+- **Reason.** The drawing touches units, lines and labels alike, so none of their groups is its home; its key names the group.
+- **Alternative.** Put the drawing under Units or Chevrons. A person would look for it in the other.

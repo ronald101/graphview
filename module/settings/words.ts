@@ -30,6 +30,7 @@ export const LIVE_TEMPLATES: Record<string, string> = {
   inspectInterface: 'Inspecting interface {unit}',
   inspectKeypair: 'Inspecting keypair from {from} to {to}',
   inspectRelation: 'Inspecting relation between {a} and {b}',
+  inspectPerspective: 'Inspecting perspective from {from} to {to}',
 };
 
 export const REFUSAL_TEXTS: Record<string, string> = {

@@ -13,20 +13,21 @@
 
 ## 1. Status
 
-| Milestone           | Status | Note                                                                                  |
-| ------------------- | ------ | ------------------------------------------------------------------------------------- |
-| M0 Start            | done   | Node.js v22.22.0; Chromium 141 with WebGL 2 on SwiftShader; tools as §10.2 pins them  |
-| M1 Core             | done   | G0 to G8, G15 and G16 pass                                                            |
-| M2 Model            | done   | G9 and G13 pass                                                                       |
-| M3 Render and view  | done   | G11 passes; GraphView tested on the embed page                                        |
-| M4 Shell            | done   | G10 passes; every example loads with its headline or refusal                          |
-| M5 Look             | done   | G14 and G19 pass; eighteen screenshots, views 17 and 18 new                           |
-| M6 Speed and builds | done   | G17 and G18 pass; `npm run check` and every browser test pass                         |
-| M7 Finish           | done   | this report; the public repository's first commit                                     |
-| N0 Contract         | done   | specification 4.0; decisions D79 to D88                                               |
-| N1 SvelteKit shell  | done   | the same page on SvelteKit 3; dist/shell and dist/server build; every test passes     |
-| N2 Settings         | done   | 273 settings in 26 groups, every value wired; dialog, pins, stores, route; 11.3, 11.4 |
-| N3 Data             | done   | sources; profile from JSON with the rules of 3.8; examples as JSON; shell as host     |
+| Milestone              | Status | Note                                                                                  |
+| ---------------------- | ------ | ------------------------------------------------------------------------------------- |
+| M0 Start               | done   | Node.js v22.22.0; Chromium 141 with WebGL 2 on SwiftShader; tools as §10.2 pins them  |
+| M1 Core                | done   | G0 to G8, G15 and G16 pass                                                            |
+| M2 Model               | done   | G9 and G13 pass                                                                       |
+| M3 Render and view     | done   | G11 passes; GraphView tested on the embed page                                        |
+| M4 Shell               | done   | G10 passes; every example loads with its headline or refusal                          |
+| M5 Look                | done   | G14 and G19 pass; eighteen screenshots, views 17 and 18 new                           |
+| M6 Speed and builds    | done   | G17 and G18 pass; `npm run check` and every browser test pass                         |
+| M7 Finish              | done   | this report; the public repository's first commit                                     |
+| N0 Contract            | done   | specification 4.0; decisions D79 to D88                                               |
+| N1 SvelteKit shell     | done   | the same page on SvelteKit 3; dist/shell and dist/server build; every test passes     |
+| N2 Settings            | done   | 273 settings in 26 groups, every value wired; dialog, pins, stores, route; 11.3, 11.4 |
+| N3 Viewer and sources  | done   | sources; examples as JSON; the shell as host; the profile from JSON came with it      |
+| N4 Profile and drawing | done   | the perspective drawing: chevrons, boxes, ovals, picking, inspector; Drawing settings |
 
 ## 2. Gates
 
@@ -78,6 +79,7 @@ The gate tests in tests/gates/ did not change, and neither did fixtures/ in this
 | 6.15 Picture                      | e2e/data.spec.ts (Save picture writes the picture as on screen, with its background or w…)                                                                                                                                                                                                                                                                                                                                                                         |
 | 6.16 Speed                        | e2e/large.spec.ts (the random graph of 10,000 units loads at its given positions, and a r…); e2e/speed.spec.ts (the path set of the complete graph of nine is answered within 2 second…); e2e/speed.spec.ts (first pictures and zoom frames, measured by the bench page)                                                                                                                                                                                           |
 | 6.17 Interfaces in the picture    | e2e/interfaces.spec.ts (in 2D each half shows the colour of the end on its side); e2e/interfaces.spec.ts (in 3D, with a root and a turned camera, the halves still face their en…); e2e/interfaces.spec.ts (one end shows on both halves; a broken interface, and an end that is o…); unit/interfaces.test.ts (§6.17 Interfaces in the picture)                                                                                                                    |
+| 6.18 Relation drawings            | e2e/drawing.spec.ts (the invented family opens by perspectives; each relation through an interf…); e2e/drawing.spec.ts (the bar switches to keypairs and back; the units stay where they are, …); e2e/drawing.spec.ts (a chevron of the perspective drawing picks its perspective; the inspector…); unit/drawing.test.ts (§6.18 Relation drawings)                                                                                                                 |
 | 7.1 Shared components             | e2e/shell.spec.ts (they open and close, starting as drawn; the canvas takes the room)                                                                                                                                                                                                                                                                                                                                                                              |
 | 7.2 Root and depth                | e2e/view.spec.ts (the field sets the root by label or key; Reset clears the field and th…)                                                                                                                                                                                                                                                                                                                                                                         |
 | 7.3 Paths                         | e2e/view.spec.ts (Shift-click finds the shortest path and those one and two steps longer…); e2e/view.spec.ts (the field finds the target by label or by key; Escape clears the path,…)                                                                                                                                                                                                                                                                             |
@@ -194,6 +196,13 @@ Version 4.0 adds:
 - D97. GraphView applies the narrow-page rule to its own side bar.
 - D98. Only the newest graph reports ready.
 - D99. The setting "Profile" is read at each load.
+- D100. The drawing chooses among the model's chevrons.
+- D101. What the perspective drawing leaves to the keypairs.
+- D102. A profile may name the keypairs' type field.
+- D103. Every profile's perspectives fall back to the keypair's type.
+- D104. The box is a rounded square and the oval half as high as a disc.
+- D105. The shell opens the invented family with base values.
+- D106. The drawing's settings form a group of their own.
 
 ## 7. Deviations
 
@@ -210,6 +219,7 @@ Version 4.0 adds:
   - The scan of every committed text file skips .svelte-kit and data as well, which git leaves out like dist: the build's output and the settings files the shell's server writes (D90).
   - Two unit tests follow renamed or extended functions: the model's `settings()` is `viewSettings()`, since `settings` is the registry (5.2), and `plane` takes the depth rules as a second argument, so a test maps degrees to planes with an arrow function.
   - With the shell as host (N3), the browser tests follow 8.1 to 8.4 and 8.9: the top bar holds Host, the name and the headline, and the view's controls are found in the viewer's bar; the sidebars are #host and the viewer's side bar; the sections are checked against how 8.1 draws them, open or closed; the numbers of types to add sit in Generate, which no longer opens Types; the theme is set in the Settings dialog; Save picture is reached by opening Display. The scan of the server build reads files only, since the examples route's build folder is named <id>.json. No check was dropped; the layout test gained the widths and heights of 8.1, and the narrow test checks that the drawers leave the canvas its size.
+  - With the perspective drawing (N4), the shapes the unit shader holds gained box and oval, so the test of a host's added shape expects it after all of them (`UNIT_SHAPES.length`) where it expected the third place; and the Settings dialog has 28 groups, with Drawing.
 - **Two files are near the size target.** model.ts has 407 lines and the shell's store 372; the target was about 400.
 - **The public repository starts over.** Its history held private names, so Ronald deleted it and created it again, empty. Its first commit holds this tree without history, pushed to main with his approval; later work goes through branches and pull requests.
 

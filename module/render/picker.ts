@@ -72,7 +72,7 @@ export function pickAt(s: FrameState, x: number, y: number): Inspected {
   // A unit within reach is on its target; with units first in the priority, nothing else is looked at.
   if (unitHit && rank('unit') === 0) return { kind: 'unit', key: unitHit.key };
   if (unitHit) found.push({ hit: { kind: 'unit', key: unitHit.key }, d: -1, rank: rank('unit') });
-  m.chevrons.forEach((ch, i) => {
+  s.chevrons.forEach((ch, i) => {
     const rel = m.relations[ch.rel];
     if (far(rel) || s.chevronOpacity(i, snap) < r.minOpacity) return;
     const a = snap.st[rel.a];
@@ -84,9 +84,11 @@ export function pickAt(s: FrameState, x: number, y: number): Inspected {
     const axis = across(a.p, b.p, centre, eye, r.capsule.halfLength * px * wpp);
     if (!axis) return;
     const h = raySegment(origin, dir, axis[0], axis[1]);
-    const hit: Inspected = ch.forward
-      ? { kind: 'keypair', from: rel.ka, to: rel.kb }
-      : { kind: 'keypair', from: rel.kb, to: rel.ka };
+    // A chevron of the perspective drawing picks its perspective (6.18).
+    const p = ch.perspective;
+    const hit: Inspected = p
+      ? { kind: 'perspective', iface: p.iface, from: p.from, to: p.to }
+      : { kind: 'keypair', from: ch.from, to: ch.to };
     consider(hit, h.distance / wpp - r.capsule.radius * px, r.padding.chevron, rank('chevron'));
   });
   const [gain, below] = s.rules.lines.gain;

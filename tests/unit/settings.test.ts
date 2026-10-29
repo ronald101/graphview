@@ -212,6 +212,7 @@ describe('§5.9 Settings: the registry', () => {
       'Reading the data',
       'Layout',
       'Root and depth',
+      'Drawing',
       'Units',
       'Lines',
       'Chevrons',

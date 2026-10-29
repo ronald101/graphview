@@ -1,7 +1,9 @@
 // The state of the picture between two model changes: the instanced attributes, the transition's
 // flags and its point, and the CPU's copy of the shaders' sums, so that picking, labels, hulls and
 // the snapshot read what is drawn.
+import { keyJson } from '../core/index.ts';
 import { depthState, plane, type DepthState } from '../model/depth.ts';
+import type { DrawnChevron, Drawing } from '../model/drawing.ts';
 import type { GraphModel } from '../model/model.ts';
 import type { V3 } from '../model/picking.ts';
 import { LOOK, type ChevronBuffers, type LineBuffers, type UnitBuffers } from './geometry.ts';
@@ -36,6 +38,10 @@ export class FrameState {
   applied = 0;
   /** Relations per unit, for the order in which labels claim room. */
   relationsPer = new Uint32Array(0);
+  /** The relation drawing, the chevrons it draws (model/drawing.ts), and each unit's shape in it. */
+  drawing: Drawing = 'keypairs';
+  chevrons: DrawnChevron[] = [];
+  shapes: string[] = [];
   gpu: Gpu | null = null;
   readonly model: GraphModel;
   /** How each kind of unit looks, and the shapes the unit shader holds: the host's, with the setting "Looks of kinds" over them for the graph loaded. */
@@ -146,12 +152,12 @@ export class FrameState {
   /** Where chevron i sits along its line, as a share from the line's first unit. */
   chevronAt(i: number): number {
     const at = this.rules.chevrons.at;
-    return this.model.chevrons[i].forward ? at.forward : at.backward;
+    return this.chevrons[i].forward ? at.forward : at.backward;
   }
 
   /** A chevron's size on screen, in pixels, as the shader draws it. */
   chevronPx(i: number, snap: Snapshot): number {
-    const ch = this.model.chevrons[i];
+    const ch = this.chevrons[i];
     const rel = this.model.relations[ch.rel];
     const t = this.chevronAt(i);
     const a = snap.st[rel.a].s.scale;
@@ -162,7 +168,7 @@ export class FrameState {
   }
 
   chevronOpacity(i: number, snap: Snapshot): number {
-    const ch = this.model.chevrons[i];
+    const ch = this.chevrons[i];
     const rel = this.model.relations[ch.rel];
     const r = this.rules.chevrons;
     const t = this.chevronAt(i);
@@ -189,6 +195,19 @@ export class FrameState {
       room *
       this.model.overrides.opacity
     );
+  }
+
+  /** A unit's label: its key, or its label; by perspectives, an interface's class when it has one (6.18). */
+  labelText(i: number, showKey: boolean): string {
+    const m = this.model;
+    const k = m.graph!.units[i];
+    if (showKey) return keyJson(k);
+    const byClass =
+      this.drawing === 'perspectives' &&
+      m.kinds.ends.has(i) &&
+      m.profile.classOf !== undefined &&
+      m.settings.get('drawing.classLabels');
+    return (byClass ? m.unitType(k)?.label : undefined) ?? m.label(k);
   }
 
   /** The radius a unit is drawn with, in pixels. */

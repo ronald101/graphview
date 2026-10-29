@@ -92,6 +92,7 @@
     return {
       mode: model.mode,
       hulls: model.hulls,
+      drawing: model.settings.get('drawing.relations'),
       shows: new Set(model.settings.get('panels.bar')),
       sections: model.settings.get('panels.sections'),
       banner: model.issues.length > 0 && model.settings.get('issues.banner'),
@@ -229,6 +230,16 @@
       >
     {/if}
     {#if bar.shows.has('fit')}<button type="button" onclick={() => canvas?.fit()}>{t('Fit')}</button>{/if}
+    {#if bar.shows.has('drawing')}
+      <select
+        aria-label={t('Drawing')}
+        value={bar.drawing}
+        onchange={(e) => model.setSetting('drawing.relations', (e.target as HTMLSelectElement).value)}
+      >
+        <option value="keypairs">{t('Keypairs')}</option>
+        <option value="perspectives">{t('Perspectives')}</option>
+      </select>
+    {/if}
     <span class="gv-grow"></span>
     {#if bar.shows.has('panels')}
       <button

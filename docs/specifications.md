@@ -410,7 +410,7 @@ Its methods:
 
 The `graph` aspect means that everything changed: a listener that hears it redraws every part, the mode, display factors, palettes and camera controls included. The `settings` aspect comes with the keys that changed (`model.changedSettings`); a listener redraws what those settings touch.
 
-Its queries: `label(key)`, `find(text)` (a label, a key as JSON text, or a bare word naming a text key), `keypairsOf(key)` (outgoing first, then incoming, each in file order), `activePath()`, `unitType(key)`, `keypairType(a, b)`, `kindOf(key)`, `endsOf(key)` (an interface's ends, or null), `perspectivesOf(key)` (5.7), `pathSteps()`, `planeCounts()`, `fieldRange(field, kind)`, `viewSettings()` (the view settings to save with the graph), `colours(theme?)` and `colour(value)` (the colour tokens of the settings, and a colour setting's value as a colour), `relationCount()`.
+Its queries: `label(key)`, `find(text)` (a label, a key as JSON text, or a bare word naming a text key), `keypairsOf(key)` (outgoing first, then incoming, each in file order), `activePath()`, `unitType(key)`, `keypairType(a, b)`, `kindOf(key)`, `endsOf(key)` (an interface's ends, or null), `perspectivesOf(key)` and `perspectiveType(interface, from, to)` (5.7), `pathSteps()`, `planeCounts()`, `fieldRange(field, kind)`, `viewSettings()` (the view settings to save with the graph), `colours(theme?)` and `colour(value)` (the colour tokens of the settings, and a colour setting's value as a colour), `relationCount()`.
 
 `setTarget` asks with the core's default limits (`PATH_DEFAULTS`). A slow answer never overwrites a newer state: each load has a run number, and each answer checks it, and checks that the root or target it was asked for is still the one held.
 
@@ -460,7 +460,11 @@ interface Overrides {
   opacity: number;
 }
 type Inspected =
-  { kind: 'unit'; key: Key } | { kind: 'keypair'; from: Key; to: Key } | { kind: 'relation'; a: Key; b: Key } | null;
+  | { kind: 'unit'; key: Key }
+  | { kind: 'keypair'; from: Key; to: Key }
+  | { kind: 'relation'; a: Key; b: Key }
+  | { kind: 'perspective'; iface: Key; from: Key; to: Key } // a chevron of the perspective drawing (6.18)
+  | null;
 interface PathChoice {
   length: number;
   index: number;
@@ -619,7 +623,9 @@ Version 4.0 adds: the sources of 5.8 (`JsonFileSource`, `DocumentSource` and the
 - `pairs`: complementary pairs of keypair types, [forward, backward], ahead of the pairs the data shows (6.6). A pair whose types the data lacks is left out; a type whose partner is declared elsewhere stays alone.
 - `checks`: each with its `codes`, `find(graph, kinds, relations)` on the stored graph, and `words(issue, name)`. Their issues follow the interface checks', in the order of the checks.
 - `superseded(graph, key)`: whether a unit is superseded besides its row's mark, such as by a relation that supersedes it. The picture fades it and its keypairs as 6.13 says.
-- `perspective(graph, interface, from, to)`: the pair type of an interface's relation seen from one end toward the other. `perspectivesOf(key)` gives an interface's perspectives: from its first end to its second and back; one for an interface with one end; none otherwise. The inspector shows a perspective's type at the top of its column (7.4).
+- `perspective(graph, interface, from, to)`: the pair type of an interface's relation seen from one end toward the other. Without it, or where it gives none, the type of the keypair from that end into the interface serves (3.9); the model's `perspectiveType(interface, from, to)` gives the result. `perspectivesOf(key)` gives an interface's perspectives: from its first end to its second and back; one for an interface with one end; none otherwise. The inspector shows a perspective's type at the top of its column (7.4).
+- `keypairTypeField`: the attribute that holds a keypair's type; when keypairs carry it, it wins over the type field the schema finds (6.6). A profile from JSON names its `pairTypeField`, so pair types colour the keypairs and fill the Types panel.
+- `classUnit(info, key)`, `pairOf(info)` and `pairTypeOf(info)`: whether a unit is a class unit, an interface's member pair, and a keypair's pair type, as 3.9 describes them.
 - `project(graph, kinds)`: the graph the viewer shows, made from the stored graph, such as each interface folded into its relation's line. The model then holds both: `stored` as loaded, and `graph` as shown. Issues, the fingerprint and saving follow the stored graph; the picture, the paths and the panels follow the shown graph.
 
 **Looks** (`Looks`, module/render/looks.ts) map each kind to its look: a `shape` name, `hulls`, and optionally `halves(model, index)`, the palette slots of a unit's two halves, which `halfSlots` gives by default (6.17). A kind without a look draws as plain. `shapes` lists the unit shapes, each a name and GLSL statements over `uv` and `col` that return how far the point lies from the centre, 1 at the edge, and may change its colour; a shape may read the unit's two colours, the direction between its ends, and the surface colour. The ring, the outline and the glow follow every shape's edge.
@@ -922,10 +928,12 @@ A polite live region says what changed, one message per action: "Graph loaded: 8
 | A chevron points                            | along its keypair     | at the unit whose perspective it is                |
 | A chevron is named and coloured by          | its keypair's type    | the perspective's pair type                        |
 
-- The relation between A and B through the interface i keeps the chevrons of (A, i) and (B, i). The chevron on A's side points toward B and carries B's perspective; the chevron on B's side points toward A and carries A's perspective. So the two chevrons point at each other, each at the unit whose perspective it is.
-- An interface with one end carries one chevron on its line, pointing at that end. A direct relation, and an interface with more than two ends, draw by keypairs.
+- The relation between A and B through the interface i keeps the chevrons of (A, i) and (B, i). The chevron on A's side points toward B and carries B's perspective, the one that runs from B to A; the chevron on B's side points toward A and carries A's perspective. So the two chevrons point at each other, each at the unit whose perspective it is. Each sits where its keypair's chevron sits, a third of the way from its end.
+- An interface with one end keeps the chevron of (i, A) on its line, pointing at its end A and carrying A's perspective of itself. A direct relation, a relation between two interfaces, and an interface with other than one or two ends draw by keypairs. A keypair that is missing has no chevron to keep.
 - An interface's label is its class when it has one, else its label or key.
-- Picking, labels, the inspector and the scene snapshot follow the drawing. A chevron of the perspective drawing picks its perspective: the inspector shows the perspective's type, its two keypairs and its two ends.
+- A perspective's pair type is the profile's (5.7), else the type of its keypair into the interface (3.9); its colour is that type's colour among the keypair types (6.6), or the context colour.
+- Picking, labels, the inspector and the scene snapshot follow the drawing. A chevron of the perspective drawing picks its perspective, `{ kind: 'perspective', iface, from, to }`: the inspector shows "Perspective from A to B", its pair type, the interface, and its two keypairs, (A, i) and (i, B); the live region says "Inspecting perspective from A to B".
+- The group Drawing holds `drawing.relations` (Keypairs or Perspectives, default Keypairs), `drawing.classShape` (default box), `drawing.interfaceShape` (default oval) and `drawing.classLabels` (whether interfaces are labelled with their class, default on). A shape the unit shader does not hold draws as the disc. A change of drawing redraws at once; nothing moves.
 
 ### 6.19 Search
 
@@ -1154,9 +1162,10 @@ The random numbers come from mulberry32: a 32-bit state seeded with the seed as 
 - The database fixture is the sample graph, with the id `sample`: 81 units and 84 relations, labels `unit_<key>`, unit types `type_<n>`, keypair types in complementary pairs (rel_ab and rel_ba, rel_cd and rel_dc, rel_ef and rel_fe), and weights. Its description reads "A hierarchy of parts with a few relations across it: hubs with many leaves. Units carry types; keypairs carry types and weights."
 - Every other example keeps its fixture's name as its id.
 - No example is bundled into the page as data: the page holds their list, with names and descriptions from the documents, and loads a graph from its own file when it is chosen.
-- The shell's own examples sit in shell/examples, in name order, each with its file name as its id: the interface graphs of 3.8, "Fully interfaced graph" (interfaces-full) and "Partly interfaced graph" (interfaces-partial), with types on the plain units; and "Broken interfaces" (broken-interfaces), with an interface that joins three units, one that joins one, and two interfaces related directly. A name that starts with "broken-" lists the example among those with issues.
+- The shell's own examples sit in shell/examples, in name order, each with its file name as its id: the interface graphs of 3.8, "Fully interfaced graph" (interfaces-full) and "Partly interfaced graph" (interfaces-partial), with types on the plain units; "Broken interfaces" (broken-interfaces), with an interface that joins three units, one that joins one, and two interfaces related directly; and "Classes and perspectives" (classes-and-perspectives), an invented family in the form of 3.9: two class units that define themselves through an interface with one end, courses and people that are their members, two teachings and a revision, every relation through an interface with its member pair, and every keypair with its pair type. A name that starts with "broken-" lists the example among those with issues.
+- The invented family opens as its host would show it: the shell gives the viewer two base values with it (5.9), the profile of shell/lib/twin.ts as `extensions.profile` (self-relations allowed, direct relations reported, superseded by the pair type replacedBy, declared pairs) and `drawing.relations` set to perspectives. Other graphs get no base values from the shell.
 
-The menu lists the fixtures in fixture order, then the shell's examples: 26 loadable, of which 9 have issues, and 4 refused.
+The menu lists the fixtures in fixture order, then the shell's examples: 27 loadable, of which 9 have issues, and 4 refused.
 
 ### 8.11 Opening files
 

@@ -270,7 +270,7 @@ export class GraphModel {
     this.stored = p?.stored ?? null;
     this.graph = p?.graph ?? null;
     this.issues = issues;
-    this.schema = p ? reflectSchema(p.graph, this.schemaRules()) : EMPTY_SCHEMA;
+    this.schema = p ? this.reflect(p.graph) : EMPTY_SCHEMA;
     this.ids = p?.ids ?? [];
     this.index = p?.index ?? new Map();
     [this.relations, this.relationOf, this.chevrons] = [t.relations, t.relationOf, t.chevrons];
@@ -278,6 +278,14 @@ export class GraphModel {
     this.superseded = p?.superseded ?? new Uint8Array(0);
     this.types = p ? this.buildTypes(p.graph, this.settings.get('types.slots')) : EMPTY_TYPES;
     this.positions = new Float32Array(2 * this.ids.length);
+  }
+
+  /** The schema of a graph; the profile's keypair type field comes first when keypairs carry it. */
+  private reflect(g: Graph): Schema {
+    const schema = reflectSchema(g, this.schemaRules());
+    const f = this.profile.keypairTypeField;
+    const carried = f && g.keypairs.some(([a, b]) => g.keypairInfo.get(keypairId(a, b))?.attrs?.[f] !== undefined);
+    return carried ? { ...schema, keypairTypeField: f } : schema;
   }
 
   /** The types with the colours of the settings; the slots stay those of the graph's load. */
@@ -613,10 +621,18 @@ export class GraphModel {
     return e && this.graph ? e.map((j) => this.graph!.units[j]) : null;
   }
 
-  /** An interface's perspectives, from each end toward the other, with the profile's pair types (3.8). */
+  /** An interface's perspectives, from each end toward the other, with their pair types (3.8, 3.9). */
   perspectivesOf(k: Key): Perspective[] | null {
     const ends = this.endsOf(k);
-    return ends && this.graph ? perspectivesOf(this.graph, k, ends, this.profile.perspective) : null;
+    return ends && this.graph
+      ? perspectivesOf(this.graph, k, ends, (_, i, a, b) => this.perspectiveType(i, a, b))
+      : null;
+  }
+
+  /** A perspective's pair type: the profile's, else the type of its keypair into the interface (3.9). */
+  perspectiveType(iface: Key, from: Key, to: Key): string | null {
+    const g = this.graph;
+    return (g && this.profile.perspective?.(g, iface, from, to)) ?? this.keypairType(from, iface)?.id ?? null;
   }
 
   /** Units per plane around the root (specification 7.2). */

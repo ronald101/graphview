@@ -2,6 +2,7 @@
 // shows, and the layers their values come from. The model owns one registry and is its only writer.
 import { emptySettingsFile, type SettingsFile } from './file.ts';
 import { pathSettings, displaySettings, filterSettings, motionSettings } from './groups/behaviour.ts';
+import { drawingSettings } from './groups/drawing.ts';
 import { extensionSettings } from './groups/extensions.ts';
 import { layoutSettings, schemaSettings, viewSettings } from './groups/data.ts';
 import { accessibilitySettings, cameraSettings, keyboardSettings, pointerSettings } from './groups/input.ts';
@@ -26,6 +27,7 @@ export const viewerSettings = () =>
     ...schemaSettings(),
     ...layoutSettings(),
     ...depthSettings(),
+    ...drawingSettings(),
     ...unitSettings(),
     ...lineSettings(),
     ...chevronSettings(),
@@ -57,6 +59,7 @@ export const SETTING_GROUPS = [
   'Reading the data',
   'Layout',
   'Root and depth',
+  'Drawing',
   'Units',
   'Lines',
   'Chevrons',
