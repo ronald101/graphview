@@ -13,18 +13,19 @@
 
 ## 1. Status
 
-| Milestone           | Status | Note                                                                                 |
-| ------------------- | ------ | ------------------------------------------------------------------------------------ |
-| M0 Start            | done   | Node.js v22.22.0; Chromium 141 with WebGL 2 on SwiftShader; tools as §10.2 pins them |
-| M1 Core             | done   | G0 to G8, G15 and G16 pass                                                           |
-| M2 Model            | done   | G9 and G13 pass                                                                      |
-| M3 Render and view  | done   | G11 passes; GraphView tested on the embed page                                       |
-| M4 Shell            | done   | G10 passes; every example loads with its headline or refusal                         |
-| M5 Look             | done   | G14 and G19 pass; eighteen screenshots, views 17 and 18 new                          |
-| M6 Speed and builds | done   | G17 and G18 pass; `npm run check` and every browser test pass                        |
-| M7 Finish           | done   | this report; the public repository's first commit                                    |
-| N0 Contract         | done   | specification 4.0; decisions D79 to D88                                              |
-| N1 SvelteKit shell  | done   | the same page on SvelteKit 3; dist/shell and dist/server build; every test passes    |
+| Milestone           | Status | Note                                                                                  |
+| ------------------- | ------ | ------------------------------------------------------------------------------------- |
+| M0 Start            | done   | Node.js v22.22.0; Chromium 141 with WebGL 2 on SwiftShader; tools as §10.2 pins them  |
+| M1 Core             | done   | G0 to G8, G15 and G16 pass                                                            |
+| M2 Model            | done   | G9 and G13 pass                                                                       |
+| M3 Render and view  | done   | G11 passes; GraphView tested on the embed page                                        |
+| M4 Shell            | done   | G10 passes; every example loads with its headline or refusal                          |
+| M5 Look             | done   | G14 and G19 pass; eighteen screenshots, views 17 and 18 new                           |
+| M6 Speed and builds | done   | G17 and G18 pass; `npm run check` and every browser test pass                         |
+| M7 Finish           | done   | this report; the public repository's first commit                                     |
+| N0 Contract         | done   | specification 4.0; decisions D79 to D88                                               |
+| N1 SvelteKit shell  | done   | the same page on SvelteKit 3; dist/shell and dist/server build; every test passes     |
+| N2 Settings         | done   | 273 settings in 26 groups, every value wired; dialog, pins, stores, route; 11.3, 11.4 |
 
 ## 2. Gates
 
@@ -85,6 +86,7 @@ The gate tests in tests/gates/ did not change, and neither did fixtures/ in this
 | 7.7 Types                         | e2e/view.spec.ts (a renamed type shows in the inspector and the path table)                                                                                                                                                                                                                                                                                                                                                                                        |
 | 7.8 Data issues                   | e2e/interfaces.spec.ts (the broken interfaces example lists each interface issue in words); e2e/view.spec.ts (a broken graph lists its issues; a keypair without its reverse keeps o…)                                                                                                                                                                                                                                                                             |
 | 7.9 GraphView                     | e2e/embed.spec.ts (one component shows the bar, the canvas and the panels, and tells its …)                                                                                                                                                                                                                                                                                                                                                                        |
+| 7.10 The Settings dialog and pins | e2e/settings.spec.ts (every group, a filter, a slider that changes the picture, Reset and Reset all; a pin; a refused value; Export and Import); unit/settings.test.ts (§5.9 and §5.10: every class's check, the defaults, the layers, the file, the stores, the saver, the handler)                                                                                                                                                                               |
 | 8.1 Page layout                   | e2e/shell.spec.ts (they open and close; the canvas takes the room); e2e/shell.spec.ts (at 900 pixels or less the sidebars start closed and open over the canv…)                                                                                                                                                                                                                                                                                                    |
 | 8.2 Top bar                       | e2e/shell.spec.ts (the 2D and 3D buttons, Hulls and Fit; no Load or Generate button)                                                                                                                                                                                                                                                                                                                                                                               |
 | 8.3 Data                          | e2e/data.spec.ts (Fetch loads an address that answers; a refused address is named)                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -168,6 +170,24 @@ Decisions D1 to D54 are folded into the specification. docs/decisions.md holds t
 - D77. A projection keeps the stored graph beside the shown one.
 - D78. Joining kinds share the interface checks; perspectives follow the ends.
 
+Version 4.0 adds:
+
+- D79. Setting classes name their control; the view maps controls to components.
+- D80. The settings file holds flat keys and only the values that differ.
+- D81. Display factors and hulls stay in a graph's view, as a layer over the settings.
+- D82. Two shell builds: static for Pages, with a server for tests and settings.
+- D83. The perspective drawing keeps the chevrons that point into the interface.
+- D84. The scope hides units, and the loaded graph keeps one layout.
+- D85. Settings save half a second after the last change.
+- D86. Named defaults move under the settings; their old modules export them still.
+- D87. The shell's links load whole pages, as before.
+- D88. SvelteKit's options live in the shell's Vite configuration; the mode picks the adapter.
+- D89. The settings handler lives in the settings layer.
+- D90. The shell keeps one settings file per browser.
+- D91. A save that meets another revision merges its own changes.
+- D92. Panel texts pass through the setting "Panel texts".
+- D93. Inventory items that are not settings.
+
 ## 7. Deviations
 
 - **fixtures/ changed once.** CLAUDE.md keeps fixtures/ read-only. Ronald approved one change to anonymize the sample graph; the rule in .claude/settings.json was lifted for that change and restored after it. make_fixtures.py regenerated the files. Fingerprints, counts, rings, paths and the index stayed the same; only labels, attributes, meta texts and an unused field changed (D61).
@@ -180,6 +200,8 @@ Decisions D1 to D54 are folded into the specification. docs/decisions.md holds t
   - Every test title now starts with its section (G12).
   - This round, two browser tests follow version 3.0 of the specification: the explanation's exact headings gained "Relations through interfaces" (8.8, 8.16), and the menu's example count adds the shell's own examples to the fixtures (8.10). Both stay exact.
   - Version 4.0 moved the shell to SvelteKit, which starts the page after its router loads. The embed and speed tests therefore wait for the page's hook after the navigation; their checks did not change. The scan for private terms reads every text file of the server build, at any depth, where it read the top folder of dist/shell's assets (8.17).
+  - The scan of every committed text file skips .svelte-kit and data as well, which git leaves out like dist: the build's output and the settings files the shell's server writes (D90).
+  - Two unit tests follow renamed or extended functions: the model's `settings()` is `viewSettings()`, since `settings` is the registry (5.2), and `plane` takes the depth rules as a second argument, so a test maps degrees to planes with an arrow function.
 - **Two files are near the size target.** model.ts has 407 lines and the shell's store 372; the target was about 400.
 - **The public repository starts over.** Its history held private names, so Ronald deleted it and created it again, empty. Its first commit holds this tree without history, pushed to main with his approval; later work goes through branches and pull requests.
 

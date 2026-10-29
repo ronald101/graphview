@@ -68,4 +68,6 @@ export interface PathLimits {
   count?: number;
   list?: number;
   timeMs?: number;
+  /** The search looks at the clock every this many steps. */
+  clockEvery?: number;
 }

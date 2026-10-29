@@ -4,13 +4,18 @@ import {
   keyId,
   keypairId,
   loadGraph,
-  PATH_DEFAULTS,
   type Graph,
   type Key,
+  type PathLimits,
   type PathSetResult,
   type RefusalCode,
   type Theme,
+  type TokenName,
 } from '../core/index.ts';
+import { DEFAULT_OVERRIDES, EXTRA_STEPS } from '../settings/defaults.ts';
+import type { SettingsFile } from '../settings/file.ts';
+import { SettingsRegistry, type Refusal } from '../settings/registry.ts';
+import { isToken, TOKEN_NAMES } from '../settings/setting.svelte.ts';
 import { graphWorker } from '../workers/index.ts';
 import type {
   Aspect,
@@ -28,24 +33,23 @@ import type {
   TypeInfo,
   ViewSettings,
 } from './contracts.ts';
+import { DEFAULT_DEPTH, type DepthRules } from './depth.ts';
 import { fieldRange, NO_FILTERS } from './filters.ts';
-import { HULL_LIMIT } from './hulls.ts';
 import { NO_KINDS, type Kind, type Kinds } from './kinds.ts';
-import { placeUnits } from './placement.ts';
+import { EXTENT, placeUnits, type LayoutRules } from './placement.ts';
 import { prepare, type Prepared } from './prepare.ts';
 import { PUBLIC_PROFILE, type Profile } from './profile.ts';
 import { activePath, findUnit, keypairsOf, labelOf, pathSteps, perspectivesOf, planeCounts } from './queries.ts';
-import { EMPTY_SCHEMA, reflectSchema, typeText, type Schema } from './schema.ts';
+import { EMPTY_SCHEMA, reflectSchema, typeText, type Schema, type SchemaRules } from './schema.ts';
 import { noTopology, type Chevron, type Relation } from './topology.ts';
-import { buildTypes, EMPTY_TYPES, type Custom, type TypeRegistry } from './typeRegistry.ts';
+import { buildTypes, EMPTY_TYPES, type Custom, type TypeLook, type TypeRegistry } from './typeRegistry.ts';
 
 export { EXTENT } from './placement.ts';
 export type { Chevron, Relation } from './topology.ts';
+export { DEFAULT_OVERRIDES, EXTRA_STEPS };
 
-/** Path sets: the shortest paths and those one and two steps longer (specification 6.5). */
-export const EXTRA_STEPS = 2;
-
-export const DEFAULT_OVERRIDES: Overrides = { size: 1, width: 1, opacity: 1 };
+/** The keys whose change the model reports as a display change too. */
+const DISPLAY_KEYS = ['display.size', 'display.width', 'display.opacity', 'hulls.enabled'];
 
 export class GraphModel {
   // ---------------------------------------------------------------- the graph
@@ -71,8 +75,14 @@ export class GraphModel {
   /** x and y of each unit, in world units, y pointing up; z comes from the depth rules. */
   positions = new Float32Array(0);
   laidOut = false;
+  /** The extent the graph was laid out to, in world units. */
+  extent: number = EXTENT;
 
   // ---------------------------------------------------------------- the view
+  /** The settings (5.9); the model is the registry's only writer. */
+  readonly settings = new SettingsRegistry();
+  /** The keys of the last change of settings, which comes with the aspect "settings". */
+  changedSettings: string[] = [];
   mode: Mode = '2d';
   root: Key | null = null;
   degrees: number[] | null = null;
@@ -80,14 +90,17 @@ export class GraphModel {
   paths: PathSetResult | null = null;
   choice: PathChoice | null = null;
   filters: Filters = { ...NO_FILTERS };
+  /** The display factors in use (6.8): the settings of the group "Display", a graph's own view included. */
   overrides: Overrides = { ...DEFAULT_OVERRIDES };
-  hulls = true;
-  /** What the person chose last; graphs over HULL_LIMIT units still start without hulls. */
-  private hullsWanted = true;
+  /** The depth rules in use, from the settings of the group "Root and depth". */
+  depth: DepthRules = DEFAULT_DEPTH;
   inspected: Inspected = null;
   theme: Theme = 'light';
 
   private custom: { unit: Custom; keypair: Custom } = { unit: new Map(), keypair: new Map() };
+  /** Hulls a person turned on or off while this graph is open; null until then. */
+  private hullsChosen: boolean | null = null;
+  private loads = 0;
   private listeners = new Set<Listener>();
   private worker: GraphWorker | null = null;
   private run = 0;
@@ -97,13 +110,14 @@ export class GraphModel {
   /** What fits the model to a family of graphs: kinds, classes, pairs, checks, superseding, projection. */
   readonly profile: Profile;
 
-  /** The worker factory is the contract for distances and paths; tests and hosts may hand in their own. */
-  constructor(
-    makeWorker: (units: Key[], keypairs: [Key, Key][]) => GraphWorker = graphWorker,
-    profile: Profile = PUBLIC_PROFILE,
-  ) {
-    this.makeWorker = makeWorker;
+  /**
+   * The worker factory is the contract for distances and paths; tests and hosts may hand in their own.
+   * The default one runs in a Web Worker, or on the page when the setting "Workers" says so.
+   */
+  constructor(makeWorker?: (units: Key[], keypairs: [Key, Key][]) => GraphWorker, profile: Profile = PUBLIC_PROFILE) {
+    this.makeWorker = makeWorker ?? ((u, k) => graphWorker(u, k, this.settings.get('performance.workers') === 'off'));
     this.profile = profile;
+    this.mode = this.settings.get('view.mode');
   }
 
   subscribe(fn: Listener): () => void {
@@ -133,6 +147,8 @@ export class GraphModel {
     this.worker?.terminate();
     this.worker = null;
     const loaded = loadGraph(doc);
+    const keep = new Set<string>(this.loads++ > 0 ? this.settings.get('view.keep') : []);
+    const before = { filters: this.filters, schema: this.schema };
     this.doc = doc;
     this.root = null;
     this.degrees = null;
@@ -142,10 +158,20 @@ export class GraphModel {
     this.inspected = null;
     this.laidOut = false;
     this.ranges.clear();
-    this.custom = { unit: customOf(settings.types?.unit), keypair: customOf(settings.types?.keypair) };
+    if (!keep.has('types') || settings.types)
+      this.custom = { unit: customOf(settings.types?.unit), keypair: customOf(settings.types?.keypair) };
     if (settings.mode) this.mode = settings.mode;
-    if (settings.overrides) this.overrides = { ...DEFAULT_OVERRIDES, ...settings.overrides };
-    if (settings.hulls !== undefined) this.hulls = settings.hulls;
+    else if (!keep.has('mode') && this.loads > 1) this.mode = this.settings.get('view.mode');
+    // A graph's own display factors and hulls lie over the settings while it is open (D81).
+    const o = settings.overrides;
+    this.settings.setGraph({
+      ...(o?.size !== undefined && { 'display.size': o.size }),
+      ...(o?.width !== undefined && { 'display.width': o.width }),
+      ...(o?.opacity !== undefined && { 'display.opacity': o.opacity }),
+      ...(settings.hulls !== undefined && { 'hulls.enabled': settings.hulls }),
+    });
+    this.hullsChosen = null;
+    this.cache();
     if (!loaded.ok) {
       this.refused = { code: loaded.code, message: loaded.message };
       this.hold(null, []);
@@ -156,18 +182,26 @@ export class GraphModel {
     }
     const p = prepare(loaded.graph, this.profile);
     const g = p.graph;
-    if (settings.hulls === undefined) this.hulls = g.units.length > HULL_LIMIT ? false : this.hullsWanted;
     this.refused = null;
     this.hold(p, [...loaded.issues, ...p.issues]);
+    // Kept filters stay when the new graph has their fields.
+    const kept =
+      keep.has('filters') &&
+      (before.filters.timeField === null || this.schema.timeFields.includes(before.filters.timeField)) &&
+      (before.filters.weightField === null || this.schema.weightFields.includes(before.filters.weightField)) &&
+      before.schema !== EMPTY_SCHEMA;
     this.filters = {
       ...NO_FILTERS,
       timeField: this.schema.timeFields[0] ?? null,
       weightField: this.schema.weightFields[0] ?? null,
+      ...(kept ? before.filters : {}),
       ...settings.filters,
     };
     this.worker = this.makeWorker(g.units, g.keypairs);
     this.emit('graph');
-    const placed = await placeUnits(g, this.ids, this.relations, () => run === this.run);
+    const layout = this.layoutRules();
+    this.extent = layout.extent;
+    const placed = await placeUnits(g, this.ids, this.relations, () => run === this.run, layout);
     if (!placed || run !== this.run) return false;
     this.positions = placed;
     this.laidOut = true;
@@ -188,14 +222,19 @@ export class GraphModel {
     this.stored = p?.stored ?? null;
     this.graph = p?.graph ?? null;
     this.issues = issues;
-    this.schema = p ? reflectSchema(p.graph) : EMPTY_SCHEMA;
+    this.schema = p ? reflectSchema(p.graph, this.schemaRules()) : EMPTY_SCHEMA;
     this.ids = p?.ids ?? [];
     this.index = p?.index ?? new Map();
     [this.relations, this.relationOf, this.chevrons] = [t.relations, t.relationOf, t.chevrons];
     this.kinds = p?.kinds ?? NO_KINDS;
     this.superseded = p?.superseded ?? new Uint8Array(0);
-    this.types = p ? buildTypes(p.graph, this.schema, this.theme, this.custom, this.profile) : EMPTY_TYPES;
+    this.types = p ? this.buildTypes(p.graph, this.settings.get('types.slots')) : EMPTY_TYPES;
     this.positions = new Float32Array(2 * this.ids.length);
+  }
+
+  /** The types with the colours of the settings; the slots stay those of the graph's load. */
+  private buildTypes(g: Graph, slots = this.types.look.slots): TypeRegistry {
+    return buildTypes(g, this.schema, this.theme, this.custom, this.profile, this.typeLook(slots));
   }
 
   // ---------------------------------------------------------------- commands
@@ -238,12 +277,13 @@ export class GraphModel {
     const run = this.run;
     const from = this.root;
     this.target = key;
-    const result = await this.worker.paths(from, key, EXTRA_STEPS, PATH_DEFAULTS);
+    const result = await this.worker.paths(from, key, this.settings.get('paths.extraSteps'), this.pathLimits());
     if (run !== this.run || this.root !== from || this.target === null || keyId(this.target) !== keyId(key))
       return null;
     this.paths = result;
     const first = result.lengths.find((l) => l.paths.length > 0);
-    this.choice = first ? { length: first.length, index: 0 } : null;
+    this.choice =
+      first && this.settings.get('paths.autoChoose') === 'first' ? { length: first.length, index: 0 } : null;
     this.emit('paths');
     return result;
   }
@@ -278,19 +318,30 @@ export class GraphModel {
   private setCustom(kind: 'unit' | 'keypair', id: string, part: { label?: string; colour?: string }) {
     const c = this.custom[kind];
     c.set(id, { ...c.get(id), ...part });
-    if (this.graph) this.types = buildTypes(this.graph, this.schema, this.theme, this.custom, this.profile);
+    if (this.graph) this.types = this.buildTypes(this.graph);
     this.emit('types');
   }
 
+  /** The display factors (6.8): a person's change writes their settings. */
   setOverrides(part: Partial<Overrides>) {
-    this.overrides = { ...this.overrides, ...part };
+    for (const k of ['size', 'width', 'opacity'] as const)
+      if (part[k] !== undefined) this.settings.set(`display.${k}`, part[k]);
+    this.cache();
     this.emit('display');
   }
 
+  /** Hulls on or off (6.9): the setting, and this graph's choice, which beats the size rule. */
   setHulls(on: boolean) {
-    this.hulls = on;
-    this.hullsWanted = on;
+    this.hullsChosen = on;
+    this.settings.set('hulls.enabled', on);
     this.emit('display');
+  }
+
+  /** Whether hulls show: a person's choice for this graph, else the graph's own view, else the setting; large graphs start without. */
+  get hulls(): boolean {
+    if (this.hullsChosen !== null) return this.hullsChosen;
+    const large = (this.graph?.units.length ?? 0) > this.settings.get('hulls.autoOffAbove');
+    return large && !this.settings.inGraphLayer('hulls.enabled') ? false : this.settings.get('hulls.enabled');
   }
 
   inspect(what: Inspected) {
@@ -301,8 +352,160 @@ export class GraphModel {
   setTheme(theme: Theme) {
     if (theme === this.theme) return;
     this.theme = theme;
-    if (this.graph) this.types = buildTypes(this.graph, this.schema, this.theme, this.custom, this.profile);
+    if (this.graph) this.types = this.buildTypes(this.graph);
     this.emit('theme', 'types');
+  }
+
+  // ---------------------------------------------------------------- settings (5.9)
+
+  /** A person's value for a setting. A refused value changes nothing; the reason comes back. */
+  setSetting(key: string, value: unknown): string | null {
+    const r = this.settings.set(key, value);
+    if ('refused' in r) return r.refused;
+    this.settingsChanged(r.changed);
+    return null;
+  }
+
+  /** Returns the keys, or every key, to the values below the person's own. */
+  resetSettings(keys?: string[]) {
+    this.settingsChanged(this.settings.reset(keys));
+  }
+
+  /** Takes a stored settings file: its values, its pins and its revision. */
+  applySettingsFile(file: SettingsFile) {
+    this.settingsChanged(this.settings.applyFile(file));
+  }
+
+  /** A person's import of a settings file: its values and pins replace the person's own. */
+  importSettings(file: SettingsFile) {
+    this.settingsChanged(this.settings.importFile(file));
+  }
+
+  /** The host's base values (GraphView's `settings`); returns those refused. */
+  setBaseSettings(values: Record<string, unknown>): Refusal[] {
+    const r = this.settings.setBase(values);
+    this.settingsChanged(r.changed);
+    return r.refused;
+  }
+
+  /** Shows a setting in the side bar as well, or no longer. */
+  pinSetting(key: string, on: boolean) {
+    this.settingsChanged(this.settings.pin(key, on));
+  }
+
+  private settingsChanged(keys: string[]) {
+    if (!keys.length) return;
+    this.changedSettings = keys;
+    this.cache();
+    const aspects: Aspect[] = ['settings'];
+    const has = (prefix: string) => keys.some((k) => k.startsWith(prefix));
+    if (keys.some((k) => DISPLAY_KEYS.includes(k))) aspects.push('display');
+    if (has('theme.colours.') || has('types.')) {
+      if (this.graph) this.types = this.buildTypes(this.graph);
+      aspects.push('types');
+    }
+    if (keys.includes('view.mode') && this.loads === 0) {
+      this.mode = this.settings.get('view.mode');
+      aspects.push('mode');
+    }
+    this.emit(...aspects);
+    // A path set follows its settings: the extra steps and the limits.
+    if (has('paths.extraSteps') || has('paths.limits.') || has('performance.pathClockEvery'))
+      if (this.root !== null && this.target !== null) void this.setTarget(this.target);
+  }
+
+  /** Recomputes what the model keeps from its settings. */
+  private cache() {
+    const s = this.settings;
+    this.overrides = { size: s.get('display.size'), width: s.get('display.width'), opacity: s.get('display.opacity') };
+    this.depth = {
+      spacing: s.get('depth.spacing'),
+      foreground: s.get('depth.foreground'),
+      second: { scale: s.get('depth.second.scale'), opacity: s.get('depth.second.opacity') },
+      far: { scale: s.get('depth.far.scale'), opacity: s.get('depth.far.opacity') },
+      path: { scale: s.get('depth.path.scale'), opacity: s.get('depth.path.opacity'), glow: s.get('depth.path.glow') },
+      dimmed: s.get('depth.dimmed'),
+      maxPlanes: s.get('depth.maxPlanes'),
+      frontDegrees: s.get('depth.frontDegrees'),
+    };
+  }
+
+  /** The colour tokens of a theme, from the settings of the group "Theme". */
+  colours(theme: Theme = this.theme): Record<TokenName, string> {
+    return Object.fromEntries(TOKEN_NAMES.map((t) => [t, this.settings.get(`theme.colours.${t}`)[theme]])) as Record<
+      TokenName,
+      string
+    >;
+  }
+
+  /** A colour setting's value as a colour: a token name gives the token's colour in the theme. */
+  colour(value: string, theme: Theme = this.theme): string {
+    return isToken(value) ? this.colours(theme)[value] : value;
+  }
+
+  private typeLook(slots: number): TypeLook {
+    const s = this.settings;
+    return {
+      palette: s.get('types.palette')[this.theme],
+      other: this.colour(s.get('types.otherColour')),
+      surface: this.colour('surface'),
+      tint: s.get('types.backwardTint'),
+      slots,
+    };
+  }
+
+  private schemaRules(): SchemaRules {
+    const s = this.settings;
+    return {
+      typeFields: s.get('schema.typeFields'),
+      timeNames: new RegExp(s.get('schema.timeFieldNames'), 'i'),
+      datePattern: new RegExp(s.get('schema.datePattern')),
+      weightMinDistinct: s.get('schema.weightMinDistinct'),
+      weightFirst: s.get('schema.weightFirst'),
+    };
+  }
+
+  private layoutRules(): LayoutRules {
+    const s = this.settings;
+    return {
+      extent: s.get('layout.extent'),
+      positions: s.get('layout.positions'),
+      flipY: s.get('layout.flipY'),
+      pinned: s.get('layout.pinned'),
+      seed: s.get('layout.force.seed'),
+      startSpacing: s.get('layout.force.startSpacing'),
+      inline: s.get('performance.workers') === 'off',
+      force: {
+        batch: s.get('layout.force.batch'),
+        tolerance: s.get('layout.force.tolerance'),
+        maxIterations: s.get('layout.force.maxIterations'),
+        barnesHutFrom: s.get('layout.force.barnesHutFrom'),
+        barnesHutTheta: s.get('layout.force.barnesHutTheta'),
+        large: {
+          from: s.get('layout.force.large.from'),
+          maxIterations: s.get('layout.force.large.maxIterations'),
+          barnesHutTheta: s.get('layout.force.large.barnesHutTheta'),
+        },
+        gravity: s.get('layout.force.gravity'),
+        strongGravityMode: s.get('layout.force.strongGravityMode'),
+        scalingRatio: s.get('layout.force.scalingRatio'),
+        slowDown: s.get('layout.force.slowDown'),
+        linLogMode: s.get('layout.force.linLogMode'),
+        outboundAttractionDistribution: s.get('layout.force.outboundAttractionDistribution'),
+        adjustSizes: s.get('layout.force.adjustSizes'),
+        edgeWeightInfluence: s.get('layout.force.edgeWeightInfluence'),
+      },
+    };
+  }
+
+  private pathLimits(): PathLimits {
+    const s = this.settings;
+    return {
+      count: s.get('paths.limits.count'),
+      list: s.get('paths.limits.list'),
+      timeMs: s.get('paths.limits.timeMs'),
+      clockEvery: s.get('performance.pathClockEvery'),
+    };
   }
 
   // ---------------------------------------------------------------- queries
@@ -370,7 +573,7 @@ export class GraphModel {
 
   /** Units per plane around the root (specification 7.2). */
   planeCounts(): PlaneCounts {
-    return planeCounts(this.degrees);
+    return planeCounts(this.degrees, this.depth);
   }
 
   /** The range of a time field over all rows, or of a weight field over the keypairs. */
@@ -378,12 +581,12 @@ export class GraphModel {
     const g = this.graph;
     if (!g || !field) return null;
     const key = `${kind}\t${field}`;
-    if (!this.ranges.has(key)) this.ranges.set(key, fieldRange(g, field, kind));
+    if (!this.ranges.has(key)) this.ranges.set(key, fieldRange(g, field, kind, this.schema.rules));
     return this.ranges.get(key)!;
   }
 
   /** The view settings to save with the graph; the scene adds its camera. */
-  settings(): Omit<ViewSettings, 'camera'> {
+  viewSettings(): Omit<ViewSettings, 'camera'> {
     const out = (c: Custom) => Object.fromEntries(c);
     return {
       mode: this.mode,

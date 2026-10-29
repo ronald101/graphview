@@ -27,5 +27,59 @@ export { default as IssuesPanel } from './view/IssuesPanel.svelte';
 export { default as TypesPanel } from './view/TypesPanel.svelte';
 export { default as Section } from './view/Section.svelte';
 export { default as RangeSlider } from './view/RangeSlider.svelte';
-export { issueWords, keyText, count } from './view/words.ts';
+export { default as SettingsDialog } from './view/settings/SettingsDialog.svelte';
+export { default as SettingControl } from './view/settings/SettingControl.svelte';
+export { default as SettingRow } from './view/settings/SettingRow.svelte';
+export { default as PinnedPanel } from './view/settings/PinnedPanel.svelte';
+export { issueWords, keyText, count, fill, say } from './view/words.ts';
+export { viewCss } from './view/css.ts';
+export {
+  Setting,
+  CheckboxSetting,
+  SliderSetting,
+  NumberSetting,
+  RangeSetting,
+  SelectSetting,
+  TextSetting,
+  ColourSetting,
+  ThemeColourSetting,
+  PaletteSetting,
+  OrderSetting,
+  SetSetting,
+  KeysSetting,
+  JsonSetting,
+  type Control,
+  type Applies,
+  type ThemeColour,
+  type Palette,
+} from './settings/setting.svelte.ts';
+export {
+  SettingsRegistry,
+  createRegistry,
+  viewerSettings,
+  SETTING_GROUPS,
+  GRAPH_LAYER,
+  type SettingKey,
+  type SettingValue,
+  type SettingValues,
+  type ViewerSettings,
+  type Refusal,
+} from './settings/registry.ts';
+export {
+  SETTINGS_FORMAT,
+  emptySettingsFile,
+  readSettingsFile,
+  parseSettingsFile,
+  type SettingsFile,
+} from './settings/file.ts';
+export {
+  HttpSettingsStore,
+  BrowserSettingsStore,
+  MemorySettingsStore,
+  FallbackSettingsStore,
+  SettingsConflict,
+  type SettingsStore,
+} from './settings/stores.ts';
+export { SettingsSaver, mergeFiles, type SaveState } from './settings/saver.svelte.ts';
+export { createSettingsHandler, type SettingsHandlerOptions, type SettingsRequest } from './settings/handler.ts';
 export { UNIT_SECTIONS, type SectionProps, type UnitSections } from './view/inspector/sections.ts';

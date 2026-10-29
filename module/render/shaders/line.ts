@@ -1,17 +1,20 @@
 // The lines: one per relation, drawn in screen space between its two units.
-import { DEPTH_RULES } from '../../model/depth.ts';
-import { ENDS_GLSL, f } from './common.ts';
+import { endsGlsl } from './common.ts';
 
-export const LINE_VS = /* glsl */ `
-${ENDS_GLSL}
+export const lineVs = (slots: number) => /* glsl */ `
+${endsGlsl(slots)}
 attribute vec4 aLine;
 attribute vec4 aLine2;
 attribute vec2 aStatic;
 uniform float uWidth;
 uniform float uWidthScale;
-uniform vec3 uContext;
-uniform vec3 uNeutral;
-uniform vec3 uPathColour;
+uniform vec4 uLineGain; // width gain by strength, width below the threshold, extra width on the path, opacity below
+uniform float uFeather;
+uniform float uBrighten;
+uniform vec3 uLineColour;
+uniform vec3 uLineBelowColour;
+uniform vec3 uLinePathColour;
+uniform vec3 uStrengthColour;
 varying float vT;
 varying float vSide;
 varying float vOpacity;
@@ -39,21 +42,21 @@ void main() {
   float above = mix(aLine.z, aLine.w, uT);
   float strength = mix(aLine2.x, aLine2.y, uT);
   // Thickness and opacity follow the end units, linearly along the line.
-  float w = uWidth * uWidthScale * mix(sa.y, sb.y, t) * (1.0 + 2.0 * strength);
-  w = mix(1.0, w, above);
-  w *= 1.0 + 0.2 * onPath * hasPath;
+  float w = uWidth * uWidthScale * mix(sa.y, sb.y, t) * (1.0 + uLineGain.x * strength);
+  w = mix(uLineGain.y, w, above);
+  w *= 1.0 + uLineGain.z * onPath * hasPath;
   float op = mix(sa.z, sb.z, t);
-  op = mix(op, mix(${f(DEPTH_RULES.dimmed)}, 1.0, onPath), hasPath);
+  op = mix(op, mix(uDepthC.w, 1.0, onPath), hasPath);
   op *= mix(aLine.x, aLine.y, uT) * aStatic.x * uOpacityScale;
-  op *= mix(0.6, 1.0, above);
+  op *= mix(uLineGain.w, 1.0, above);
   vec4 c = mix(ca, cb, t);
-  float halfPx = w * 0.5 + 0.75;
+  float halfPx = w * 0.5 + uFeather;
   c.xy += nrm * position.y * halfPx / halfRes * c.w;
   gl_Position = c;
-  // Lines stay in the context colour; the chevrons carry the keypairs' type colours.
-  vec3 col = mix(uContext, vec3(1.0), 0.35 * strength * above);
-  col = mix(uNeutral, col, above);
-  col = mix(col, uPathColour, onPath * hasPath);
+  // Lines stay in their own colour; the chevrons carry the keypairs' type colours.
+  vec3 col = mix(uLineColour, uStrengthColour, uBrighten * strength * above);
+  col = mix(uLineBelowColour, col, above);
+  col = mix(col, uLinePathColour, onPath * hasPath);
   vColor = col;
   vT = t;
   vSide = position.y;
@@ -61,12 +64,14 @@ void main() {
   vMissing = aStatic.y;
   vLenPx = len;
   vHalfPx = halfPx;
-  if (op < 0.002) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+  if (op < uCull) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
 }
 `;
 
 export const LINE_FS = /* glsl */ `
 uniform vec3 uIssue;
+uniform vec2 uDash; // period in pixels, drawn share
+uniform float uDiscard;
 varying float vT;
 varying float vSide;
 varying float vOpacity;
@@ -80,12 +85,12 @@ void main() {
   bool missing = (vMissing > 0.5 && vMissing < 1.5 && vT < 0.5) || (vMissing > 1.5 && vT > 0.5);
   if (missing) {
     col = uIssue;
-    if (fract(vT * vLenPx / 10.0) > 0.55) discard;
+    if (fract(vT * vLenPx / uDash.x) > uDash.y) discard;
   }
   float dist = abs(vSide) * vHalfPx;
   float cover = clamp(vHalfPx - dist, 0.0, 1.0);
   float alpha = vOpacity * cover;
-  if (alpha < 0.004) discard;
+  if (alpha < uDiscard) discard;
   gl_FragColor = vec4(col, alpha);
 }
 `;

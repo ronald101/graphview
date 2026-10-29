@@ -7,7 +7,8 @@
 
   let fileInput: HTMLInputElement;
   let urlInput = $state('');
-  let pictureBackground = $state(true);
+  // svelte-ignore state_referenced_locally
+  let pictureBackground = $state(shell.model.settings.get('picture.background'));
 
   async function browse() {
     if (!(await shell.browse())) fileInput.click();

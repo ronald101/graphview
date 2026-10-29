@@ -14,6 +14,7 @@
     IssuesPanel,
     Section,
     count,
+    viewCss,
   } from '../module/index.ts';
   import { Shell } from './lib/shell.svelte.ts';
   import DataSection from './sections/DataSection.svelte';
@@ -52,6 +53,12 @@
       : `${info.name}, ${count(info.units, 'unit', 'units')}, ${count(info.relations, 'relation', 'relations')}, ${count(info.issues, 'issue', 'issues')}`,
   );
 
+  // The panels the shell lays out take the viewer's text and panel settings from here.
+  const css = $derived.by(() => {
+    void shell.version;
+    return viewCss(model);
+  });
+
   let dragging = $state(false);
 
   async function onDrop(e: DragEvent) {
@@ -64,6 +71,7 @@
 
 <div
   class="shell"
+  style={css}
   class:dragging
   role="presentation"
   ondragover={(e) => {
@@ -103,7 +111,7 @@
       onclick={() => (shell.rightOpen = !shell.rightOpen)}>Panels</button
     >
   </header>
-  {#if info.issues > 0}
+  {#if info.issues > 0 && model.settings.get('issues.banner')}
     <p class="banner" role="status" data-testid="rules-banner">
       This graph breaks the graph rules; the data issues panel lists each breach.
     </p>

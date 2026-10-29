@@ -1,9 +1,9 @@
 // Hull groups for the 3D view (specification 6.9): units of one type that sit close together.
 // Pure geometry, so that it is testable without a browser.
+import { HULL_LIMIT } from '../settings/defaults.ts';
 import type { V3 } from './picking.ts';
 
-/** Graphs with more units start without hulls; the switch can still turn them on. */
-export const HULL_LIMIT = 3000;
+export { HULL_LIMIT };
 
 /**
  * Single-linkage groups: two points closer than `reach` share a group, and so do points

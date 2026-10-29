@@ -188,11 +188,11 @@
 - **Reason.** A person cannot forget to save, and a slider's drag writes once.
 - **Alternative.** A Save button. Changes would be lost on a reload before it.
 
-## D86. Defaults stay where they were; the registry points at them
+## D86. Named defaults move under the settings; their old modules export them still
 
-- **Choice.** The registry takes its defaults from the constants that already hold them, such as `tokens`, `DEPTH_RULES`, `SPACING`, `PATH_DEFAULTS` and `TYPE_PALETTE`. The code reads the registry's live value wherever it used the constant.
-- **Reason.** The exports of 5.6 and the gates keep their meaning, and each default is written once.
-- **Alternative.** Move every default into the registry and drop the constants. That breaks the public exports and G15's view of the tokens.
+- **Choice.** The constants that hold defaults, such as `DEPTH_RULES`, `SPACING`, `CHEVRON_AT`, `TYPE_PALETTE` and `HULL_LIMIT`, now live in module/settings/defaults.ts; the modules that held them export them as before. `tokens` and `PATH_DEFAULTS` stay in the core. The registry takes its defaults from these constants, and the code reads the registry's live value wherever it used a constant. Literals in shaders and panels became settings whose default is written in the setting.
+- **Reason.** The settings sit below the model (5.1), so they cannot import the model's or the renderer's constants. The exports of 5.6 and the gates keep their meaning, and each default is written once.
+- **Alternative.** Leave the constants where they were and let the settings import upward. That breaks the order of the layers.
 
 ## D87. The shell's links load whole pages, as before
 
@@ -205,3 +205,33 @@
 - **Choice.** shell/vite.config.ts passes the options to the `sveltekit` plugin: the shell's folder, the base path /graphview and the adapter. The mode `static` builds with adapter-static into dist/shell; any other mode builds with adapter-node into dist/server.
 - **Reason.** SvelteKit 3 reads no svelte.config.js. A mode works on every system, where an environment variable set in a script does not.
 - **Alternative.** An environment variable, or a second Vite configuration.
+
+## D89. The settings handler lives in the settings layer
+
+- **Choice.** `createSettingsHandler` is module/settings/handler.ts, beside the file's rules; no folder of the module is called server.
+- **Reason.** SvelteKit refuses to let browser code import any module inside a folder named server, and module/index.ts serves the browser and the server alike. The handler uses only `Request` and `Response`, so it is safe in both.
+- **Alternative.** Two entry points, one for servers. A host would then import from two places, and G16 allows the shell one.
+
+## D90. The shell keeps one settings file per browser
+
+- **Choice.** The shell's route names each browser with a cookie at its first visit and keeps that browser's file at data/settings/<name>.json. The handler hands the route's request event to `read` and `write`, so that a host can tell people apart the same way.
+- **Reason.** A host such as the one the shell simulates keeps settings per person. One shared file would also let the browser tests, which run side by side, change each other's settings.
+- **Alternative.** One file for every visitor, as 5.10 first said. Tests would need to reset it, and could not run in parallel.
+
+## D91. A save that meets another revision merges its own changes
+
+- **Choice.** The viewer remembers the keys and pins it changed since its last save. When the store answers with another revision, the viewer puts those changes over the stored file, saves that, and takes the result, so that both viewers' changes stay.
+- **Reason.** Two tabs of one person save to one file. Refusing the second would lose its changes; overwriting would lose the first tab's.
+- **Alternative.** The last save wins, or the person chooses. The first loses changes; the second asks a question for a case a merge settles.
+
+## D92. Panel texts pass through the setting "Panel texts"
+
+- **Choice.** Every fixed text of the module's panels, bar, dialog and inspector goes through `say(model, text)`, which looks the English text up in the setting `words.panels` and fills in its braces. The issues, the live region, the refusals, the canvas's name and its hint have settings of their own.
+- **Reason.** A host can change any wording, or the language, without editing the module, and texts the setting does not name stay as written.
+- **Alternative.** Keys for every text. A translator would then need a list of keys, and the code would lose its readable texts.
+
+## D93. Inventory items that are not settings
+
+- **Choice.** The settings leave out what belongs to a graph (the root, the target, the path, the inspected part, the camera, type names and colours, the filters' window), what is fixed when the code is built (the font files' weights), the core's limits that the gates fix (the path search's most extra steps), and the parts of the extension points that are code (checks, perspectives, projections, shapes' GLSL, inspector sections). The declarative parts of the profile come with version 4.0's profile from JSON (5.7).
+- **Reason.** A graph's own state travels in its `meta.view`; build-time values cannot change while the viewer runs; the gates fix the core's limits; code cannot live in a JSON file.
+- **Alternative.** Settings for them too. They would either do nothing or break the rules above.

@@ -114,7 +114,7 @@ describe('§6.4 Depth rules', () => {
     depthState({ degree, onPath: false, hasRoot: true, hasPath: false, depth: true, ...more });
 
   test('planes: the root and degree 1 in front, then one plane per degree, units out of reach deepest', () => {
-    expect([0, 1, 2, 3, 4, 9, 40, -1].map(plane)).toEqual([0, 0, 1, 2, 3, 6, 6, 6]);
+    expect([0, 1, 2, 3, 4, 9, 40, -1].map((d) => plane(d))).toEqual([0, 0, 1, 2, 3, 6, 6, 6]);
   });
 
   test('with a root, in 3D: degree 1 in front, degree 2 one plane back at 60 percent, degree 3 and more far back', () => {
@@ -488,8 +488,8 @@ describe('§5.2 The model: one source of truth', () => {
     a.setHulls(false);
     a.setTypeLabel('unit', 'a', 'first kind');
     const b = new GraphModel();
-    await b.load(d, a.settings());
-    expect(b.settings()).toEqual(a.settings());
+    await b.load(d, a.viewSettings());
+    expect(b.viewSettings()).toEqual(a.viewSettings());
     expect(b.activePath()).toEqual([1, 2, 3, 4]);
     expect(b.types.unit.find((t) => t.id === 'a')!.label).toBe('first kind');
   });

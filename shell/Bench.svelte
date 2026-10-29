@@ -5,7 +5,7 @@
   import { exampleDoc } from './lib/examples.ts';
   import { wearTokens } from './lib/theme.ts';
 
-  wearTokens(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const scheme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
   interface Stats {
     median: number;
@@ -20,6 +20,7 @@
   }
 
   const model = new GraphModel();
+  wearTokens(scheme, model.colours(scheme));
   let canvas: ReturnType<typeof GraphCanvas> | undefined = $state();
   let rows: Row[] = $state([]);
   let status = $state('Press Run to measure.');

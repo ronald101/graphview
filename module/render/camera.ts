@@ -2,9 +2,12 @@
 // (specification 6.3, 6.14).
 import { MOUSE, TOUCH, Vector3 } from 'three';
 import type { GraphModel } from '../model/model.ts';
-import { EXTENT } from '../model/placement.ts';
 import type { V3 } from '../model/picking.ts';
 import type { Gpu } from './gpu.ts';
+
+const BUTTONS = { pan: MOUSE.PAN, rotate: MOUSE.ROTATE, dolly: MOUSE.DOLLY, none: null } as const;
+const ONE = { pan: TOUCH.PAN, rotate: TOUCH.ROTATE, none: null } as const;
+const TWO = { 'dolly-pan': TOUCH.DOLLY_PAN, 'dolly-rotate': TOUCH.DOLLY_ROTATE, none: null } as const;
 
 export type Nudge = 'left' | 'right' | 'up' | 'down' | 'in' | 'out' | 'turn-left' | 'turn-right';
 
@@ -18,16 +21,24 @@ export class CameraRig {
     this.model = model;
   }
 
-  /** 2D looks straight down and does not turn out of the plane; 3D turns freely. */
+  /** 2D looks straight down and does not turn out of the plane; 3D turns freely. The buttons and fingers follow the settings. */
   mode(animate: boolean) {
     const g = this.gpu;
     if (!g) return;
+    const s = this.model.settings;
     const twoD = this.model.mode === '2d';
-    g.controls.enableRotate = !twoD;
-    // In 2D the left button and one finger pan; in 3D they turn the view.
-    g.controls.mouseButtons.LEFT = twoD ? MOUSE.PAN : MOUSE.ROTATE;
-    g.controls.touches.ONE = twoD ? TOUCH.PAN : TOUCH.ROTATE;
-    if (!twoD) return;
+    g.controls.enableRotate = !twoD || s.get('camera.rotateIn2d');
+    // By default the left button and one finger pan in 2D; in 3D they turn the view.
+    const m = twoD ? '2d' : '3d';
+    // three.js types the buttons without "nothing", which it accepts.
+    const buttons = g.controls.mouseButtons as Record<string, MOUSE | null>;
+    buttons.LEFT = BUTTONS[s.get(`camera.mouse.${m}.left`)];
+    buttons.MIDDLE = BUTTONS[s.get(`camera.mouse.${m}.middle`)];
+    buttons.RIGHT = BUTTONS[s.get(`camera.mouse.${m}.right`)];
+    const touches = g.controls.touches as Record<string, TOUCH | null>;
+    touches.ONE = ONE[s.get(`camera.touch.${m}.one`)];
+    touches.TWO = TWO[s.get(`camera.touch.${m}.two`)];
+    if (!twoD || !s.get('camera.flattenIn2d')) return;
     const target = g.controls.target.toArray() as V3;
     const pos = g.camera.position.toArray() as V3;
     const dist = Math.hypot(pos[0] - target[0], pos[1] - target[1], pos[2] - target[2]);
@@ -69,36 +80,42 @@ export class CameraRig {
     const g = this.gpu;
     if (!g) return;
     this.cam = null;
+    const s = this.model.settings;
     // The vertical field of view is fixed; a canvas narrower than tall needs more distance for the width.
-    const d = ((EXTENT / 2 / Math.tan(((g.camera.fov / 2) * Math.PI) / 180)) * 1.15) / Math.min(1, g.camera.aspect);
+    const half = Math.tan(((g.camera.fov / 2) * Math.PI) / 180);
+    const d = ((this.model.extent / 2 / half) * s.get('camera.fitMargin')) / Math.min(1, g.camera.aspect);
     g.controls.target.set(0, 0, 0);
     g.camera.position.set(0, 0, d);
-    g.camera.near = 1;
-    g.camera.far = d * 10;
+    g.camera.near = s.get('camera.near');
+    g.camera.far = d * s.get('camera.farPerFit');
     g.camera.updateProjectionMatrix();
     g.controls.update();
     g.request();
   }
 
   /**
-   * Moves the camera by keyboard: a pan of a tenth of the view, a zoom by 1.25, or in 3D a turn of
-   * 15 degrees around the camera's up axis. 2D does not turn, as with the mouse.
+   * Moves the camera by keyboard: a pan by a share of the view, a zoom by a factor, or in 3D a turn
+   * around the camera's up axis, as the settings of the group "Keyboard" say. 2D does not turn, as
+   * with the mouse.
    */
   nudge(move: Nudge) {
     const g = this.gpu;
     if (!g) return;
     this.cam = null;
+    const s = this.model.settings;
     const pos = g.camera.position;
     const target = g.controls.target;
     const offset = pos.clone().sub(target);
     if (move === 'in' || move === 'out') {
-      pos.copy(target).add(offset.multiplyScalar(move === 'in' ? 0.8 : 1.25));
+      const f = s.get('keyboard.zoomFactor');
+      pos.copy(target).add(offset.multiplyScalar(move === 'in' ? 1 / f : f));
     } else if (move === 'turn-left' || move === 'turn-right') {
-      if (this.model.mode === '2d') return;
-      const a = ((move === 'turn-left' ? -15 : 15) * Math.PI) / 180;
+      if (this.model.mode === '2d' && !s.get('camera.rotateIn2d')) return;
+      const a = ((move === 'turn-left' ? -1 : 1) * s.get('keyboard.turnStep') * Math.PI) / 180;
       pos.copy(target).add(offset.applyAxisAngle(g.camera.up, a));
     } else {
-      const step = 0.2 * offset.length() * Math.tan(((g.camera.fov / 2) * Math.PI) / 180);
+      // The view's height is twice the distance times the tangent of half the field of view.
+      const step = 2 * s.get('keyboard.panStep') * offset.length() * Math.tan(((g.camera.fov / 2) * Math.PI) / 180);
       const [dx, dy] = { left: [-1, 0], right: [1, 0], up: [0, 1], down: [0, -1] }[move];
       // The camera's own right and up directions, so that a pan follows the screen in 3D too.
       const right = new Vector3().setFromMatrixColumn(g.camera.matrix, 0);

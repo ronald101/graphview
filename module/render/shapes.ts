@@ -2,7 +2,8 @@
 // and may change the fill colour there. The unit shader draws the edge, the separating ring, the
 // outline and the glow along that measure, so every shape gets them. Each unit carries the slot
 // of its shape; the shader holds every shape registered here. A shape may read the unit's two
-// colours, vColor and vColor2, the direction vSplit between its two ends, and the surface colour.
+// colours, vColor and vColor2, the direction vSplit between its two ends, the surface colour, and
+// the cut's width and strength (uCut) and colour (uCutColour) of the settings.
 
 export interface UnitShape {
   name: string;
@@ -14,12 +15,12 @@ export const UNIT_SHAPES: UnitShape[] = [
   { name: 'disc', glsl: 'return length(uv);' },
   {
     // A disc cut across the line between its two ends: each half in the colour of the end on its
-    // side, with a thin line in the surface colour between them.
+    // side, with a thin line between them.
     name: 'divided',
     glsl: `float s = dot(uv, vSplit);
     float w = max(fwidth(s), 1e-4);
     col = mix(vColor, vColor2, smoothstep(-w, w, s));
-    col = mix(col, uSurface, (1.0 - smoothstep(0.08 - w, 0.08 + w, abs(s))) * 0.9);
+    col = mix(col, uCutColour, (1.0 - smoothstep(uCut.x - w, uCut.x + w, abs(s))) * uCut.y);
     return length(uv);`,
   },
 ];

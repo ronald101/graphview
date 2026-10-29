@@ -106,7 +106,7 @@ export class Shell {
 
   /** The shell's effects; call once while the page component starts. */
   connect() {
-    $effect(() => wearTokens(this.resolved));
+    $effect(() => wearTokens(this.resolved, this.model.colours(this.resolved)));
     // A newly chosen family starts from its own parameters.
     $effect(() => {
       const f = this.chosenFamily;
@@ -188,7 +188,7 @@ export class Shell {
     if (!d || typeof d !== 'object' || Array.isArray(d)) return d;
     const doc = d as Record<string, unknown>;
     const meta = doc.meta && typeof doc.meta === 'object' && !Array.isArray(doc.meta) ? doc.meta : {};
-    const view: ViewSettings = { ...m.settings(), camera: this.canvas?.getCamera() ?? null };
+    const view: ViewSettings = { ...m.viewSettings(), camera: this.canvas?.getCamera() ?? null };
     const fp = m.stored ? { fingerprint: fingerprint(m.stored) } : {};
     return { ...doc, meta: { ...meta, ...fp, view } };
   }

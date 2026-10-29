@@ -71,7 +71,8 @@ export default defineConfig(({ mode }) => ({
     sveltekit({
       adapter:
         mode === 'static'
-          ? adapterStatic({ pages: 'dist/shell', assets: 'dist/shell' })
+          ? // The settings route needs a server: the static demo leaves it out and keeps settings in the browser.
+            adapterStatic({ pages: 'dist/shell', assets: 'dist/shell', strict: false })
           : adapterNode({ out: 'dist/server' }),
       files: { src: 'shell', assets: 'shell/static' },
       paths: { base: '/graphview' },

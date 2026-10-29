@@ -23,12 +23,11 @@ The module repairs nothing. It lists every breach of the graph rules (2.2) as a 
 | Part     | Folder          | Does                                                                                                                                                  |
 | -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core     | module/core     | Format, loading and issues, fingerprint, degrees, components, rings, path sets, colour tokens. Pure TypeScript.                                       |
-| Settings | module/settings | One class per kind of control, one instance per setting, the registry, the settings file and its stores. TypeScript with Svelte state.                |
+| Settings | module/settings | One class per kind of control, one instance per setting, the registry, the settings file, its stores and the handler a host's route uses.             |
 | Model    | module/model    | The state of one viewer, its sources and contracts, and the rules for depth, filters, schema, types, layout, hulls, search, highlights and scope.     |
 | Render   | module/render   | Draws the model with three.js: instanced shaders, transitions, camera, hulls, labels, picking, picture capture.                                       |
 | View     | module/view     | The viewer component with its bar, side bar and Settings dialog; the canvas, the panels and the controls of the settings. Svelte 5.                   |
 | Workers  | module/workers  | Force layout, distances and path sets off the main thread.                                                                                            |
-| Server   | module/server   | The handler a host's settings route uses. Pure TypeScript.                                                                                            |
 | Shell    | shell/          | The SvelteKit app that simulates a host: host tools (data and generator), the viewer page, the settings route, example graphs, bench and embed pages. |
 
 ### 1.3 Inputs that exist before the build
@@ -356,32 +355,32 @@ Two examples from the fixtures. In the database graph, from unit 79 to unit 77 w
 
 ### 5.1 Layers and imports
 
-**Each layer imports only the layers below it.** core ← settings ← model ← render ← view; workers serve the model, and import from it only the type `GraphWorker`; server serves hosts, and imports only the core and the settings. The module imports nothing outside module/. The shell reaches the module only through module/index.ts, or its CSS (G16). module/settings, module/server and module/model run without a browser, apart from the model's worker factory and the browser store (5.9).
+**Each layer imports only the layers below it.** core ← settings ← model ← render ← view; workers serve the model, and import from it only the type `GraphWorker`. The settings handler of 5.10 belongs to the settings and uses only `Request` and `Response`, so that the entry point serves a host's browser code and its server alike (D89). The module imports nothing outside module/. The shell reaches the module only through module/index.ts, or its CSS (G16). module/settings and module/model run without a browser, apart from the model's worker factory and the browser store (5.9).
 
 ### 5.2 The model
 
 **Every change goes to the model first; the model then tells its listeners which aspects changed, and they redraw from the model.** The canvas and the panels never talk to each other. `GraphModel` holds one viewer's state:
 
-| Field                                       | Holds                                                                                                                                        |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| doc, stored, graph, issues, refused         | the document; the graph as loaded, and the graph shown (the same unless the profile projects it, 5.7); its issues; or the refusal            |
-| profile, superseded                         | the profile (5.7); whether each unit is superseded, by its row or by the profile                                                             |
-| kinds                                       | each unit's kind, each interface's ends, and the interface issues (3.8)                                                                      |
-| schema                                      | the reflected fields: unit and keypair type fields, time fields, weight fields (6.6)                                                         |
-| ids, index, relations, chevrons, relationOf | key ids, their places, one record per relation (its two units and which keypairs exist), one record per keypair, and each keypair's relation |
-| types                                       | the type registry (6.6)                                                                                                                      |
-| positions, laidOut                          | each unit's x and y, scaled to an extent of 1,000, y up; whether the layout is done                                                          |
-| mode                                        | '2d' or '3d'; default '2d'                                                                                                                   |
-| root, degrees                               | the root and every unit's degree                                                                                                             |
-| target, paths, choice                       | the path end, its path set, the chosen path                                                                                                  |
-| filters, overrides, hulls                   | 6.7, 6.8, 6.9; hulls default on, and start off for a graph over 3,000 units                                                                  |
-| inspected                                   | a unit, a keypair, a relation, or nothing                                                                                                    |
-| theme                                       | 'light' or 'dark'                                                                                                                            |
-| settings                                    | the settings registry (5.9); the model is its only writer                                                                                    |
-| source                                      | the source of the graph held (5.8)                                                                                                           |
-| selection, highlights                       | the selected units and the highlight groups (6.20)                                                                                           |
-| scope                                       | the scope (6.21)                                                                                                                             |
-| rules                                       | the filter rules (6.7)                                                                                                                       |
+| Field                                       | Holds                                                                                                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| doc, stored, graph, issues, refused         | the document; the graph as loaded, and the graph shown (the same unless the profile projects it, 5.7); its issues; or the refusal                |
+| profile, superseded                         | the profile (5.7); whether each unit is superseded, by its row or by the profile                                                                 |
+| kinds                                       | each unit's kind, each interface's ends, and the interface issues (3.8)                                                                          |
+| schema                                      | the reflected fields: unit and keypair type fields, time fields, weight fields (6.6)                                                             |
+| ids, index, relations, chevrons, relationOf | key ids, their places, one record per relation (its two units and which keypairs exist), one record per keypair, and each keypair's relation     |
+| types                                       | the type registry (6.6)                                                                                                                          |
+| positions, laidOut                          | each unit's x and y, scaled to an extent of 1,000, y up; whether the layout is done                                                              |
+| mode                                        | '2d' or '3d'; default '2d'                                                                                                                       |
+| root, degrees                               | the root and every unit's degree                                                                                                                 |
+| target, paths, choice                       | the path end, its path set, the chosen path                                                                                                      |
+| filters, overrides, hulls                   | 6.7, 6.8, 6.9: the display factors and hulls come from their settings, a graph's own view included; hulls start off for a graph over 3,000 units |
+| inspected                                   | a unit, a keypair, a relation, or nothing                                                                                                        |
+| theme                                       | 'light' or 'dark'                                                                                                                                |
+| settings, changedSettings, depth, extent    | the settings registry (5.9), of which the model is the only writer; the keys of the last change; the depth rules; the extent laid out to         |
+| source                                      | the source of the graph held (5.8)                                                                                                               |
+| selection, highlights                       | the selected units and the highlight groups (6.20)                                                                                               |
+| scope                                       | the scope (6.21)                                                                                                                                 |
+| rules                                       | the filter rules (6.7)                                                                                                                           |
 
 Its methods:
 
@@ -401,6 +400,7 @@ Its methods:
 | `setTheme(theme)`                                                           | Rebuilds the type colours for the theme.                                                                                                                          | theme, types                                   |
 | `loadFrom(source, settings?)`                                               | Reads the source and loads its document as `load` does; a source that fails gives a refusal (5.8).                                                                | as `load`                                      |
 | `setSetting(key, value)`, `resetSettings(keys?)`, `applySettingsFile(file)` | Changes settings through the registry; a value outside a setting's allowed values is refused and reported.                                                        | settings, and the aspects each setting touches |
+| `importSettings(file)`, `setBaseSettings(values)`, `pinSetting(key, on)`    | A person's import, which replaces the person's values; the host's base values, by key; a pin.                                                                     | settings, and the aspects each setting touches |
 | `select(keys, how)`                                                         | Replaces, adds to, toggles in or clears the selection.                                                                                                            | selection, highlight                           |
 | `setHighlight(name, on)`, `saveHighlight(name)`, `removeHighlight(name)`    | Turns a highlight group on or off, saves the selection as a group, or removes a saved group.                                                                      | highlight                                      |
 | `setRule(rule)`, `clearRules()`                                             | Sets or clears filter rules (6.7).                                                                                                                                | filters                                        |
@@ -410,7 +410,7 @@ Its methods:
 
 The `graph` aspect means that everything changed: a listener that hears it redraws every part, the mode, display factors, palettes and camera controls included. The `settings` aspect comes with the keys that changed (`model.changedSettings`); a listener redraws what those settings touch.
 
-Its queries: `label(key)`, `find(text)` (a label, a key as JSON text, or a bare word naming a text key), `keypairsOf(key)` (outgoing first, then incoming, each in file order), `activePath()`, `unitType(key)`, `keypairType(a, b)`, `kindOf(key)`, `endsOf(key)` (an interface's ends, or null), `perspectivesOf(key)` (5.7), `pathSteps()`, `planeCounts()`, `fieldRange(field, kind)`, `settings()`, `relationCount()`.
+Its queries: `label(key)`, `find(text)` (a label, a key as JSON text, or a bare word naming a text key), `keypairsOf(key)` (outgoing first, then incoming, each in file order), `activePath()`, `unitType(key)`, `keypairType(a, b)`, `kindOf(key)`, `endsOf(key)` (an interface's ends, or null), `perspectivesOf(key)` (5.7), `pathSteps()`, `planeCounts()`, `fieldRange(field, kind)`, `viewSettings()` (the view settings to save with the graph), `colours(theme?)` and `colour(value)` (the colour tokens of the settings, and a colour setting's value as a colour), `relationCount()`.
 
 `setTarget` asks with the core's default limits (`PATH_DEFAULTS`). A slow answer never overwrites a newer state: each load has a run number, and each answer checks it, and checks that the root or target it was asked for is still the one held.
 
@@ -599,7 +599,7 @@ interface SceneSnapshot {
 
 **module/index.ts is the module's only entry point.** It exports the core (4.1), the contracts (5.3), `GraphModel` with the types `Relation` and `Chevron`, `EXTENT` and `EXTRA_STEPS`, the kinds of 3.8 (`kindOfUnit`, and the types `Kind`, `Kinds` and `KindIssue`), the extension points of 5.7 (`PUBLIC_PROFILE`, `INTERFACE`, `PUBLIC_LOOKS`, `halfSlots`, `UNIT_SHAPES`, `UNIT_SECTIONS`, and the types `Profile`, `KindRule`, `Check`, `CheckIssue`, `Look`, `Looks`, `UnitShape`, `SectionProps` and `UnitSections`), the depth rules of 6.4 (`DEPTH_RULES`, `SPACING`, `FOREGROUND`, `CHEVRON_AT`, `depthState`, `plane`), the type palette (`TYPE_PALETTE`, `MAX_TYPES`, `OTHER`, `mixColour`), the `SceneSnapshot` type, the components `GraphCanvas`, `GraphView`, `RootPanel`, `PathsPanel`, `InspectorPanel`, `FiltersPanel`, `DisplayPanel`, `TypesPanel`, `IssuesPanel`, `Section` and `RangeSlider`, and the word helpers of 7.8 (`issueWords`, `keyText`, `count`). A host makes a model, hands it to `GraphCanvas` and the panels it wants, and calls the model's methods. `GraphView` is the composite for hosts without a layout of their own (7.9).
 
-Version 4.0 adds: the sources of 5.8 (`JsonFileSource`, `DocumentSource` and the type `GraphSource`); the settings of 5.9 (`Setting` and its classes, `SettingsRegistry`, `createRegistry`, `SETTING_GROUPS`, the stores `HttpSettingsStore`, `BrowserSettingsStore`, `MemorySettingsStore` and `FallbackSettingsStore`, and the types `SettingsFile`, `SettingsStore` and `Control`); `createSettingsHandler` (5.10); `profileFromJson` and the type `ProfileJson` (5.7); the contracts of 5.3; and the components `SettingsDialog`, `SettingControl`, `PinnedPanel`, `SearchPanel`, `ScopePanel` and `HighlightsPanel`.
+Version 4.0 adds: the sources of 5.8 (`JsonFileSource`, `DocumentSource` and the type `GraphSource`); the settings of 5.9 (`Setting` and its classes, `SettingsRegistry`, `createRegistry`, `viewerSettings`, `SETTING_GROUPS`, `GRAPH_LAYER`, the file's `SETTINGS_FORMAT`, `emptySettingsFile`, `readSettingsFile` and `parseSettingsFile`, the stores `HttpSettingsStore`, `BrowserSettingsStore`, `MemorySettingsStore` and `FallbackSettingsStore` with `SettingsConflict`, the `SettingsSaver` with `mergeFiles`, and the types `SettingsFile`, `SettingsStore`, `SettingKey`, `SettingValue` and `Control`); `createSettingsHandler` (5.10); `viewCss`, the CSS properties of the view for a host that lays out the panels itself; the word helpers `fill` and `say`; `profileFromJson` and the type `ProfileJson` (5.7); the contracts of 5.3; and the components `SettingsDialog`, `SettingControl`, `SettingRow`, `PinnedPanel`, `SearchPanel`, `ScopePanel` and `HighlightsPanel`.
 
 ### 5.7 Extending graphview
 
@@ -726,11 +726,12 @@ abstract class Setting<T> {
 
 ### 5.10 The settings handler
 
-**A host keeps the viewer's settings file through one handler, so that the file's rules stay in the module.** `createSettingsHandler({ read, write })` returns the `GET` and `PUT` functions of a SvelteKit route; `read()` resolves to the stored text or null, and `write(text)` stores it.
+**A host keeps the viewer's settings file through one handler, so that the file's rules stay in the module.** `createSettingsHandler({ read, write })` returns the `GET` and `PUT` functions of a SvelteKit route; `read(event)` resolves to the stored text or null, and `write(text, event)` stores it. The route's request event tells whose file it is, as a host keeps one per person.
 
 - GET answers the file, or an empty file of revision 0.
 - PUT takes a file and checks its format. A revision other than the stored one is refused with status 409 and the stored file; otherwise the file is stored with its revision raised by one, and answered.
-- The shell stores the file at data/graphview-settings.json, outside the build and outside git. A host may store it anywhere, such as in its own database.
+- The shell keeps one file per browser under data/settings, outside the build and outside git; a cookie names the browser (D90). A host may store it anywhere, such as in its own database.
+- A viewer whose save meets another revision puts its own changes since its last save over the stored file, saves that, and takes it (D91).
 
 ---
 
@@ -1247,9 +1248,8 @@ module/model/             the model, its sources, contracts and rules
 module/render/            the three.js scene and its parts: buffers, camera, picking, hulls, labels, snapshot, shapes, looks; shaders/ for the GLSL
 module/view/              Svelte components: the viewer, canvas, panels, sections, the Settings dialog; inspector/ for the inspector's sections; settings/ for the controls of the settings
 module/workers/           force layout, distances and path sets
-module/server/            the settings handler for a host's route
 shell/                    the SvelteKit app: routes/ for the page, the settings route and the example graphs; lib/ for the host's store, examples, generators, types and times, interfaces, explanations, files, links and the importer; sections/ for the host sections; examples/ for the shell's own examples; the bench and embed pages
-data/                     the shell's settings file; not in git
+data/                     the shell's settings files; not in git
 tests/gates/              gate tests fixed before the build; read-only
 tests/unit/               unit tests
 tests/e2e/                browser tests

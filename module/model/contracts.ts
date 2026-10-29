@@ -29,7 +29,11 @@ export type Aspect =
   | 'types' // type labels and colours
   | 'display' // size, width and opacity factors, hulls
   | 'inspect'
-  | 'theme';
+  | 'theme'
+  | 'settings' // settings changed: model.changedSettings names them
+  | 'selection'
+  | 'highlight'
+  | 'scope';
 
 export type Listener = (aspects: ReadonlySet<Aspect>) => void;
 

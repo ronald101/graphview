@@ -1,7 +1,7 @@
 // The scene for tests and hosts (specification 5.5): every unit, line and chevron as drawn now, in
 // CSS pixels, so that tests need no knowledge of the shaders.
-import { keyId, tokens, type Key } from '../core/index.ts';
-import { CHEVRON_AT, plane } from '../model/depth.ts';
+import { keyId, type Key } from '../core/index.ts';
+import { plane } from '../model/depth.ts';
 import { along } from '../model/picking.ts';
 import { paletteOf } from '../model/typeRegistry.ts';
 import type { FrameState } from './frame.ts';
@@ -86,7 +86,7 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
   // The display factors as drawn: the shaders' values, which follow the model's overrides.
   const size = g ? g.uniforms.uSizeScale.value : m.overrides.size;
   const opacity = g ? g.uniforms.uOpacityScale.value : m.overrides.opacity;
-  const palette = paletteOf(m.types.unit, m.theme);
+  const palette = paletteOf(m.types.unit, m.types.look);
   const units: SceneSnapshot['units'] = (graph?.units ?? []).map((k, i) => {
     const v = snap.st[i];
     const d = m.degrees ? m.degrees[i] : null;
@@ -97,7 +97,7 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
       ends: m.endsOf(k),
       halves: [palette[s.u.halves[2 * i]], palette[s.u.halves[2 * i + 1]]],
       degree: d,
-      plane: d === null ? null : plane(d),
+      plane: d === null ? null : plane(d, s.rules.depth),
       type: m.unitType(k)?.id ?? null,
       x: v.p[0],
       y: v.p[1],
@@ -129,7 +129,7 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
   });
   const chevrons: SceneSnapshot['chevrons'] = m.chevrons.map((ch, i) => {
     const rel = m.relations[ch.rel];
-    const at = ch.forward ? CHEVRON_AT.forward : CHEVRON_AT.backward;
+    const at = s.chevronAt(i);
     const p = g ? g.project(along(snap.st[rel.a].p, snap.st[rel.b].p, at)) : { x: 0, y: 0 };
     const [from, to] = ch.forward ? [rel.ka, rel.kb] : [rel.kb, rel.ka];
     const type = m.keypairType(from, to);
@@ -137,11 +137,11 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
       from,
       to,
       at,
-      visible: s.chevronOpacity(i, snap) > 0.1,
+      visible: s.chevronOpacity(i, snap) > s.rules.pointer.minOpacity,
       opacity: s.chevronOpacity(i, snap),
       flow: s.now(s.c.aChevState, i, 4, 0),
       type: type?.id ?? null,
-      colour: type?.colour ?? tokens[m.theme].context,
+      colour: type?.colour ?? m.types.look.other,
       sx: p.x,
       sy: p.y,
     };

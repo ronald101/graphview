@@ -3,15 +3,12 @@
 // gives the new next value. The shaders then ease from one to the other, which also gives the
 // fade-in, fade-out and trails of moving units (specification 6.10).
 import { keyId, keypairId, type Key } from '../core/index.ts';
-import { CHEVRON_AT } from '../model/depth.ts';
 import { keypairPasses, lineWeight, unitPasses, weightOf } from '../model/filters.ts';
 import type { GraphModel } from '../model/model.ts';
 import type { Relation } from '../model/topology.ts';
-import { OTHER } from '../model/typeRegistry.ts';
 import type { FrameState } from './frame.ts';
 import { LOOK, type EndBuffers } from './geometry.ts';
 import { halvesOf, lookOf } from './looks.ts';
-import { SUPERSEDED } from './rules.ts';
 import { shapeSlot } from './shapes.ts';
 
 /** New attribute arrays for the model's graph, with the values that do not change over transitions. */
@@ -54,39 +51,57 @@ export function allocate(s: FrameState) {
   s.relationsPer = new Uint32Array(n);
   if (g) {
     g.units.forEach((_, i) => {
-      s.u.look[4 * i + LOOK.fade] = m.superseded[i] ? SUPERSEDED : 1;
       s.u.look[4 * i + LOOK.shape] = shapeSlot(lookOf(s.looks, m.kinds.of[i]).shape, s.looks.shapes);
     });
     m.relations.forEach((rel, i) => {
       s.relationsPer[rel.a]++;
       s.relationsPer[rel.b]++;
-      s.l.aStatic[2 * i] = relationFade(m, rel);
       s.l.aStatic[2 * i + 1] = rel.ab && rel.ba ? 0 : rel.ab ? 2 : 1;
     });
     m.chevrons.forEach((ch, i) => {
       const rel = m.relations[ch.rel];
       const [from, to] = ch.forward ? [rel.ka, rel.kb] : [rel.kb, rel.ka];
-      s.c.aChev[4 * i] = ch.forward ? CHEVRON_AT.forward : CHEVRON_AT.backward;
       s.c.aChev[4 * i + 1] = ch.forward ? 1 : -1;
-      s.c.aChev[4 * i + 2] = m.types.keypairSlot.get(keypairId(from, to)) ?? OTHER;
-      s.c.aChev[4 * i + 3] = keypairFade(m, from, to);
+      s.c.aChev[4 * i + 2] = m.types.keypairSlot.get(keypairId(from, to)) ?? m.types.other;
     });
   }
+  statics(s);
   s.flags = { root: [0, 0], path: [0, 0], depth: [0, 0] };
   s.forget();
 }
 
+/** The values that change only with the settings: the fades of superseded parts and the chevrons' places. */
+export function statics(s: FrameState) {
+  const m = s.model;
+  const g = m.graph;
+  if (!g) return;
+  const fade = s.rules.superseded;
+  const at = s.rules.chevrons.at;
+  g.units.forEach((_, i) => (s.u.look[4 * i + LOOK.fade] = m.superseded[i] ? fade : 1));
+  m.relations.forEach((rel, i) => (s.l.aStatic[2 * i] = relationFade(m, rel, fade)));
+  m.chevrons.forEach((ch, i) => {
+    const rel = m.relations[ch.rel];
+    const [from, to] = ch.forward ? [rel.ka, rel.kb] : [rel.kb, rel.ka];
+    s.c.aChev[4 * i] = ch.forward ? at.forward : at.backward;
+    s.c.aChev[4 * i + 3] = keypairFade(m, from, to, fade);
+  });
+  s.forget();
+}
+
 /** A keypair fades when it, or one of its units, is superseded. */
-function keypairFade(m: GraphModel, a: Key, b: Key): number {
+function keypairFade(m: GraphModel, a: Key, b: Key, fade: number): number {
   const unitGone = (k: Key) => m.superseded[m.index.get(keyId(k))!] === 1;
   const gone = unitGone(a) || unitGone(b) || m.graph!.keypairInfo.get(keypairId(a, b))?.superseded;
-  return gone ? SUPERSEDED : 1;
+  return gone ? fade : 1;
 }
 
 /** A relation's line fades when every keypair it has fades. */
-function relationFade(m: GraphModel, rel: Relation): number {
-  const fades = [rel.ab ? keypairFade(m, rel.ka, rel.kb) : null, rel.ba ? keypairFade(m, rel.kb, rel.ka) : null];
-  return fades.every((f) => f === null || f < 1) ? SUPERSEDED : 1;
+function relationFade(m: GraphModel, rel: Relation, fade: number): number {
+  const fades = [
+    rel.ab ? keypairFade(m, rel.ka, rel.kb, fade) : null,
+    rel.ba ? keypairFade(m, rel.kb, rel.ka, fade) : null,
+  ];
+  return fades.every((f) => f === null || f < 1) ? fade : 1;
 }
 
 /**
@@ -112,10 +127,11 @@ export function step(s: FrameState, first: boolean, marks: string[]) {
     }
   }
   const f = m.filters;
+  const rules = m.schema.rules;
   const pass = new Uint8Array(n);
-  g.units.forEach((k, i) => (pass[i] = unitPasses(g, k, f) ? 1 : 0));
+  g.units.forEach((k, i) => (pass[i] = unitPasses(g, k, f, rules) ? 1 : 0));
   const keypairShows = (a: Key, b: Key) =>
-    keypairPasses(g, a, b, f) && pass[m.index.get(keyId(a))!] === 1 && pass[m.index.get(keyId(b))!] === 1;
+    keypairPasses(g, a, b, f, rules) && pass[m.index.get(keyId(a))!] === 1 && pass[m.index.get(keyId(b))!] === 1;
   const span = m.fieldRange(f.weightField, 'weight');
   const pair = (arr: Float32Array, i: number, next: number) => {
     arr[2 * i] = first ? next : arr[2 * i + 1];

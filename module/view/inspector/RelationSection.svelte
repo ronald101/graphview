@@ -1,5 +1,6 @@
 <!-- The inspector's relation, one line: both of its keypairs side by side, or that one is missing. -->
 <script lang="ts">
+  import { say } from '../words.ts';
   import KeypairRecord from './KeypairRecord.svelte';
   import { keypairRecord } from './record.ts';
   import type { SectionProps, Shown } from './sections.ts';
@@ -12,12 +13,14 @@
   });
 </script>
 
-<h3 data-kind="relation">Relation between {model.label(inspected.a)} and {model.label(inspected.b)}</h3>
+<h3 data-kind="relation">
+  {say(model, 'Relation between {a} and {b}', { a: model.label(inspected.a), b: model.label(inspected.b) })}
+</h3>
 <div class="gv-pair">
   {#each records as rec, i (i)}
     <div class="gv-col" data-col={i}>
-      <h4>{model.label(rec.from)} to {model.label(rec.to)}</h4>
-      <KeypairRecord {rec} />
+      <h4>{say(model, '{from} to {to}', { from: model.label(rec.from), to: model.label(rec.to) })}</h4>
+      <KeypairRecord {rec} {model} />
     </div>
   {/each}
 </div>
