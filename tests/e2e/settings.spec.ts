@@ -28,7 +28,7 @@ test('§7.10 The Settings dialog and pins: every group, a filter, a slider that 
 }) => {
   await ready(page);
   const dialog = await settings(page);
-  await expect(dialog.locator('.gv-section')).toHaveCount(26);
+  await expect(dialog.locator('.gv-section')).toHaveCount(27);
   await dialog.getByLabel('Filter the settings').fill('units.radius');
   await expect(dialog.locator('.gv-setting')).toHaveCount(1);
   const before = await reach(page);

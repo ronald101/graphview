@@ -235,3 +235,39 @@
 - **Choice.** The settings leave out what belongs to a graph (the root, the target, the path, the inspected part, the camera, type names and colours, the filters' window), what is fixed when the code is built (the font files' weights), the core's limits that the gates fix (the path search's most extra steps), and the parts of the extension points that are code (checks, perspectives, projections, shapes' GLSL, inspector sections). The declarative parts of the profile come with version 4.0's profile from JSON (5.7).
 - **Reason.** A graph's own state travels in its `meta.view`; build-time values cannot change while the viewer runs; the gates fix the core's limits; code cannot live in a JSON file.
 - **Alternative.** Settings for them too. They would either do nothing or break the rules above.
+
+## D94. The shell reads files and addresses itself; examples reach the viewer as sources
+
+- **Choice.** The shell serves each example at /graphview/examples/<id>.json, written at build time, and hands GraphView a `JsonFileSource` of it; when types or interfaces are added, a source of the shell's reads that file and prepares the document on the way. A file or an address the shell reads itself, converts rows (3.7), and hands over as a `DocumentSource`.
+- **Reason.** The words about files and addresses ("The file … is not valid JSON.", "The server at … refused the request, or sent no JSON.") are the host's, and a file that cannot be read leaves the viewer's graph as it was. The examples take the path a host's data module takes.
+- **Alternative.** Hand every file and address to the viewer as a `JsonFileSource`. A file that failed would then replace the graph with the refusal "source", and the shell would lose its messages.
+
+## D95. The shell attaches to GraphView's model once it is on the page
+
+- **Choice.** The shell takes GraphView's `model` and `getCanvas()` from the component after it mounts. It follows the model's aspects for the headline and the page's colours, and it hands graphs to GraphView only through its props.
+- **Reason.** GraphView makes its own model and needs nothing from its host but a graph (7.9); the shell plays such a host.
+- **Alternative.** A `model` prop. Every host would then build and own a model, which 7.9 keeps inside the viewer.
+
+## D96. The hook's look is a base value
+
+- **Choice.** `setLook({ theme, motion })` sets GraphView's `theme` and `motion` props, the base values of `theme.scheme` and `motion.enabled`.
+- **Reason.** A test's look stays out of the person's settings file, and the Settings dialog shows no change the person did not make.
+- **Alternative.** Set the person's values. Each test would write its look into the settings file.
+
+## D97. GraphView applies the narrow-page rule to its own side bar
+
+- **Choice.** On a page 900 pixels wide or less, GraphView starts its side bar closed and draws it as a drawer over the canvas.
+- **Reason.** 8.1's rule covers the viewer's side bar, which the host does not lay out; the viewer keeps the rule in any host.
+- **Alternative.** A prop for whether the side bar starts open. Each host would repeat the rule.
+
+## D98. Only the newest graph reports ready
+
+- **Choice.** GraphView calls `onready` for the newest `graph` or `source` it was given, after the canvas settles, and not for a load that a newer one overtook.
+- **Reason.** A load that finishes while a newer one runs would otherwise tell the host that the newer graph is shown; the shell's hook waits on these calls.
+- **Alternative.** Report every finished load with its source, and let hosts match them.
+
+## D99. The setting "Profile" is read at each load
+
+- **Choice.** When `extensions.profile` holds a profile as JSON, each load builds the model's profile from it; when it is empty, the profile given to the model serves. The rules of 3.8 that a profile may change act where the kinds are found, so the issues follow the profile of the load.
+- **Reason.** The profile decides the kinds, the issues and the superseded units of the stored graph, which a load computes; the setting applies with the next graph, as its mark says.
+- **Alternative.** Recompute the kinds of the open graph at once. That would repeat the load's work outside a load.

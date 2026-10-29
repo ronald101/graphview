@@ -39,6 +39,7 @@ export const ISSUE_PARTS: { [C in KnownIssue['code']]: Parts<C> } = {
   'fingerprint-mismatch': () => ({}),
   'interface-ends': (i, name, locale) => ({ unit: name(i.key), ends: count(i.ends, 'unit', 'units', locale) }),
   'interface-pair': (i, name) => ({ a: name(i.keypair[0]), b: name(i.keypair[1]) }),
+  'direct-relation': (i, name) => ({ a: name(i.keypair[0]), b: name(i.keypair[1]) }),
 };
 
 /** An issue in plain words: the module's own templates for its codes, else the words of the check that found it. */

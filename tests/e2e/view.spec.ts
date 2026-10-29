@@ -532,7 +532,7 @@ test('§6.9 Hulls: they wrap close units of one type; the switch in the top bar 
     expect(h.members).toBeGreaterThanOrEqual(3);
     expect(types).toContain(h.type);
   }
-  const toggle = page.getByRole('banner').getByLabel('Hulls');
+  const toggle = page.getByRole('toolbar', { name: 'View' }).getByLabel('Hulls');
   await toggle.uncheck();
   await frames(page);
   expect((await snap(page)).hulls).toEqual([]);

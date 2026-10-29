@@ -2,6 +2,7 @@
 // shows, and the layers their values come from. The model owns one registry and is its only writer.
 import { emptySettingsFile, type SettingsFile } from './file.ts';
 import { pathSettings, displaySettings, filterSettings, motionSettings } from './groups/behaviour.ts';
+import { extensionSettings } from './groups/extensions.ts';
 import { layoutSettings, schemaSettings, viewSettings } from './groups/data.ts';
 import { accessibilitySettings, cameraSettings, keyboardSettings, pointerSettings } from './groups/input.ts';
 import { textSettings, themeSettings, typeSettings } from './groups/look.ts';
@@ -44,6 +45,7 @@ export const viewerSettings = () =>
     ...pictureSettings(),
     ...rendererSettings(),
     ...speedSettings(),
+    ...extensionSettings(),
   ]);
 
 /** The groups of the Settings dialog, in their order. */
@@ -74,6 +76,7 @@ export const SETTING_GROUPS = [
   'Picture',
   'Renderer',
   'Speed',
+  'Extension points',
 ] as const;
 
 export type ViewerSettings = ReturnType<typeof viewerSettings>;

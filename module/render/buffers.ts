@@ -14,6 +14,8 @@ import { shapeSlot } from './shapes.ts';
 /** New attribute arrays for the model's graph, with the values that do not change over transitions. */
 export function allocate(s: FrameState) {
   const m = s.model;
+  const kinds = m.settings.get('extensions.looks');
+  s.looks = kinds ? { ...s.baseLooks, kinds: { ...s.baseLooks.kinds, ...kinds } } : s.baseLooks;
   const n = m.ids.length;
   const r = m.relations.length;
   const k = m.chevrons.length;

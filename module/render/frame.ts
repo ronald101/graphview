@@ -38,15 +38,16 @@ export class FrameState {
   relationsPer = new Uint32Array(0);
   gpu: Gpu | null = null;
   readonly model: GraphModel;
-  /** How each kind of unit looks, and the shapes the unit shader holds. */
-  readonly looks: Looks;
+  /** How each kind of unit looks, and the shapes the unit shader holds: the host's, with the setting "Looks of kinds" over them for the graph loaded. */
+  looks: Looks;
+  readonly baseLooks: Looks;
   /** The numbers the shaders draw with, from the settings; the scene refreshes them. */
   rules: DrawRules;
   private snap: { key: string; value: Snapshot } | null = null;
 
   constructor(model: GraphModel, looks: Looks = PUBLIC_LOOKS) {
     this.model = model;
-    this.looks = looks;
+    this.looks = this.baseLooks = looks;
     this.rules = drawRules(model);
   }
 

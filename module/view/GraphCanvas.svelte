@@ -72,7 +72,11 @@
     return {
       mode,
       refused: model.refused,
-      refusal: model.refused ? (set('words.refusals')[model.refused.code] ?? model.refused.message) : '',
+      refusal: model.refused
+        ? fill(set('words.refusals')[model.refused.code] ?? model.refused.message, {
+            reason: model.refused.reason ?? '',
+          })
+        : '',
       name: fill(set('words.canvasName'), {
         mode: mode === '3d' ? '3D' : '2D',
         units: count(g?.units.length ?? 0, 'unit', 'units', locale),

@@ -1,6 +1,6 @@
 // The Generate section (specification 8.4, 8.7 to 8.9): types, weights and times added at random
-// within chosen ranges, the Types section in complementary pairs, and the explanation that follows
-// every change.
+// within chosen ranges, the viewer's Types section in complementary pairs, and the explanation that
+// follows every change.
 import { expect, test, type Page } from '@playwright/test';
 import { open, read, settled, slide } from './helpers.ts';
 
@@ -11,20 +11,22 @@ type Doc = {
 
 const addTypes = (page: Page) => page.getByRole('checkbox', { name: 'Add types, weights and times' });
 
-test('§8.4 Generate: "Add types, weights and times" opens Types and turns on the sliders and the numbers', async ({
+test('§8.4 Generate: "Add types, weights and times" turns on the numbers of types and the sliders, in Generate', async ({
   page,
 }) => {
   await open(page);
-  await expect(page.getByTestId('section-types')).toHaveAttribute('data-open', 'false');
+  const generate = page.getByTestId('section-generate');
   for (const l of ['Weights, lowest', 'Weights, highest', 'Times, lowest', 'Times, highest'])
-    await expect(page.getByLabel(l, { exact: true })).toBeDisabled();
-  await expect(page.getByLabel('Unit types to add')).toBeDisabled();
+    await expect(generate.getByLabel(l, { exact: true })).toBeDisabled();
+  await expect(generate.getByLabel('Unit types to add')).toBeDisabled();
+  await expect(generate.getByLabel('Relation types to add')).toBeDisabled();
   await addTypes(page).check();
-  await expect(page.getByTestId('section-types')).toHaveAttribute('data-open', 'true');
   for (const l of ['Weights, lowest', 'Weights, highest', 'Times, lowest', 'Times, highest'])
-    await expect(page.getByLabel(l, { exact: true })).toBeEnabled();
-  await expect(page.getByLabel('Unit types to add')).toHaveValue('5');
-  await expect(page.getByLabel('Relation types to add')).toHaveValue('4');
+    await expect(generate.getByLabel(l, { exact: true })).toBeEnabled();
+  await expect(generate.getByLabel('Unit types to add')).toHaveValue('5');
+  await expect(generate.getByLabel('Relation types to add')).toHaveValue('4');
+  // The viewer's Types section stays as the person left it.
+  await expect(page.getByTestId('section-types')).toHaveAttribute('data-open', 'false');
 });
 
 test('§8.7 Types, weights and times: a family gets unit types, complementary relation types, and weights and times within the ranges', async ({
@@ -65,8 +67,10 @@ test('§8.7 Types, weights and times: a family gets unit types, complementary re
     expect(t).toBeGreaterThanOrEqual(Math.max(born.get(e.from)!, born.get(e.to)!));
     expect(t).toBeLessThanOrEqual(times[1]);
   }
-  // The Types section shows the unit types, and the keypair types side by side with their complements.
+  // The viewer's Types section shows the unit types, and the keypair types side by side with their complements.
+  await page.getByTestId('section-types').locator('h2 button').click();
   const types = page.getByTestId('types-panel');
+  await expect(types).toBeVisible();
   await expect(types.getByTestId('unit-types').locator('li')).toHaveCount(3);
   const rows = types.getByTestId('keypair-types').locator('tbody tr');
   await expect(rows).toHaveCount(2);

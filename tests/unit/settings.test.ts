@@ -231,6 +231,7 @@ describe('§5.9 Settings: the registry', () => {
       'Picture',
       'Renderer',
       'Speed',
+      'Extension points',
     ]);
   });
 

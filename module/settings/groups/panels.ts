@@ -62,7 +62,7 @@ export const panelSettings = () =>
       group: 'Panels',
       label: 'Open at the start',
       description: 'The sections that start open.',
-      default: SECTIONS.map(([s]) => s).filter((s) => s !== 'display'),
+      default: ['search', 'root', 'paths', 'inspector', 'issues', 'pinned'],
       items: SECTIONS,
     }),
     new SliderSetting({
@@ -70,7 +70,7 @@ export const panelSettings = () =>
       group: 'Panels',
       label: 'Side bar width',
       description: 'Width of the side bar.',
-      default: 340,
+      default: 360,
       min: 200,
       max: 800,
       step: 10,

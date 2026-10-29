@@ -1,8 +1,8 @@
-// The shell (specification section 8): the top bar, the
-// sidebars and their sections, the examples and families of the Generate section, broken rules,
-// the bench page, and no private names in the build.
+// The shell (specification section 8): the top bar, the host tools and the viewer's side bar with
+// their sections, the examples and families of the Generate section, broken rules, the bench page,
+// and no private names in the build.
 import { expect, test } from '@playwright/test';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { loadGraph, tokens } from '../../module/core/index.ts';
 import {
   close,
@@ -23,41 +23,67 @@ import { leaks, PRIVATE_TERMS } from '../unit/privateWords.ts';
 
 const exampleId = (fixture: string) => (fixture === SAMPLE_SOURCE ? SAMPLE : fixture);
 
-test('§8.2 Top bar: the 2D and 3D buttons, Hulls and Fit; no Load or Generate button', async ({ page }) => {
+test("§8.2 Top bar: Host, graphview and the headline; the view's controls are in the viewer's bar", async ({
+  page,
+}) => {
   await open(page);
-  const bar = page.getByRole('banner');
-  for (const b of ['2D', '3D', 'Fit', 'Controls', 'Panels'])
+  const top = page.getByRole('banner');
+  await expect(top.getByRole('button', { name: 'Host', exact: true })).toBeVisible();
+  await expect(top.getByRole('heading', { name: 'graphview' })).toBeVisible();
+  await expect(top.getByRole('button')).toHaveCount(1);
+  await expect(top.getByRole('checkbox')).toHaveCount(0);
+  await expect(top.getByRole('combobox')).toHaveCount(0);
+  const bar = page.getByRole('toolbar', { name: 'View' });
+  for (const b of ['2D', '3D', 'Fit', 'Panels', 'Settings'])
     await expect(bar.getByRole('button', { name: b, exact: true })).toBeVisible();
   await expect(bar.getByRole('checkbox', { name: 'Hulls' })).toBeChecked();
   await expect(bar.getByRole('button', { name: /^(Load|Generate)/ })).toHaveCount(0);
-  await expect(bar.getByRole('combobox')).toHaveCount(0);
   await expect(page.getByTestId('headline')).toHaveText(
     `Sample graph, 81 units, 84 relations, ${words(expected(SAMPLE_SOURCE).issues.length, 'issue', 'issues')}`,
   );
 });
 
-test('§7.1 and §8.1 Sections and sidebars: they open and close; the canvas takes the room', async ({ page }) => {
+test('§7.1 and §8.1 Sections and sidebars: they open and close, starting as drawn; the canvas takes the room', async ({
+  page,
+}) => {
   await open(page);
   const width = async () => (await page.getByTestId('canvas').boundingBox())!.width;
   const w0 = await width();
-  await page.getByRole('button', { name: 'Controls', exact: true }).click();
-  await expect(page.locator('#controls')).toBeHidden();
+  await expect(page.locator('#host')).toHaveCSS('width', '300px');
+  await expect(page.locator('#gv-view-panels')).toHaveCSS('width', '360px');
+  await expect(page.getByRole('banner')).toHaveCSS('height', '48px');
+  await page.getByRole('button', { name: 'Host', exact: true }).click();
+  await expect(page.locator('#host')).toBeHidden();
   await page.getByRole('button', { name: 'Panels', exact: true }).click();
-  await expect(page.locator('#panels')).toBeHidden();
-  await expect.poll(width).toBeGreaterThan(w0 + 400);
-  await page.getByRole('button', { name: 'Controls', exact: true }).click();
+  await expect(page.locator('#gv-view-panels')).toBeHidden();
+  await expect.poll(width).toBeGreaterThan(w0 + 600);
+  await page.getByRole('button', { name: 'Host', exact: true }).click();
   await page.getByRole('button', { name: 'Panels', exact: true }).click();
+  // The host's sections, then the viewer's, each open (true) or closed (false) at the start.
+  const sections = page.locator('[data-testid^="section-"]');
+  expect(await sections.evaluateAll((els) => els.map((e) => [e.getAttribute('data-testid'), e.dataset.open]))).toEqual([
+    ['section-data', 'true'],
+    ['section-generate', 'true'],
+    ['section-root', 'true'],
+    ['section-paths', 'true'],
+    ['section-inspector', 'true'],
+    ['section-filters', 'false'],
+    ['section-types', 'false'],
+    ['section-display', 'false'],
+    ['section-issues', 'true'],
+    ['section-pinned', 'true'],
+  ]);
   for (const id of [
     'data',
     'generate',
-    'types',
-    'look',
     'root',
     'paths',
     'inspector',
     'filters',
+    'types',
     'display',
     'issues',
+    'pinned',
   ]) {
     const section = page.getByTestId(`section-${id}`);
     const toggle = section.locator('h2 button');
@@ -71,12 +97,15 @@ test('§7.1 and §8.1 Sections and sidebars: they open and close; the canvas tak
 test('§8.1 Page layout: at 900 pixels or less the sidebars start closed and open over the canvas', async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 700 });
   await open(page);
-  await expect(page.locator('#controls')).toBeHidden();
-  await expect(page.locator('#panels')).toBeHidden();
-  await page.getByRole('button', { name: 'Controls', exact: true }).click();
-  await expect(page.locator('#controls')).toBeVisible();
+  await expect(page.locator('#host')).toBeHidden();
+  await expect(page.locator('#gv-view-panels')).toBeHidden();
+  const canvas = (await page.getByTestId('canvas').boundingBox())!;
+  await page.getByRole('button', { name: 'Host', exact: true }).click();
+  await expect(page.locator('#host')).toBeVisible();
   await page.getByRole('button', { name: 'Panels', exact: true }).click();
-  await expect(page.locator('#panels')).toBeVisible();
+  await expect(page.locator('#gv-view-panels')).toBeVisible();
+  // Over the canvas: it keeps its size.
+  expect((await page.getByTestId('canvas').boundingBox())!.width).toBe(canvas.width);
   // The boundary: at 900 pixels the drawers still apply; one pixel more shows both sidebars.
   for (const [width, hidden] of [
     [900, true],
@@ -84,7 +113,8 @@ test('§8.1 Page layout: at 900 pixels or less the sidebars start closed and ope
   ] as const) {
     await page.setViewportSize({ width, height: 700 });
     await open(page);
-    await expect(page.locator('#controls')).toBeVisible({ visible: !hidden });
+    await expect(page.locator('#host')).toBeVisible({ visible: !hidden });
+    await expect(page.locator('#gv-view-panels')).toBeVisible({ visible: !hidden });
   }
 });
 
@@ -169,15 +199,17 @@ test('§8.6 Breaking the rules: breaking them on purpose shows the banner and th
   });
 });
 
-test('§8.9 Look: the theme takes effect at once, in the page and in the picture, with the tokens of §4.6', async ({
+test("§8.9 Types and look: the viewer's theme takes effect at once, in the page and in the picture, with the tokens of §4.6", async ({
   page,
 }) => {
   await open(page);
-  await page.getByTestId('section-look').locator('h2 button').click();
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Settings' });
+  await dialog.getByLabel('Filter the settings').fill('theme.scheme');
   const surface = () =>
     page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--gv-surface').trim());
   for (const theme of ['dark', 'light'] as const) {
-    await page.getByLabel('Theme').selectOption(theme);
+    await dialog.getByTestId('setting-theme.scheme').getByRole('combobox').selectOption(theme);
     await expect.poll(surface).toBe(tokens[theme].surface);
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
     await frames(page);
@@ -215,8 +247,11 @@ test('§11.1 Fixtures: the built shell carries no private term', async ({ page }
   expect(PRIVATE_TERMS.full.size).toBeGreaterThan(100);
   // Every text file of the server build, which the browser tests run against (8.17), at any depth.
   const dir = new URL('../../dist/server/', import.meta.url);
-  const files = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => /\.(js|css|html|json)$/.test(f));
+  const files = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter(
+    (f) => /\.(js|css|html|json)$/.test(f) && statSync(new URL(f, dir)).isFile(),
+  );
   expect(files).toContain('prerendered/graphview/index.html');
+  expect(files).toContain('prerendered/graphview/examples/sample.json');
   expect(files.filter((f) => f.startsWith('client/') && f.endsWith('.js')).length).toBeGreaterThan(5);
   for (const f of files) {
     expect(leaks(readFileSync(new URL(f, dir), 'utf8')), f).toEqual([]);

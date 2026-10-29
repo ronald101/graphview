@@ -11,20 +11,28 @@ const root = resolve(here, '..');
 const fixtures = resolve(root, 'fixtures');
 
 /**
- * The examples as a module of data, built from the fixtures at build time, then the shell's own
- * examples in shell/examples. The largest graph loads on demand instead.
+ * The examples, built from the fixtures at build time, then the shell's own examples in shell/examples:
+ * "virtual:examples" lists them for the page, and "virtual:example-docs" holds their documents for the
+ * route that serves them (specification 8.10).
  */
 function examples(): Plugin {
-  const id = 'virtual:examples';
-  const resolved = `\0${id}`;
+  const LIST = 'virtual:examples';
+  const DOCS = 'virtual:example-docs';
   return {
     name: 'graphview-examples',
-    resolveId: (source) => (source === id ? resolved : undefined),
+    resolveId: (source) => (source === LIST || source === DOCS ? `\0${source}` : undefined),
     load(source) {
-      if (source !== resolved) return;
-      const indexFile = resolve(fixtures, 'index.json');
-      this.addWatchFile(indexFile);
-      const index = JSON.parse(readFileSync(indexFile, 'utf8')) as {
+      if (source !== `\0${LIST}` && source !== `\0${DOCS}`) return;
+      const read = (file: string) => {
+        this.addWatchFile(file);
+        return JSON.parse(readFileSync(file, 'utf8')) as unknown;
+      };
+      const meta = (doc: unknown) => {
+        const m = (doc as { meta?: unknown } | null)?.meta;
+        return m && typeof m === 'object' ? (m as { name?: unknown; description?: unknown }) : {};
+      };
+      const text = (v: unknown) => (typeof v === 'string' ? v : null);
+      const index = read(resolve(fixtures, 'index.json')) as {
         fixture: string;
         load: string;
         units: number | null;
@@ -32,17 +40,14 @@ function examples(): Plugin {
       }[];
       const list: unknown[] = [];
       const docs: Record<string, unknown> = {};
+      const add = (id: string, group: string, units: number | null, doc: unknown) => {
+        docs[id] = doc;
+        const m = meta(doc);
+        list.push({ id, group, units, name: text(m.name), description: text(m.description) });
+      };
       for (const e of index) {
         const group = e.load === 'refused' ? 'refused' : e.issues > 0 ? 'broken' : 'valid';
-        if (e.fixture === 'random-10k') {
-          list.push({ id: e.fixture, group, units: e.units, onDemand: true });
-          continue;
-        }
-        const file = resolve(fixtures, 'graphs', `${e.fixture}.json`);
-        this.addWatchFile(file);
-        const name = exampleId(e.fixture);
-        docs[name] = JSON.parse(readFileSync(file, 'utf8'));
-        list.push({ id: name, group, units: e.units, onDemand: false });
+        add(exampleId(e.fixture), group, e.units, read(resolve(fixtures, 'graphs', `${e.fixture}.json`)));
       }
       // The shell's own examples: interface graphs, which the fixtures do not hold. A name that
       // starts with broken- shows among the examples with issues.
@@ -50,14 +55,11 @@ function examples(): Plugin {
       for (const name of readdirSync(own)
         .filter((n) => n.endsWith('.json'))
         .sort()) {
-        const file = resolve(own, name);
-        this.addWatchFile(file);
+        const doc = read(resolve(own, name)) as { vertices: unknown[] };
         const id = name.replace(/\.json$/, '');
-        docs[id] = JSON.parse(readFileSync(file, 'utf8'));
-        const group = id.startsWith('broken-') ? 'broken' : 'valid';
-        list.push({ id, group, units: (docs[id] as { vertices: unknown[] }).vertices.length, onDemand: false });
+        add(id, id.startsWith('broken-') ? 'broken' : 'valid', doc.vertices.length, doc);
       }
-      return `export default ${JSON.stringify({ list, docs })};`;
+      return `export default ${JSON.stringify(source === `\0${LIST}` ? list : docs)};`;
     },
   };
 }

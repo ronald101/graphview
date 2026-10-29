@@ -1,14 +1,12 @@
-<!-- Data: open and save files, save a picture, fetch from the web, and share a link. -->
+<!-- Data (specification 8.3): open and save files, fetch from the web, and share a link. -->
 <script lang="ts">
   import { Section } from '../../module/index.ts';
   import type { Shell } from '../lib/shell.svelte.ts';
 
-  let { shell, refused }: { shell: Shell; refused: boolean } = $props();
+  let { shell }: { shell: Shell } = $props();
 
   let fileInput: HTMLInputElement;
   let urlInput = $state('');
-  // svelte-ignore state_referenced_locally
-  let pictureBackground = $state(shell.model.settings.get('picture.background'));
 
   async function browse() {
     if (!(await shell.browse())) fileInput.click();
@@ -25,7 +23,7 @@
   <h3>File</h3>
   <div class="gv-row">
     <button type="button" onclick={browse}>Browse…</button>
-    <button type="button" onclick={() => shell.save()} disabled={refused && !shell.model.doc}>Save</button>
+    <button type="button" onclick={() => shell.save()} disabled={shell.info.refused && !shell.info.hasDoc}>Save</button>
     <input
       bind:this={fileInput}
       type="file"
@@ -37,11 +35,6 @@
   </div>
   <p class="file-name" data-testid="file-name">{shell.fileName || 'No file selected'}</p>
   <p class="gv-note">Or drop a file on the page. Save writes the graph with its view settings.</p>
-  <h3>Picture</h3>
-  <div class="gv-row">
-    <button type="button" onclick={() => shell.savePicture(pictureBackground)}>Save picture</button>
-    <label class="check"><input type="checkbox" bind:checked={pictureBackground} /> Background</label>
-  </div>
   <h3>Web</h3>
   <form
     class="gv-row"

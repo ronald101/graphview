@@ -1,12 +1,21 @@
 // The shell's state and actions, shared by its sections: where the graph came from, the open file,
-// the messages, the Generate settings, the look, and which sidebars and sections are open. Every
-// change to the graph goes through the model.
+// the messages, and the Generate settings. The shell plays the host (specification 8): it prepares
+// each graph as JSON and hands it to the viewer, GraphView, as a source; it learns what the viewer
+// shows from the viewer's model.
 import { goto } from '$app/navigation';
 import { untrack } from 'svelte';
-import { fingerprint, type GraphCanvas, type GraphModel, type ViewSettings } from '../../module/index.ts';
+import {
+  DocumentSource,
+  fingerprint,
+  JsonFileSource,
+  type CanvasHandle,
+  type GraphModel,
+  type GraphSource,
+  type ViewSettings,
+} from '../../module/index.ts';
 import { breakRules, NO_BREAKS, type BreakOptions } from './breakRules.ts';
 import { decorate, DECORATE_DEFAULTS, type DecorateOptions } from './decorate.ts';
-import { exampleDoc, examples } from './examples.ts';
+import { examples, exampleSource } from './examples.ts';
 import { canPick, pickFile, saveFile, type FileHandle } from './files.ts';
 import { FAMILIES, generate, type Family, type Params } from './generate.ts';
 import { importDoc } from './importer.ts';
@@ -15,7 +24,26 @@ import { SAMPLE_ID } from './sample.ts';
 import { LINK_GRAPH_ERROR, makeLink, readLink, type Source } from './share.ts';
 import { wearTokens } from './theme.ts';
 
-type Canvas = ReturnType<typeof GraphCanvas>;
+/** What the shell needs of the viewer: its model and its canvas. */
+export interface Viewer {
+  readonly model: GraphModel;
+  getCanvas(): CanvasHandle | undefined;
+}
+
+/** A source that reads another and prepares its document, as a host's data module does. */
+class PreparedSource implements GraphSource {
+  readonly name: string;
+  private from: GraphSource;
+  private prepare: (doc: unknown) => unknown;
+  constructor(from: GraphSource, prepare: (doc: unknown) => unknown) {
+    this.name = from.name;
+    this.from = from;
+    this.prepare = prepare;
+  }
+  async load() {
+    return this.prepare(await this.from.load());
+  }
+}
 
 const wide = () => typeof innerWidth === 'number' && innerWidth > 900;
 
@@ -43,32 +71,22 @@ function settingsOf(doc: unknown): Partial<ViewSettings> {
 }
 
 export class Shell {
-  readonly model: GraphModel;
-  canvas: Canvas | undefined = $state();
-  /** Counts the model's changes, so that derived values follow the model. */
-  version = $state(0);
+  /** The viewer's model and canvas, once the viewer is on the page. */
+  model: GraphModel | null = null;
+  private viewer: Viewer | null = null;
+  /** What the viewer shows, for the headline and the sections. */
+  info = $state({ name: 'Graph', units: 0, relations: 0, issues: 0, refused: false, hasDoc: false });
 
   // ---------------------------------------------------------------- page
   leftOpen = $state(wide());
-  rightOpen = $state(wide());
-  open = $state({
-    data: true,
-    generate: true,
-    types: false,
-    look: false,
-    root: true,
-    paths: true,
-    inspector: true,
-    filters: false,
-    display: false,
-    issues: true,
-  });
-  theme = $state<'light' | 'dark' | 'system'>('system');
-  motion = $state<'on' | 'off' | 'system'>('system');
-  systemDark = $state(matchMedia('(prefers-color-scheme: dark)').matches);
-  resolved: 'light' | 'dark' = $derived(
-    this.theme === 'dark' || (this.theme !== 'light' && this.systemDark) ? 'dark' : 'light',
-  );
+  open = $state({ data: true, generate: true });
+
+  // ---------------------------------------------------------------- what the viewer is handed
+  /** The graph's source, the view to apply to it, and the base values of the viewer's look. */
+  graphSource: GraphSource | null = $state.raw(null);
+  view: Partial<ViewSettings> = $state.raw({});
+  theme: 'light' | 'dark' | 'system' | undefined = $state();
+  motion: 'on' | 'off' | 'system' | undefined = $state();
 
   // ---------------------------------------------------------------- data
   source: Source | null = $state(null);
@@ -98,15 +116,8 @@ export class Shell {
   private readyCount = 0;
   private waiters: (() => void)[] = [];
 
-  constructor(model: GraphModel) {
-    this.model = model;
-    model.subscribe(() => untrack(() => this.version++));
-    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => (this.systemDark = e.matches));
-  }
-
   /** The shell's effects; call once while the page component starts. */
   connect() {
-    $effect(() => wearTokens(this.resolved, this.model.colours(this.resolved)));
     // A newly chosen family starts from its own parameters.
     $effect(() => {
       const f = this.chosenFamily;
@@ -115,30 +126,48 @@ export class Shell {
         this.params = paramsText(FAMILIES.find((x) => x.id === f)!.params);
       }
     });
-    // Adding types opens the Types section, where their numbers are set.
-    $effect(() => {
-      if (this.addTypes) untrack(() => (this.open.types = true));
-    });
-    $effect(() => this.expose());
+  }
+
+  /** Takes the viewer once it is on the page: follows its model, wears its colours, and exposes the test hook. */
+  attach(viewer: Viewer) {
+    this.viewer = viewer;
+    this.model = viewer.model;
+    viewer.model.subscribe((a) => untrack(() => this.follow(a)));
+    this.follow();
+    this.expose();
+  }
+
+  /** The headline's facts, and the page's colours, which follow the viewer's theme (8.9). */
+  private follow(a?: ReadonlySet<string>) {
+    const m = this.model!;
+    const info = {
+      name: this.graphName(),
+      units: m.graph?.units.length ?? 0,
+      relations: m.relationCount(),
+      issues: m.issues.length,
+      refused: m.refused !== null,
+      hasDoc: m.doc !== null,
+    };
+    if (JSON.stringify(info) !== JSON.stringify(this.info)) this.info = info;
+    if (!a || a.has('theme') || a.has('settings')) wearTokens(m.theme, m.colours(m.theme));
   }
 
   /** The graph's name, for the headline and file names. */
   graphName(): string {
-    const g = this.model.graph;
+    const g = this.model?.graph;
     return g && typeof g.meta.name === 'string' ? g.meta.name : 'Graph';
   }
 
   // ---------------------------------------------------------------- loading
 
-  /** Loads a document into the model, with saved view settings; the panels follow the model. */
-  async show(doc: unknown, from: Source, settings: Partial<ViewSettings> = {}) {
+  /** Hands a graph to the viewer, with view settings to apply; resolves when the viewer has shown it. */
+  private show(source: GraphSource, from: Source, view: Partial<ViewSettings> = {}): Promise<void> {
     this.source = from;
     this.shareLink = '';
-    const done = await this.model.load(doc, settings);
-    if (!done) return;
-    await this.canvas?.whenSettled();
-    if (settings.camera) this.canvas?.setCamera(settings.camera.position, settings.camera.target);
-    this.ready();
+    const shown = new Promise<void>((r) => this.waiters.push(r));
+    this.view = view;
+    this.graphSource = source;
+    return shown;
   }
 
   async openText(text: string, name: string, handle: FileHandle | null) {
@@ -153,7 +182,7 @@ export class Shell {
     this.fileHandle = handle;
     this.fileName = name;
     this.message = converted ? `The file ${name} was read as rows with id, source and target.` : '';
-    await this.show(doc, { kind: 'file', name }, settingsOf(doc));
+    await this.show(new DocumentSource(doc, name), { kind: 'file', name }, settingsOf(doc));
   }
 
   /** Opens a file with the browser's picker; false where there is none, so that the page uses its file input. */
@@ -166,29 +195,30 @@ export class Shell {
 
   async loadUrl(url: string, settings: Partial<ViewSettings> = {}) {
     this.message = `Loading ${url}`;
+    let raw: unknown;
     try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(String(res.status));
-      const { doc, converted } = importDoc(await res.json());
-      this.fileHandle = null;
-      this.fileName = '';
-      this.message = converted ? 'The address was read as rows with id, source and target.' : '';
-      await this.show(doc, { kind: 'url', url }, { ...settingsOf(doc), ...settings });
+      raw = await new JsonFileSource(url).load();
     } catch {
       this.message = `The server at ${url} refused the request, or sent no JSON.`;
+      return;
     }
+    const { doc, converted } = importDoc(raw);
+    this.fileHandle = null;
+    this.fileName = '';
+    this.message = converted ? 'The address was read as rows with id, source and target.' : '';
+    await this.show(new DocumentSource(doc, url), { kind: 'url', url }, { ...settingsOf(doc), ...settings });
   }
 
   // ---------------------------------------------------------------- saving and sharing
 
   /** The graph with its view: mode, root, path, filters, display, types and camera. */
   private documentToSave(): unknown {
-    const m = this.model;
+    const m = this.model!;
     const d = m.doc;
     if (!d || typeof d !== 'object' || Array.isArray(d)) return d;
     const doc = d as Record<string, unknown>;
     const meta = doc.meta && typeof doc.meta === 'object' && !Array.isArray(doc.meta) ? doc.meta : {};
-    const view: ViewSettings = { ...m.viewSettings(), camera: this.canvas?.getCamera() ?? null };
+    const view: ViewSettings = { ...m.viewSettings(), camera: this.viewer?.getCanvas()?.getCamera() ?? null };
     const fp = m.stored ? { fingerprint: fingerprint(m.stored) } : {};
     return { ...doc, meta: { ...meta, ...fp, view } };
   }
@@ -218,15 +248,15 @@ export class Shell {
           : `Downloaded ${saved.name}.`;
   }
 
-  async savePicture(background: boolean) {
-    const png = await this.canvas?.picture(background);
-    if (!png) return;
+  /** The viewer's Save picture hands the picture to its host, which saves it as a file. */
+  async savePicture(png: Blob) {
     const saved = await saveFile(`${this.fileStem()}.png`, png, 'picture', null, () => false);
     if (saved) this.message = saved.how === 'downloaded' ? `Downloaded ${saved.name}.` : `Saved ${saved.name}.`;
   }
 
   async share() {
     const m = this.model;
+    if (!m) return;
     if (!this.source || this.source.kind === 'file') {
       this.shareLink = '';
       this.message = 'A graph opened from a file cannot travel in a link; save the file instead.';
@@ -259,7 +289,8 @@ export class Shell {
     this.breaks = { ...breaks };
   }
 
-  async generateNow() {
+  /** Makes the chosen example or family and hands it to the viewer, with view settings to apply. */
+  async generateNow(view: Partial<ViewSettings> = {}) {
     this.message = '';
     this.reached = null;
     const options = this.addTypes ? $state.snapshot(this.deco) : null;
@@ -269,11 +300,16 @@ export class Shell {
     try {
       if (this.chosenExample) {
         const id = this.chosenExample;
-        const raw = await exampleDoc(id);
-        const doc = throughInterfaces(options ? decorate(raw, seed, options) : raw, interfaces, seed);
+        // An example comes as JSON from the shell's route; types and interfaces are added on the way.
+        const plain = !options && interfaces === 0;
+        const source = plain
+          ? exampleSource(id)
+          : new PreparedSource(exampleSource(id), (raw) =>
+              throughInterfaces(options ? decorate(raw, seed, options) : raw, interfaces, seed),
+            );
         this.fileHandle = null;
         this.fileName = '';
-        await this.show(doc, { kind: 'example', id, decorate: options, ...share });
+        await this.show(source, { kind: 'example', id, decorate: options, ...share }, view);
       } else if (this.chosenFamily) {
         const family = this.chosenFamily;
         const p = paramsValue(this.params);
@@ -285,7 +321,7 @@ export class Shell {
         this.fileHandle = null;
         this.fileName = '';
         const from = { family, params: p, seed, breaks: { ...breaks }, decorate: options, ...share };
-        await this.show(doc, { kind: 'generated', ...from });
+        await this.show(new DocumentSource(doc, family), { kind: 'generated', ...from }, view);
       }
     } catch (err) {
       this.message = `Cannot generate: ${(err as Error).message}.`;
@@ -295,18 +331,22 @@ export class Shell {
   // ---------------------------------------------------------------- start: a link, or the sample
 
   async start() {
-    const m = this.model;
     const link = readLink(location.search);
     let note = link.error;
-    if (link.view.mode) m.setMode(link.view.mode);
-    let view = { root: link.view.root ?? null, target: link.view.target ?? null, path: link.view.path ?? null };
+    const mode = link.view.mode ? { mode: link.view.mode } : {};
+    let view: Partial<ViewSettings> = {
+      ...mode,
+      root: link.view.root ?? null,
+      target: link.view.target ?? null,
+      path: link.view.path ?? null,
+    };
     let s = link.source;
     const id = s?.kind === 'example' ? s.id : null;
     if (id !== null && !examples.some((e) => e.id === id)) {
-      // An unknown example: the sample graph, without the view that belonged to the other one.
+      // An unknown example: the sample graph, in the link's mode, without the view that belonged to the other one.
       note = LINK_GRAPH_ERROR;
       s = null;
-      view = { root: null, target: null, path: null };
+      view = mode;
     }
     // The link's message joins whatever loading the graph says.
     const tell = () => {
@@ -320,18 +360,14 @@ export class Shell {
       if (s.decorate) this.deco = { ...s.decorate };
       this.interfaces = s.interfaces ?? 0;
     }
-    await this.generateNow();
+    await this.generateNow(view);
     tell();
-    if (view.root !== null) {
-      await m.setRoot(view.root);
-      if (view.target !== null) await m.setTarget(view.target);
-      if (view.path) m.choosePath(view.path);
-    }
   }
 
   // ---------------------------------------------------------------- for browser tests and the console
 
-  private ready() {
+  /** The viewer showed a graph: GraphView's onready. */
+  ready() {
     this.readyCount++;
     const w = this.waiters;
     this.waiters = [];
@@ -342,7 +378,7 @@ export class Shell {
   private expose() {
     (window as unknown as Record<string, unknown>).graphview = {
       model: this.model,
-      canvas: () => this.canvas,
+      canvas: () => this.viewer?.getCanvas(),
       ready: () => this.readyCount,
       nextReady: () => new Promise<void>((r) => this.waiters.push(r)),
       /** Chooses an example and generates it, as the Generate section does. */
@@ -365,6 +401,7 @@ export class Shell {
         this.interfaces = interfaces;
         await this.generateNow();
       },
+      /** Sets the viewer's settings theme.scheme and motion.enabled, as base values. */
       setLook: (look: { theme?: Shell['theme']; motion?: Shell['motion'] }) => {
         if (look.theme) this.theme = look.theme;
         if (look.motion) this.motion = look.motion;

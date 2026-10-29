@@ -36,6 +36,8 @@ import type {
 import { DEFAULT_DEPTH, type DepthRules } from './depth.ts';
 import { fieldRange, NO_FILTERS } from './filters.ts';
 import { NO_KINDS, type Kind, type Kinds } from './kinds.ts';
+import { profileFromJson } from './profileJson.ts';
+import type { GraphSource } from './source.ts';
 import { EXTENT, placeUnits, type LayoutRules } from './placement.ts';
 import { prepare, type Prepared } from './prepare.ts';
 import { PUBLIC_PROFILE, type Profile } from './profile.ts';
@@ -60,7 +62,8 @@ export class GraphModel {
   graph: Graph | null = null;
   /** The core's issues, then the model's own (kinds.ts). */
   issues: ModelIssue[] = [];
-  refused: { code: RefusalCode; message: string } | null = null;
+  /** The core's refusal of the document, or "source" when its source could not be read (5.8), with the source's reason. */
+  refused: { code: RefusalCode | 'source'; message: string; reason?: string } | null = null;
   schema: Schema = EMPTY_SCHEMA;
   ids: string[] = [];
   index = new Map<string, number>();
@@ -107,8 +110,15 @@ export class GraphModel {
   private ranges = new Map<string, { min: number; max: number } | null>();
 
   private makeWorker: (units: Key[], keypairs: [Key, Key][]) => GraphWorker;
-  /** What fits the model to a family of graphs: kinds, classes, pairs, checks, superseding, projection. */
-  readonly profile: Profile;
+  /**
+   * What fits the model to a family of graphs: kinds, classes, pairs, checks, superseding, projection.
+   * The host's own, or, while the setting "Profile" holds one, the profile from that JSON (5.7); a graph
+   * keeps the profile of its load.
+   */
+  profile: Profile;
+  private ownProfile: Profile;
+  /** The source of the graph held (5.8). */
+  source: GraphSource | null = null;
 
   /**
    * The worker factory is the contract for distances and paths; tests and hosts may hand in their own.
@@ -116,7 +126,7 @@ export class GraphModel {
    */
   constructor(makeWorker?: (units: Key[], keypairs: [Key, Key][]) => GraphWorker, profile: Profile = PUBLIC_PROFILE) {
     this.makeWorker = makeWorker ?? ((u, k) => graphWorker(u, k, this.settings.get('performance.workers') === 'off'));
-    this.profile = profile;
+    this.profile = this.ownProfile = profile;
     this.mode = this.settings.get('view.mode');
   }
 
@@ -143,10 +153,44 @@ export class GraphModel {
    * newer graph replaced this one first.
    */
   async load(doc: unknown, settings: Partial<ViewSettings> = {}): Promise<boolean> {
+    return this.hand(++this.run, doc, settings, null);
+  }
+
+  /** Reads a source and loads its document as `load` does; a source that fails gives the refusal "source" (5.8). */
+  async loadFrom(source: GraphSource, settings: Partial<ViewSettings> = {}): Promise<boolean> {
     const run = ++this.run;
+    let doc: unknown;
+    try {
+      doc = await source.load();
+    } catch (e) {
+      if (run !== this.run) return false;
+      const reason = String((e as Error)?.message ?? e);
+      return this.hand(
+        run,
+        null,
+        settings,
+        { code: 'source', message: `The graph could not be read: ${reason}.`, reason },
+        source,
+      );
+    }
+    return run === this.run && this.hand(run, doc, settings, null, source);
+  }
+
+  private async hand(
+    run: number,
+    doc: unknown,
+    settings: Partial<ViewSettings>,
+    failed: { code: 'source'; message: string; reason: string } | null,
+    source: GraphSource | null = null,
+  ): Promise<boolean> {
     this.worker?.terminate();
     this.worker = null;
-    const loaded = loadGraph(doc);
+    this.source = source;
+    const json = this.settings.get('extensions.profile');
+    this.profile = json ? profileFromJson(json) : this.ownProfile;
+    const loaded: ReturnType<typeof loadGraph> | ({ ok: false } & typeof failed & object) = failed
+      ? { ok: false, ...failed }
+      : loadGraph(doc);
     const keep = new Set<string>(this.loads++ > 0 ? this.settings.get('view.keep') : []);
     const before = { filters: this.filters, schema: this.schema };
     this.doc = doc;
@@ -173,7 +217,11 @@ export class GraphModel {
     this.hullsChosen = null;
     this.cache();
     if (!loaded.ok) {
-      this.refused = { code: loaded.code, message: loaded.message };
+      this.refused = {
+        code: loaded.code,
+        message: loaded.message,
+        ...('reason' in loaded && { reason: loaded.reason }),
+      };
       this.hold(null, []);
       this.filters = { ...NO_FILTERS };
       this.laidOut = true;

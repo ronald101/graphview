@@ -13,6 +13,7 @@ export const ISSUE_TEMPLATES: Record<string, string> = {
   'fingerprint-mismatch': 'The stated fingerprint differs from the data.',
   'interface-ends': 'The interface {unit} joins {ends}, not 2.',
   'interface-pair': 'The interfaces {a} and {b} are related directly; an interface joins two plain units.',
+  'direct-relation': 'The units {a} and {b} are related directly; every relation runs through an interface.',
 };
 
 export const LIVE_TEMPLATES: Record<string, string> = {
@@ -32,6 +33,7 @@ export const LIVE_TEMPLATES: Record<string, string> = {
 };
 
 export const REFUSAL_TEXTS: Record<string, string> = {
+  source: 'The graph could not be read: {reason}.',
   'not-object': 'The file is not a JSON object.',
   format: 'The file is not in the format graphview-graph/1.',
   vertices: 'The file has no list of vertices.',

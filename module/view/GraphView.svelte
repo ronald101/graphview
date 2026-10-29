@@ -1,15 +1,16 @@
-<!-- GraphView (specification 7.9): the whole viewer in one component, for hosts that want no layout of
-     their own: a bar, the canvas, the side bar and the Settings dialog. It makes its own model and keeps
-     its settings in a store; a host gives it a graph. -->
+<!-- GraphView (specification 7.9): the whole viewer in one component: a bar, the rule banner, the
+     canvas, the side bar and the Settings dialog. It makes its own model and keeps its settings in a
+     store; a host gives it a graph, or a source to read one from (5.8). -->
 <script lang="ts">
-  import { onMount, type Component } from 'svelte';
+  import { onMount, tick, type Component } from 'svelte';
   import type { Key } from '../core/index.ts';
   import type { Inspected, Mode, ViewSettings } from '../model/contracts.ts';
   import { GraphModel } from '../model/model.ts';
   import type { Profile } from '../model/profile.ts';
+  import type { GraphSource } from '../model/source.ts';
   import type { Looks } from '../render/looks.ts';
   import type { SettingsFile } from '../settings/file.ts';
-  import type { SectionId } from '../settings/groups/panels.ts';
+  import { SECTIONS, type SectionId } from '../settings/groups/panels.ts';
   import { SettingsSaver } from '../settings/saver.svelte.ts';
   import { BrowserSettingsStore, type SettingsStore } from '../settings/stores.ts';
   import { viewCss } from './css.ts';
@@ -17,6 +18,7 @@
   import FiltersPanel from './FiltersPanel.svelte';
   import GraphCanvas from './GraphCanvas.svelte';
   import InspectorPanel from './InspectorPanel.svelte';
+  import type { CanvasHandle } from './handle.ts';
   import type { UnitSections } from './inspector/sections.ts';
   import IssuesPanel from './IssuesPanel.svelte';
   import PathsPanel from './PathsPanel.svelte';
@@ -29,7 +31,10 @@
   import { say } from './words.ts';
 
   interface Props {
-    graph: unknown;
+    /** A document to show (3.1); a new one loads. */
+    graph?: unknown;
+    /** Or a source to read the graph from (5.8); a new one loads, and it wins over `graph`. */
+    source?: GraphSource;
     /** The host's base values of settings, by key (5.9). */
     settings?: Record<string, unknown>;
     /** Where the settings file lives; browser storage unless given. */
@@ -53,6 +58,7 @@
   }
   let {
     graph,
+    source,
     settings,
     settingsStore,
     view,
@@ -75,9 +81,10 @@
   const saver = new SettingsSaver(model.settings, store, (file) => model.applySettingsFile(file));
   let canvas: ReturnType<typeof GraphCanvas> | undefined = $state();
   let dialogOpen = $state(false);
-  let panelsOpen = $state(true);
+  // The side bar starts closed on a narrow page, and opens as a drawer over the canvas (8.1).
+  let panelsOpen = $state(typeof innerWidth !== 'number' || innerWidth > 900);
   let background = $state(model.settings.get('picture.background'));
-  const w = watch(() => model, ['mode', 'display', 'theme']);
+  const w = watch(() => model, ['graph', 'mode', 'display', 'theme', 'settings']);
   const t = (text: string) => say(model, text);
 
   const bar = $derived.by(() => {
@@ -87,11 +94,23 @@
       hulls: model.hulls,
       shows: new Set(model.settings.get('panels.bar')),
       sections: model.settings.get('panels.sections'),
+      banner: model.issues.length > 0 && model.settings.get('issues.banner'),
       css: viewCss(model),
     };
   });
-  // The sections that start open, read once.
-  const openAtStart = new Set(model.settings.get('panels.open'));
+  // Which sections are open; the setting says which start open, read once.
+  const openAtStart = new Set<string>(model.settings.get('panels.open'));
+  const open: Record<SectionId, boolean> = $state(
+    Object.fromEntries(SECTIONS.map(([id]) => [id, openAtStart.has(id)])) as Record<SectionId, boolean>,
+  );
+
+  /** The canvas's key for finding a unit: opens the side bar and the Root field, and puts the cursor in it. */
+  async function findUnit() {
+    panelsOpen = true;
+    open.root = true;
+    await tick();
+    document.getElementById('gv-root')?.focus();
+  }
 
   // The props are base values of their settings (7.9); keys a new base no longer holds lose theirs.
   let based: string[] = [];
@@ -131,15 +150,24 @@
     };
   });
 
+  // A new source, or a new document, loads; the view settings and the camera come with it. Only the
+  // newest load tells the host it is ready.
   let loaded: unknown = undefined;
+  let loads = 0;
   $effect(() => {
-    const g = graph;
-    if (g === loaded) return;
-    loaded = g;
+    const [src, doc] = [source, graph];
+    const from = src ?? doc;
+    if (from === loaded || from === undefined) return;
+    loaded = from;
+    const mine = ++loads;
     void (async () => {
       await settingsReady;
-      if (!(await model.load($state.snapshot(g), $state.snapshot(view)))) return;
+      const v = $state.snapshot(view);
+      const done = src ? await model.loadFrom(src, v) : await model.load($state.snapshot(doc), v);
+      if (!done) return;
       await canvas?.whenSettled();
+      if (mine !== loads) return;
+      if (v?.camera) canvas?.setCamera(v.camera.position, v.camera.target);
       onready?.({
         units: model.graph?.units.length ?? 0,
         issues: model.issues.length,
@@ -155,6 +183,11 @@
     return canvas?.getScene() ?? null;
   }
 
+  /** The canvas's commands, for hosts and tests (8.15). */
+  export function getCanvas(): CanvasHandle | undefined {
+    return canvas;
+  }
+
   async function savePicture() {
     const picture = await canvas?.picture(background);
     if (!picture) return;
@@ -167,7 +200,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  const SECTIONS: Partial<Record<SectionId, { title: string; panel: Component<{ model: GraphModel }> }>> = {
+  const PANELS: Partial<Record<SectionId, { title: string; panel: Component<{ model: GraphModel }> }>> = {
     root: { title: 'Root and depth', panel: RootPanel },
     paths: { title: 'Paths', panel: PathsPanel },
     filters: { title: 'Filters', panel: FiltersPanel },
@@ -209,19 +242,24 @@
       <button type="button" aria-haspopup="dialog" onclick={() => (dialogOpen = true)}>{t('Settings')}</button>
     {/if}
   </div>
+  {#if bar.banner}
+    <p class="gv-banner" role="status" data-testid="rules-banner">
+      {t('This graph breaks the graph rules; the data issues panel lists each breach.')}
+    </p>
+  {/if}
   <div class="gv-view-body">
     <div class="gv-view-canvas">
-      <GraphCanvas bind:this={canvas} {model} {looks} onfind={() => document.getElementById('gv-root')?.focus()} />
+      <GraphCanvas bind:this={canvas} {model} {looks} onfind={findUnit} />
     </div>
     <aside id="gv-view-panels" class="gv-view-panels" aria-label={t('Panels')} hidden={!panelsOpen}>
       {#each bar.sections as id (id)}
-        {@const s = SECTIONS[id]}
+        {@const s = PANELS[id]}
         {#if id === 'inspector'}
-          <Section id="gv-inspect-s" title={t('Inspector')} open={openAtStart.has(id)}
+          <Section id="gv-inspect-s" title={t('Inspector')} testid="section-{id}" bind:open={open[id]}
             ><InspectorPanel {model} {sections} /></Section
           >
         {:else if id === 'display'}
-          <Section id="gv-display-s" title={t('Display')} open={openAtStart.has(id)}>
+          <Section id="gv-display-s" title={t('Display')} testid="section-{id}" bind:open={open[id]}>
             <DisplayPanel {model} />
             <div class="gv-row gv-panel-body">
               <button type="button" onclick={savePicture}>{t('Save picture')}</button>
@@ -229,7 +267,9 @@
             </div>
           </Section>
         {:else if s}
-          <Section id="gv-{id}-s" title={t(s.title)} open={openAtStart.has(id)}><s.panel {model} /></Section>
+          <Section id="gv-{id}-s" title={t(s.title)} testid="section-{id}" bind:open={open[id]}
+            ><s.panel {model} /></Section
+          >
         {/if}
       {/each}
     </aside>
@@ -252,7 +292,14 @@
     padding: 6px 10px;
     border-bottom: 1px solid var(--gv-hairline);
   }
+  .gv-banner {
+    margin: 0;
+    padding: 6px 10px;
+    background: var(--gv-panel);
+    border-bottom: 2px dashed var(--gv-issue);
+  }
   .gv-view-body {
+    position: relative;
     display: flex;
     flex: 1 1 auto;
     min-height: 0;
@@ -265,5 +312,21 @@
     flex: 0 0 var(--gv-panels-width);
     overflow-y: auto;
     border-left: 1px solid var(--gv-hairline);
+    background: var(--gv-panel);
+  }
+  .gv-view-panels[hidden] {
+    display: none;
+  }
+  @media (max-width: 900px) {
+    .gv-view-panels {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 3;
+      width: var(--gv-panels-width);
+      max-width: 92%;
+      box-shadow: 0 0 0 1px var(--gv-hairline);
+    }
   }
 </style>
