@@ -5,15 +5,17 @@
   "type": "module",
   "description": "A graph viewer in 2D and 3D: a reusable Svelte 5 module and a static shell with a graph generator.",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.17"
   },
   "scripts": {
-    "dev": "vite --config shell/vite.config.ts",
-    "check": "svelte-check --tsconfig ./tsconfig.json && prettier --check . && vitest run tests/gates tests/unit",
+    "prepare": "svelte-kit sync --config shell/vite.config.ts || echo ''",
+    "dev": "vite dev --config shell/vite.config.ts",
+    "check": "svelte-kit sync --config shell/vite.config.ts && svelte-check --tsconfig ./tsconfig.json && prettier --check . && vitest run tests/gates tests/unit",
     "build:module": "vite build --config module/vite.config.ts && node scripts/build-types.mjs",
-    "build:shell": "vite build --config shell/vite.config.ts",
-    "build": "npm run build:module && npm run build:shell",
-    "e2e": "npm run build:shell && playwright test",
+    "build:shell": "vite build --config shell/vite.config.ts --mode static",
+    "build:server": "vite build --config shell/vite.config.ts",
+    "build": "npm run build:module && npm run build:shell && npm run build:server",
+    "e2e": "npm run build:server && playwright test",
     "test": "npm run check && npm run e2e"
   },
   "dependencies": {
@@ -26,6 +28,10 @@
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
     "@playwright/test": "1.64.1",
+    "@sveltejs/adapter-node": "6.0.0",
+    "@sveltejs/adapter-static": "4.0.0",
+    "@sveltejs/kit": "3.1.0",
+    "@sveltejs/package": "3.0.1",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@types/node": "26.6.5",
     "@types/three": "0.186.0",

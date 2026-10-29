@@ -213,13 +213,11 @@ test('§8.14 The bench page: it shows the browser and the graphics information',
 
 test('§11.1 Fixtures: the built shell carries no private term', async ({ page }) => {
   expect(PRIVATE_TERMS.full.size).toBeGreaterThan(100);
-  const dir = new URL('../../dist/shell/', import.meta.url);
-  const files = [
-    'index.html',
-    ...readdirSync(new URL('assets/', dir))
-      .filter((f) => /\.(js|css|html|json)$/.test(f))
-      .map((f) => `assets/${f}`),
-  ];
+  // Every text file of the server build, which the browser tests run against (8.17), at any depth.
+  const dir = new URL('../../dist/server/', import.meta.url);
+  const files = readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => /\.(js|css|html|json)$/.test(f));
+  expect(files).toContain('prerendered/graphview/index.html');
+  expect(files.filter((f) => f.startsWith('client/') && f.endsWith('.js')).length).toBeGreaterThan(5);
   for (const f of files) {
     expect(leaks(readFileSync(new URL(f, dir), 'utf8')), f).toEqual([]);
   }

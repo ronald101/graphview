@@ -23,6 +23,8 @@
 | M5 Look             | done   | G14 and G19 pass; eighteen screenshots, views 17 and 18 new                          |
 | M6 Speed and builds | done   | G17 and G18 pass; `npm run check` and every browser test pass                        |
 | M7 Finish           | done   | this report; the public repository's first commit                                    |
+| N0 Contract         | done   | specification 4.0; decisions D79 to D88                                              |
+| N1 SvelteKit shell  | done   | the same page on SvelteKit 3; dist/shell and dist/server build; every test passes    |
 
 ## 2. Gates
 
@@ -177,6 +179,7 @@ Decisions D1 to D54 are folded into the specification. docs/decisions.md holds t
   - The test of the unused partial-positions fallback went with the fallback; a test of the rule that replaced it checks that partial positions are not used.
   - Every test title now starts with its section (G12).
   - This round, two browser tests follow version 3.0 of the specification: the explanation's exact headings gained "Relations through interfaces" (8.8, 8.16), and the menu's example count adds the shell's own examples to the fixtures (8.10). Both stay exact.
+  - Version 4.0 moved the shell to SvelteKit, which starts the page after its router loads. The embed and speed tests therefore wait for the page's hook after the navigation; their checks did not change. The scan for private terms reads every text file of the server build, at any depth, where it read the top folder of dist/shell's assets (8.17).
 - **Two files are near the size target.** model.ts has 407 lines and the shell's store 372; the target was about 400.
 - **The public repository starts over.** Its history held private names, so Ronald deleted it and created it again, empty. Its first commit holds this tree without history, pushed to main with his approval; later work goes through branches and pull requests.
 
@@ -188,14 +191,14 @@ Decisions D1 to D54 are folded into the specification. docs/decisions.md holds t
 
 ## 9. How to run
 
-You need Node.js 22.
+You need Node.js 22.17 or later.
 
 ```sh
 npm ci
-npm run dev        # the shell at http://localhost:5173/graphview/
-npm run build      # the module into dist/module, the shell into dist/shell
+npm run dev        # the shell with its server at http://localhost:5173/graphview/
+npm run build      # the module into dist/module, the static shell into dist/shell, the shell with its server into dist/server
 npm run check      # types, format, unit and gate tests
-npm run e2e        # the browser tests against the production build
+npm run e2e        # the browser tests against the server build
 npm test           # both
 node scripts/specifications-html.mjs   # docs/specifications.html from the Markdown
 ```

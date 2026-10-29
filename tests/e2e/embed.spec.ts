@@ -2,7 +2,8 @@
 // as the simplest host embeds it.
 import { expect, test, type Page } from '@playwright/test';
 
-const events = (page: Page) => page.evaluate(() => (window as any).embed.events() as string[]);
+// The page starts after the router loads, so the hook may come a moment after the navigation.
+const events = (page: Page) => page.evaluate(() => ((window as any).embed?.events() ?? []) as string[]);
 const model = <T>(page: Page, field: string) =>
   page.evaluate((f) => (window as any).embed.model()[f], field) as Promise<T>;
 

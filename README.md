@@ -10,13 +10,13 @@ docs/specifications.md is the contract: everything needed to build graphview in 
 
 ## Run the shell
 
-You need Node.js 22.
+You need Node.js 22.17 or later. The shell is a SvelteKit app that plays the host.
 
 ```sh
 npm ci
-npm run dev        # the shell at http://localhost:5173/graphview/
-npm run build      # the module into dist/module, the shell into dist/shell
-npm test           # types, format, unit and gate tests, then the browser tests
+npm run dev        # the shell with its server at http://localhost:5173/graphview/
+npm run build      # the module into dist/module, the static shell into dist/shell, the shell with its server into dist/server
+npm test           # types, format, unit and gate tests, then the browser tests against dist/server
 ```
 
 The browser tests need Playwright's Chromium: `npx playwright install --with-deps chromium`.
@@ -105,7 +105,7 @@ const model = new GraphModel(undefined, profile); // then <GraphCanvas {model} {
 ## Layout of the repository
 
 - module/: core (format, issues, fingerprint, aids, tokens), model (the state and its contracts), render (the WebGL scene), view (the canvas and panels), workers.
-- shell/: the shell.
+- shell/: the shell, a SvelteKit app: routes/ for its pages, lib/ for the host's own parts.
 - fixtures/: test graphs, their expected answers, and the Python reference. Read-only.
 - tests/: gates (fixed before the build), unit tests, browser tests.
 - docs/: the specification, the requests, the report, decisions, screenshots.

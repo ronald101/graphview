@@ -1,11 +1,14 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import adapterNode from '@sveltejs/adapter-node';
+import adapterStatic from '@sveltejs/adapter-static';
+import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig, type Plugin } from 'vite';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { exampleId } from './lib/sample.ts';
 
 const here = import.meta.dirname;
-const fixtures = resolve(here, '../fixtures');
+const root = resolve(here, '..');
+const fixtures = resolve(root, 'fixtures');
 
 /**
  * The examples as a module of data, built from the fixtures at build time, then the shell's own
@@ -59,16 +62,23 @@ function examples(): Plugin {
   };
 }
 
-// The shell: a static single-page app under /graphview/ (specification 10.3).
-export default defineConfig({
-  root: here,
-  base: '/graphview/',
-  plugins: [svelte(), examples()],
-  server: { fs: { allow: [resolve(here, '..')] } },
+// The shell: a SvelteKit app under /graphview that plays the host (specification 8.17). The mode
+// "static" builds the static demo into dist/shell; any other mode builds the app with its server into
+// dist/server.
+export default defineConfig(({ mode }) => ({
+  root,
+  plugins: [
+    sveltekit({
+      adapter:
+        mode === 'static'
+          ? adapterStatic({ pages: 'dist/shell', assets: 'dist/shell' })
+          : adapterNode({ out: 'dist/server' }),
+      files: { src: 'shell', assets: 'shell/static' },
+      paths: { base: '/graphview' },
+    }),
+    examples(),
+  ],
+  server: { fs: { allow: [root] } },
   worker: { format: 'es' },
-  build: {
-    outDir: resolve(here, '../dist/shell'),
-    emptyOutDir: true,
-    chunkSizeWarningLimit: 1500,
-  },
-});
+  build: { chunkSizeWarningLimit: 1500 },
+}));

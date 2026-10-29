@@ -1,6 +1,7 @@
 // The shell's state and actions, shared by its sections: where the graph came from, the open file,
 // the messages, the Generate settings, the look, and which sidebars and sections are open. Every
 // change to the graph goes through the model.
+import { goto } from '$app/navigation';
 import { untrack } from 'svelte';
 import { fingerprint, type GraphCanvas, type GraphModel, type ViewSettings } from '../../module/index.ts';
 import { breakRules, NO_BREAKS, type BreakOptions } from './breakRules.ts';
@@ -237,7 +238,8 @@ export class Shell {
       target: m.target,
       path: m.choice,
     });
-    history.replaceState(null, '', this.shareLink);
+    // The address bar shows the link, through the router, without a new page.
+    await goto(this.shareLink, { shallow: true, replace: true });
     try {
       await navigator.clipboard.writeText(this.shareLink);
       this.message = 'The link is on the clipboard.';

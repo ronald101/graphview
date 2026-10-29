@@ -193,3 +193,15 @@
 - **Choice.** The registry takes its defaults from the constants that already hold them, such as `tokens`, `DEPTH_RULES`, `SPACING`, `PATH_DEFAULTS` and `TYPE_PALETTE`. The code reads the registry's live value wherever it used the constant.
 - **Reason.** The exports of 5.6 and the gates keep their meaning, and each default is written once.
 - **Alternative.** Move every default into the registry and drop the constants. That breaks the public exports and G15's view of the tokens.
+
+## D87. The shell's links load whole pages, as before
+
+- **Choice.** The shell's container carries `data-sveltekit-reload`, so SvelteKit's router takes over no link. The share link reaches the address bar through the router's `goto`, as a shallow change.
+- **Reason.** The shell reads its share link and its fragment once, when the page loads (8.13, 8.17). A link that did not reload the page would leave the page as it was.
+- **Alternative.** Let the router handle links, and read the address again after each navigation.
+
+## D88. SvelteKit's options live in the shell's Vite configuration; the mode picks the adapter
+
+- **Choice.** shell/vite.config.ts passes the options to the `sveltekit` plugin: the shell's folder, the base path /graphview and the adapter. The mode `static` builds with adapter-static into dist/shell; any other mode builds with adapter-node into dist/server.
+- **Reason.** SvelteKit 3 reads no svelte.config.js. A mode works on every system, where an environment variable set in a script does not.
+- **Alternative.** An environment variable, or a second Vite configuration.
