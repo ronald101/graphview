@@ -1,8 +1,8 @@
 # graphview: specifications
 
-Version 3.0, 27 October 2026. One document for building graphview in one run.
+Version 4.0, 29 October 2026. One document for building graphview in one run.
 
-**This document consolidates every specification of the project into one contract.** It joins the release 1 specification (version 1.0 of 14 October 2026), the two 3D specifications (docs/3d/01 and 02), the adjustments of 19 October 2026 (docs/3d/03-adjustments.md), and the choices made while building release 1 and the 3D viewer (decisions D1 to D54). Version 2.1 settles the differences between version 2.0 and the code that docs/spec_discrepancies.md lists; appendix C names the changes. Version 3.0 adds interface graphs and the extension points for other families of graphs; appendix D names the changes. Where those documents disagree, this one decides. It names no private data and no owner of private data.
+**This document consolidates every specification of the project into one contract.** It joins the release 1 specification (version 1.0 of 14 October 2026), the two 3D specifications (docs/3d/01 and 02), the adjustments of 19 October 2026 (docs/3d/03-adjustments.md), and the choices made while building release 1 and the 3D viewer (decisions D1 to D54). Version 2.1 settles the differences between version 2.0 and the code that docs/spec_discrepancies.md lists; appendix C names the changes. Version 3.0 adds interface graphs and the extension points for other families of graphs; appendix D names the changes. Version 4.0 makes the viewer one self-contained component for a host that supplies only graphs as JSON: sources, settings with their controls and stores, the viewer's own bar and side bar, a drawing by perspectives, search, filter rules, highlights and scope. The shell becomes a SvelteKit app that simulates such a host; appendix E names the changes. Where those documents disagree, this one decides. It names no private data and no owner of private data.
 
 **How to use it.** A builder who has this document, the fixtures and the gate tests can build graphview from an empty module and shell, without asking anything. Section 12 gives the order of work and the rules; section 11 says when the work is done.
 
@@ -12,7 +12,7 @@ Version 3.0, 27 October 2026. One document for building graphview in one run.
 
 ### 1.1 What graphview is
 
-**graphview is a graph viewer in 2D and 3D, with a public graph generator around it.** It has two parts. The _module_ reads a graph, holds its state in one model, and draws it with WebGL. The _shell_ is a static web page around the module: it opens, generates, saves and shares graphs, and exposes every setting.
+**graphview is a graph viewer in 2D and 3D, with a public graph generator around it.** It has two parts. The _module_ is the viewer: it reads a graph from a source, holds its state in one model, keeps its settings, and draws the graph with WebGL, with its own bar, side bar and Settings dialog. The _shell_ is a SvelteKit app that simulates a host: it prepares graphs as JSON (examples, generated graphs, files and addresses), hands them to the viewer, and keeps the viewer's settings file on its server. A host supplies only graphs; everything else is the viewer's.
 
 A graph is a JSON document of units and keypairs. A keypair runs from one unit to another; a keypair and its reverse make one relation. The viewer draws each relation as one line with one chevron per keypair.
 
@@ -20,14 +20,16 @@ The module repairs nothing. It lists every breach of the graph rules (2.2) as a 
 
 ### 1.2 The parts
 
-| Part    | Folder         | Does                                                                                                                         |
-| ------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Core    | module/core    | Format, loading and issues, fingerprint, degrees, components, rings, path sets, colour tokens. Pure TypeScript.              |
-| Model   | module/model   | The state of one viewer, its contracts, and the rules for depth, filters, schema, types, layout, hulls and picking geometry. |
-| Render  | module/render  | Draws the model with three.js: instanced shaders, transitions, camera, hulls, labels, picking, picture capture.              |
-| View    | module/view    | The canvas component, the panels, and a composite component. Svelte 5.                                                       |
-| Workers | module/workers | Force layout, distances and path sets off the main thread.                                                                   |
-| Shell   | shell/         | The static page: top bar, sidebars, data, generator, examples, bench page.                                                   |
+| Part     | Folder          | Does                                                                                                                                                  |
+| -------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core     | module/core     | Format, loading and issues, fingerprint, degrees, components, rings, path sets, colour tokens. Pure TypeScript.                                       |
+| Settings | module/settings | One class per kind of control, one instance per setting, the registry, the settings file and its stores. TypeScript with Svelte state.                |
+| Model    | module/model    | The state of one viewer, its sources and contracts, and the rules for depth, filters, schema, types, layout, hulls, search, highlights and scope.     |
+| Render   | module/render   | Draws the model with three.js: instanced shaders, transitions, camera, hulls, labels, picking, picture capture.                                       |
+| View     | module/view     | The viewer component with its bar, side bar and Settings dialog; the canvas, the panels and the controls of the settings. Svelte 5.                   |
+| Workers  | module/workers  | Force layout, distances and path sets off the main thread.                                                                                            |
+| Server   | module/server   | The handler a host's settings route uses. Pure TypeScript.                                                                                            |
+| Shell    | shell/          | The SvelteKit app that simulates a host: host tools (data and generator), the viewer page, the settings route, example graphs, bench and embed pages. |
 
 ### 1.3 Inputs that exist before the build
 
@@ -40,7 +42,7 @@ The module repairs nothing. It lists every breach of the graph rules (2.2) as a 
 
 ### 1.4 Out of scope
 
-- No server, no database connection, and no editing of a graph's units or keypairs.
+- No database connection, and no editing of a graph's units or keypairs. The module runs no server; it offers a handler that a host's settings route uses (5.10), and the shell's server routes only simulate a host.
 - No overlays from hosts, minimap, history, lens, time player or comparison panels.
 - No release-1 interface: no 2D engine, no events and commands of the old component (5.6).
 
@@ -52,35 +54,45 @@ The module repairs nothing. It lists every breach of the graph rules (2.2) as a 
 
 **Each word names one thing, and the code uses the same words.**
 
-| Word                        | Meaning                                                                                                                                    |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| unit                        | What a key identifies. The format calls its rows vertices.                                                                                 |
-| kind, plain                 | A unit's kind: plain, or interface (3.8). A plain unit is one that is not an interface.                                                    |
-| interface, end              | A unit of the interface kind; it joins two units, its ends (3.8).                                                                          |
-| perspective                 | An interface's relation seen from one end toward the other, with its pair type when a profile names one (5.7).                             |
-| profile                     | What fits the module to a family of graphs: kinds, classes, pairs, checks, superseding, perspective types, a projection (5.7).             |
-| key                         | A unit's identifier: a non-empty text or a whole number.                                                                                   |
-| keypair                     | One edge row, from one unit to another.                                                                                                    |
-| relation                    | Two units joined by keypairs: (a, b), (b, a), or one of them in broken data. Drawn as one line.                                            |
-| outgoing, incoming          | Seen from a unit, (a, b) is outgoing for a and incoming for b.                                                                             |
-| chevron                     | The mark of one keypair on its relation's line.                                                                                            |
-| path                        | A sequence of units, each joined to the next by a keypair in its direction, that visits no unit twice. Its length is its number of steps.  |
-| path set                    | The paths between two units, from the shortest length d up to d + n, where n is the number of extra steps.                                 |
-| root                        | The unit the depth view centres on.                                                                                                        |
-| focus                       | The unit the core's rings count from (4.4); in the viewer, the root.                                                                       |
-| degree                      | A unit's fewest steps from the root; 0 for the root, −1 when the root cannot reach it. The core's `degrees()` counts something else (4.2). |
-| plane                       | A depth level behind the root, derived from the degree (6.4).                                                                              |
-| target                      | The unit the active paths run to, from the root.                                                                                           |
-| stored graph, current graph | Everything loaded; and the stored graph without superseded parts (3.5).                                                                    |
-| issue                       | A finding about the data, such as a keypair without its reverse.                                                                           |
-| fingerprint                 | A hash that identifies a graph's units and keypairs (3.4).                                                                                 |
-| type                        | A value of a unit's or a keypair's type field (6.6).                                                                                       |
-| complement                  | The type of a keypair's reverse, paired with its own type (6.6).                                                                           |
-| model                       | The one object that holds a viewer's state (5.2).                                                                                          |
-| aspect                      | A named part of the model's state that changed (5.2).                                                                                      |
-| scene                       | The renderer's read-only description of the picture, for tests (5.5).                                                                      |
-| view settings               | What a saved file or link carries besides the data (5.3).                                                                                  |
-| host                        | A program that embeds the module, such as the shell.                                                                                       |
+| Word                        | Meaning                                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| unit                        | What a key identifies. The format calls its rows vertices.                                                                                      |
+| kind, plain                 | A unit's kind: plain, or interface (3.8). A plain unit is one that is not an interface.                                                         |
+| interface, end              | A unit of the interface kind; it joins two units, its ends (3.8).                                                                               |
+| perspective                 | An interface's relation seen from one end toward the other, with its pair type when a profile names one (5.7).                                  |
+| profile                     | What fits the module to a family of graphs: kinds, classes, pairs, checks, superseding, perspective types, a projection (5.7).                  |
+| key                         | A unit's identifier: a non-empty text or a whole number.                                                                                        |
+| keypair                     | One edge row, from one unit to another.                                                                                                         |
+| relation                    | Two units joined by keypairs: (a, b), (b, a), or one of them in broken data. Drawn as one line.                                                 |
+| outgoing, incoming          | Seen from a unit, (a, b) is outgoing for a and incoming for b.                                                                                  |
+| chevron                     | The mark of one keypair on its relation's line.                                                                                                 |
+| path                        | A sequence of units, each joined to the next by a keypair in its direction, that visits no unit twice. Its length is its number of steps.       |
+| path set                    | The paths between two units, from the shortest length d up to d + n, where n is the number of extra steps.                                      |
+| root                        | The unit the depth view centres on.                                                                                                             |
+| focus                       | The unit the core's rings count from (4.4); in the viewer, the root.                                                                            |
+| degree                      | A unit's fewest steps from the root; 0 for the root, −1 when the root cannot reach it. The core's `degrees()` counts something else (4.2).      |
+| plane                       | A depth level behind the root, derived from the degree (6.4).                                                                                   |
+| target                      | The unit the active paths run to, from the root.                                                                                                |
+| stored graph, current graph | Everything loaded; and the stored graph without superseded parts (3.5).                                                                         |
+| issue                       | A finding about the data, such as a keypair without its reverse.                                                                                |
+| fingerprint                 | A hash that identifies a graph's units and keypairs (3.4).                                                                                      |
+| type                        | A value of a unit's or a keypair's type field (6.6).                                                                                            |
+| complement                  | The type of a keypair's reverse, paired with its own type (6.6).                                                                                |
+| model                       | The one object that holds a viewer's state (5.2).                                                                                               |
+| aspect                      | A named part of the model's state that changed (5.2).                                                                                           |
+| scene                       | The renderer's read-only description of the picture, for tests (5.5).                                                                           |
+| view settings               | What a saved file or link carries besides the data (5.3).                                                                                       |
+| host                        | A program that embeds the module, such as the shell.                                                                                            |
+| source                      | Where the viewer reads its graph: a JSON file or a document today, a host's interface later (5.8).                                              |
+| setting                     | One value that changes the viewer, with a hard-coded default, its allowed values and its control (5.9).                                         |
+| control                     | The kind of input that edits a setting: checkbox, slider, number, range, select, text, colour, theme colour, palette, order, set, keys or JSON. |
+| settings file, store        | The settings that differ from their defaults, with the pins; and where the viewer keeps that file (5.9).                                        |
+| pin                         | A setting shown in the side bar as well as in the Settings dialog (7.10).                                                                       |
+| class unit                  | A unit its data marks as a class; the perspective drawing shows it as a box (3.9).                                                              |
+| pair type                   | The type of a perspective, from the data or a profile (3.9).                                                                                    |
+| drawing                     | How relations draw: by keypairs, or by perspectives (6.18).                                                                                     |
+| selection, highlight group  | The units a person picked; a named group of units drawn emphasised while the rest dims (6.20).                                                  |
+| scope                       | The units the view shows: all of them, or the neighbourhood of chosen units, grown and shrunk by hand (6.21).                                   |
 
 ### 2.2 The graph rules
 
@@ -213,6 +225,26 @@ Here A, B and C are the plain units 1, 2 and 3, and i, j and k the interfaces 10
 
 A lone interface is also an orphan (3.3): "The interface x joins no units, not 2." follows the core's words. A relation between two plain units raises no issue.
 
+**A profile may change two of these rules (5.7).** It may allow the self-relation of a unit: an interface with one end, whose keypairs join that end both ways; then that interface raises no `interface-ends`. And it may ask for interfaces everywhere; then each relation between two plain units raises an issue after the interface issues, in relation order:
+
+| Code              | When                                                            | Words, for example                                                                |
+| ----------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `direct-relation` | Two plain units related directly, while the profile forbids it. | The units a and b are related directly; every relation runs through an interface. |
+
+### 3.9 Classes and perspectives in the data
+
+**A host may describe classes and perspectives in the data; the perspective drawing, the filter rules, the search and the inspector read them.** Every field is optional and sits in `attrs`; a profile may rename it (5.7).
+
+| Field       | Row                    | Holds                                                                                                                                                                            |
+| ----------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `class`     | vertex                 | The unit's class, as text: what an interface's oval says, and what class rules test.                                                                                             |
+| `classUnit` | vertex                 | `true` for a class unit, which the perspective drawing shows as a box.                                                                                                           |
+| `pair`      | vertex of an interface | Its member pair: `{ "type": text, "perspectives": [{ "type": text, "from": key, "to": key }, …] }`. A perspective runs from the unit it starts at to the unit at the other side. |
+| `pairType`  | edge                   | The pair type of the perspective the keypair belongs to.                                                                                                                         |
+
+- The perspective from A to B through the interface i holds the keypairs (A, i) and (i, B). Without `pair`, its type is the `pairType` of (A, i), or else that keypair's type (6.6).
+- The core reads none of these fields: the fingerprint, the issues, the gates and the reference ignore them.
+
 ---
 
 ## 4. The core
@@ -316,6 +348,7 @@ Two examples from the fixtures. In the database graph, from unit 79 to unit 77 w
 - Text tokens reach at least 4.5 to 1 against surface, plane and panel; mark tokens reach at least 3 to 1 against the surface (G15). Hairline draws borders only, never a mark.
 - The issue colour is never shown alone: dashes, the issue icon and the Data issues panel carry it.
 - Root, target and inspection show by shape and ink, never by a hue.
+- These values are the defaults of the Theme settings (5.9): a host or a person may change them, and G15 tests the defaults.
 
 ---
 
@@ -323,7 +356,7 @@ Two examples from the fixtures. In the database graph, from unit 79 to unit 77 w
 
 ### 5.1 Layers and imports
 
-**Each layer imports only the layers below it.** core ← model ← render ← view; workers serve the model, and import from it only the type `GraphWorker`. The module imports nothing outside module/. The shell reaches the module only through module/index.ts, or its CSS (G16). module/model runs without a browser, apart from its worker factory.
+**Each layer imports only the layers below it.** core ← settings ← model ← render ← view; workers serve the model, and import from it only the type `GraphWorker`; server serves hosts, and imports only the core and the settings. The module imports nothing outside module/. The shell reaches the module only through module/index.ts, or its CSS (G16). module/settings, module/server and module/model run without a browser, apart from the model's worker factory and the browser store (5.9).
 
 ### 5.2 The model
 
@@ -344,27 +377,38 @@ Two examples from the fixtures. In the database graph, from unit 79 to unit 77 w
 | filters, overrides, hulls                   | 6.7, 6.8, 6.9; hulls default on, and start off for a graph over 3,000 units                                                                  |
 | inspected                                   | a unit, a keypair, a relation, or nothing                                                                                                    |
 | theme                                       | 'light' or 'dark'                                                                                                                            |
+| settings                                    | the settings registry (5.9); the model is its only writer                                                                                    |
+| source                                      | the source of the graph held (5.8)                                                                                                           |
+| selection, highlights                       | the selected units and the highlight groups (6.20)                                                                                           |
+| scope                                       | the scope (6.21)                                                                                                                             |
+| rules                                       | the filter rules (6.7)                                                                                                                       |
 
 Its methods:
 
-| Method                                                             | Does                                                                                                                                                              | Aspects                                  |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `load(doc, settings?)`                                             | Loads a graph, resets the view state, reflects the schema, builds the types, lays out, then applies saved settings. Resolves false when a newer load replaced it. | graph, layout, and those of the settings |
-| `setMode(mode)`                                                    | 2D or 3D.                                                                                                                                                         | mode                                     |
-| `setRoot(key \| null)`                                             | Makes a unit the root and asks the worker for degrees; a new root drops the path.                                                                                 | root, paths                              |
-| `setTarget(key \| null)`                                           | Asks the worker for the path set from the root, with 2 extra steps; chooses the first path of the first length with paths.                                        | paths                                    |
-| `reversePath()`                                                    | The target becomes the root, and the paths run back.                                                                                                              | root, paths                              |
-| `choosePath({length, index})`                                      | Makes another path active.                                                                                                                                        | paths                                    |
-| `setFilters(part)`                                                 | 6.7                                                                                                                                                               | filters                                  |
-| `setOverrides(part)`                                               | 6.8                                                                                                                                                               | display                                  |
-| `setHulls(on)`                                                     | 6.9                                                                                                                                                               | display                                  |
-| `setTypeLabel(kind, id, label)`, `setTypeColour(kind, id, colour)` | Custom type names and colours; they survive a theme change.                                                                                                       | types                                    |
-| `inspect(what)`                                                    | What the inspector shows.                                                                                                                                         | inspect                                  |
-| `setTheme(theme)`                                                  | Rebuilds the type colours for the theme.                                                                                                                          | theme, types                             |
-| `subscribe(listener)`                                              | Returns an unsubscribe function.                                                                                                                                  | —                                        |
-| `dispose()`                                                        | Ends the model's workers.                                                                                                                                         | —                                        |
+| Method                                                                      | Does                                                                                                                                                              | Aspects                                        |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `load(doc, settings?)`                                                      | Loads a graph, resets the view state, reflects the schema, builds the types, lays out, then applies saved settings. Resolves false when a newer load replaced it. | graph, layout, and those of the settings       |
+| `setMode(mode)`                                                             | 2D or 3D.                                                                                                                                                         | mode                                           |
+| `setRoot(key \| null)`                                                      | Makes a unit the root and asks the worker for degrees; a new root drops the path.                                                                                 | root, paths                                    |
+| `setTarget(key \| null)`                                                    | Asks the worker for the path set from the root, with 2 extra steps; chooses the first path of the first length with paths.                                        | paths                                          |
+| `reversePath()`                                                             | The target becomes the root, and the paths run back.                                                                                                              | root, paths                                    |
+| `choosePath({length, index})`                                               | Makes another path active.                                                                                                                                        | paths                                          |
+| `setFilters(part)`                                                          | 6.7                                                                                                                                                               | filters                                        |
+| `setOverrides(part)`                                                        | 6.8                                                                                                                                                               | display                                        |
+| `setHulls(on)`                                                              | 6.9                                                                                                                                                               | display                                        |
+| `setTypeLabel(kind, id, label)`, `setTypeColour(kind, id, colour)`          | Custom type names and colours; they survive a theme change.                                                                                                       | types                                          |
+| `inspect(what)`                                                             | What the inspector shows.                                                                                                                                         | inspect                                        |
+| `setTheme(theme)`                                                           | Rebuilds the type colours for the theme.                                                                                                                          | theme, types                                   |
+| `loadFrom(source, settings?)`                                               | Reads the source and loads its document as `load` does; a source that fails gives a refusal (5.8).                                                                | as `load`                                      |
+| `setSetting(key, value)`, `resetSettings(keys?)`, `applySettingsFile(file)` | Changes settings through the registry; a value outside a setting's allowed values is refused and reported.                                                        | settings, and the aspects each setting touches |
+| `select(keys, how)`                                                         | Replaces, adds to, toggles in or clears the selection.                                                                                                            | selection, highlight                           |
+| `setHighlight(name, on)`, `saveHighlight(name)`, `removeHighlight(name)`    | Turns a highlight group on or off, saves the selection as a group, or removes a saved group.                                                                      | highlight                                      |
+| `setRule(rule)`, `clearRules()`                                             | Sets or clears filter rules (6.7).                                                                                                                                | filters                                        |
+| `showNeighbourhood(keys)`, `expand(keys)`, `hide(keys)`, `showAll()`        | Sets, grows or shrinks the scope, or ends it (6.21).                                                                                                              | scope                                          |
+| `subscribe(listener)`                                                       | Returns an unsubscribe function.                                                                                                                                  | —                                              |
+| `dispose()`                                                                 | Ends the model's workers.                                                                                                                                         | —                                              |
 
-The `graph` aspect means that everything changed: a listener that hears it redraws every part, the mode, display factors, palettes and camera controls included.
+The `graph` aspect means that everything changed: a listener that hears it redraws every part, the mode, display factors, palettes and camera controls included. The `settings` aspect comes with the keys that changed (`model.changedSettings`); a listener redraws what those settings touch.
 
 Its queries: `label(key)`, `find(text)` (a label, a key as JSON text, or a bare word naming a text key), `keypairsOf(key)` (outgoing first, then incoming, each in file order), `activePath()`, `unitType(key)`, `keypairType(a, b)`, `kindOf(key)`, `endsOf(key)` (an interface's ends, or null), `perspectivesOf(key)` (5.7), `pathSteps()`, `planeCounts()`, `fieldRange(field, kind)`, `settings()`, `relationCount()`.
 
@@ -376,7 +420,21 @@ Its queries: `label(key)`, `find(text)` (a label, a key as JSON text, or a bare 
 
 ```ts
 type Mode = '2d' | '3d';
-type Aspect = 'graph' | 'layout' | 'mode' | 'root' | 'paths' | 'filters' | 'types' | 'display' | 'inspect' | 'theme';
+type Aspect =
+  | 'graph'
+  | 'layout'
+  | 'mode'
+  | 'root'
+  | 'paths'
+  | 'filters'
+  | 'types'
+  | 'display'
+  | 'inspect'
+  | 'theme'
+  | 'settings'
+  | 'selection'
+  | 'highlight'
+  | 'scope';
 type Listener = (aspects: ReadonlySet<Aspect>) => void;
 interface TypeInfo {
   id: string;
@@ -439,6 +497,24 @@ interface GraphWorker {
   paths(from: Key, to: Key, extra: number, limits: PathLimits): Promise<PathSetResult>;
   terminate(): void;
 }
+type FilterMode = 'show' | 'fade' | 'hide';
+interface FilterRule {
+  field: 'class' | 'type' | 'kind' | 'pairType' | 'superseded' | 'degree';
+  value: string | null; // the class, type, kind or pair type; null for superseded and degree
+  range: [number, number] | null; // degree only
+  mode: FilterMode;
+}
+type SelectHow = 'replace' | 'add' | 'toggle' | 'remove' | 'clear';
+interface HighlightGroup {
+  name: string;
+  keys: Key[];
+  on: boolean;
+  saved: boolean; // saved from the selection by a person
+}
+interface Scope {
+  centres: Key[];
+  units: Key[];
+}
 ```
 
 The model takes an optional worker factory `(units, keypairs) => GraphWorker` in its constructor. The default factory starts a Web Worker, or runs the same functions inline where no Worker exists, as in unit tests.
@@ -457,6 +533,7 @@ interface SceneSnapshot {
   height: number;
   settled: boolean;
   mode: Mode;
+  drawing: 'keypairs' | 'perspectives';
   root: Key | null;
   target: Key | null;
   hasPath: boolean;
@@ -480,6 +557,10 @@ interface SceneSnapshot {
     sx: number;
     sy: number;
     reach: number;
+    selected: boolean;
+    emphasis: number; // 1 in an active highlight group, 0 otherwise
+    inScope: boolean;
+    outside: number; // relations to units outside the scope
   }[];
   lines: {
     a: Key;
@@ -504,17 +585,21 @@ interface SceneSnapshot {
     colour: string;
     sx: number;
     sy: number;
+    perspective: { from: Key; to: Key } | null; // in the perspective drawing
+    points: Key; // the unit the chevron points at
   }[];
   hulls: { type: string; members: number; opacity: number }[];
   labels: { key: Key; text: string }[];
 }
 ```
 
-`sx` and `sy` are screen points: a unit's centre, a line's middle, a chevron's centre. A unit's `scale` and `opacity` include the Display factors (6.8). `reach` is the radius of a unit's click target: the larger of 6, 8, 10 or 12 pixels by plane and its drawn disc plus 2 pixels; picking adds 3 pixels of padding (6.11). `flow` is 1 along the active path, −1 against it, 0 otherwise. A unit's `kind` is "plain", "interface" or a kind of the profile, and `shape` the name of its look's shape (5.7); `ends` are an interface's ends, null for a plain unit; `halves` are the colours of its two halves, the first end's side first (6.17), and a plain unit's type colour twice. The snapshot must match what is drawn: tests click at its points.
+`chevrons` lists the chevrons the drawing draws: one per keypair by keypairs, one per perspective by perspectives (6.18), where `type` is the pair type. `sx` and `sy` are screen points: a unit's centre, a line's middle, a chevron's centre. A unit's `scale` and `opacity` include the Display factors (6.8). `reach` is the radius of a unit's click target: the larger of 6, 8, 10 or 12 pixels by plane and its drawn disc plus 2 pixels; picking adds 3 pixels of padding (6.11). `flow` is 1 along the active path, −1 against it, 0 otherwise. A unit's `kind` is "plain", "interface" or a kind of the profile, and `shape` the name of its look's shape (5.7); `ends` are an interface's ends, null for a plain unit; `halves` are the colours of its two halves, the first end's side first (6.17), and a plain unit's type colour twice. The snapshot must match what is drawn: tests click at its points.
 
 ### 5.6 The module's entry point
 
 **module/index.ts is the module's only entry point.** It exports the core (4.1), the contracts (5.3), `GraphModel` with the types `Relation` and `Chevron`, `EXTENT` and `EXTRA_STEPS`, the kinds of 3.8 (`kindOfUnit`, and the types `Kind`, `Kinds` and `KindIssue`), the extension points of 5.7 (`PUBLIC_PROFILE`, `INTERFACE`, `PUBLIC_LOOKS`, `halfSlots`, `UNIT_SHAPES`, `UNIT_SECTIONS`, and the types `Profile`, `KindRule`, `Check`, `CheckIssue`, `Look`, `Looks`, `UnitShape`, `SectionProps` and `UnitSections`), the depth rules of 6.4 (`DEPTH_RULES`, `SPACING`, `FOREGROUND`, `CHEVRON_AT`, `depthState`, `plane`), the type palette (`TYPE_PALETTE`, `MAX_TYPES`, `OTHER`, `mixColour`), the `SceneSnapshot` type, the components `GraphCanvas`, `GraphView`, `RootPanel`, `PathsPanel`, `InspectorPanel`, `FiltersPanel`, `DisplayPanel`, `TypesPanel`, `IssuesPanel`, `Section` and `RangeSlider`, and the word helpers of 7.8 (`issueWords`, `keyText`, `count`). A host makes a model, hands it to `GraphCanvas` and the panels it wants, and calls the model's methods. `GraphView` is the composite for hosts without a layout of their own (7.9).
+
+Version 4.0 adds: the sources of 5.8 (`JsonFileSource`, `DocumentSource` and the type `GraphSource`); the settings of 5.9 (`Setting` and its classes, `SettingsRegistry`, `createRegistry`, `SETTING_GROUPS`, the stores `HttpSettingsStore`, `BrowserSettingsStore`, `MemorySettingsStore` and `FallbackSettingsStore`, and the types `SettingsFile`, `SettingsStore` and `Control`); `createSettingsHandler` (5.10); `profileFromJson` and the type `ProfileJson` (5.7); the contracts of 5.3; and the components `SettingsDialog`, `SettingControl`, `PinnedPanel`, `SearchPanel`, `ScopePanel` and `HighlightsPanel`.
 
 ### 5.7 Extending graphview
 
@@ -540,6 +625,112 @@ interface SceneSnapshot {
 **Looks** (`Looks`, module/render/looks.ts) map each kind to its look: a `shape` name, `hulls`, and optionally `halves(model, index)`, the palette slots of a unit's two halves, which `halfSlots` gives by default (6.17). A kind without a look draws as plain. `shapes` lists the unit shapes, each a name and GLSL statements over `uv` and `col` that return how far the point lies from the centre, 1 at the edge, and may change its colour; a shape may read the unit's two colours, the direction between its ends, and the surface colour. The ring, the outline and the glow follow every shape's edge.
 
 **Sections** (`UnitSections`, module/view/inspector/sections.ts) give a Svelte component per kind of unit, with the props `model`, `inspected` and `version`. A kind without one shows plain's section.
+
+**A profile can come from JSON**, so that a host configures the viewer without code. `profileFromJson(json)` builds a `Profile` from:
+
+```ts
+interface ProfileJson {
+  kinds?: { id: string; field: string; equals: unknown; joins: boolean }[]; // a unit is of the first kind whose attribute field equals the value
+  classField?: string; // default 'class' (3.9)
+  classUnitField?: string; // default 'classUnit'
+  pairField?: string; // default 'pair'
+  pairTypeField?: string; // default 'pairType'
+  pairs?: [string, string][]; // declared complementary pair types
+  supersededBy?: string[]; // a unit that starts a perspective of one of these types is superseded
+  selfRelations?: 'allowed' | 'issue'; // default 'issue' (3.8)
+  directRelations?: 'allowed' | 'issue'; // default 'allowed' (3.8)
+}
+```
+
+The kind rule `{ "field": "interface", "equals": true }` is the public interface kind; a JSON profile without `kinds` keeps it. The perspective type of a profile from JSON reads the interface's `pair` field (3.9). The unit shapes gain `box` (a square with rounded corners) and `oval` (a disc twice as wide as high), for the perspective drawing (6.18).
+
+### 5.8 Sources
+
+**The viewer reads its graph from a source, so that a host can change how graphs arrive without changing the viewer.**
+
+```ts
+interface GraphSource {
+  readonly name: string; // a name for messages and file names
+  load(): Promise<unknown>; // a graphview-graph/1 document, or rows that the importer converts (3.7)
+}
+```
+
+- `JsonFileSource(address | File)` fetches an address or reads a file, and parses its JSON. `DocumentSource(doc, name)` hands over a document already in memory.
+- `model.loadFrom(source, settings)` reads the source and loads the document as `load` does (5.2). A source that fails gives a refusal with the code `source` and the words "The graph could not be read: <reason>."
+- A later source may also offer `subgraph(keys, hops)` and `search(text, limit)`. The scope (6.21) and the search (6.19) ask it when it does, and work on the loaded graph when it does not.
+
+### 5.9 Settings
+
+**Every value that changes the viewer is a setting: one instance of a class per kind of control, each with a hard-coded default.** module/settings/registry.ts lists them, in the groups the Settings dialog shows; their defaults are the values sections 4 to 9 give.
+
+```ts
+type Control =
+  | 'checkbox'
+  | 'slider'
+  | 'number'
+  | 'range'
+  | 'select'
+  | 'text'
+  | 'colour'
+  | 'theme-colour'
+  | 'palette'
+  | 'order'
+  | 'set'
+  | 'keys'
+  | 'json';
+abstract class Setting<T> {
+  readonly key: string; // 'labels.size'
+  readonly label: string; // 'Label size'
+  readonly group: string; // 'Labels'
+  readonly description: string;
+  readonly default: T; // hard-coded
+  readonly applies: 'live' | 'load'; // at once, or with the next graph
+  readonly control: Control;
+  value: T; // Svelte state
+  pinned: boolean; // shown in the side bar too
+  check(v: unknown): T | undefined; // the value when it is allowed
+}
+```
+
+| Class                | Value                             | Control      | Holds besides           |
+| -------------------- | --------------------------------- | ------------ | ----------------------- |
+| `CheckboxSetting`    | boolean                           | checkbox     | —                       |
+| `SliderSetting`      | number                            | slider       | min, max, step, unit    |
+| `NumberSetting`      | number                            | number       | min, max, step, whole   |
+| `RangeSetting`       | [number, number]                  | range        | min, max, step          |
+| `SelectSetting`      | text                              | select       | options                 |
+| `TextSetting`        | text                              | text         | pattern                 |
+| `ColourSetting`      | a colour or a token name          | colour       | whether tokens may name |
+| `ThemeColourSetting` | { light, dark }                   | theme colour | —                       |
+| `PaletteSetting`     | { light: colours, dark: colours } | palette      | most colours            |
+| `OrderSetting`       | a list of texts in order          | order        | the items               |
+| `SetSetting`         | a list of texts                   | set          | the items               |
+| `KeysSetting`        | key → action                      | keys         | the actions             |
+| `JsonSetting`        | any JSON value                    | json         | —                       |
+
+- A `SettingsRegistry` holds every setting by key: `get(key)` reads, `set(key, value)` checks and writes, `reset(keys)` returns to the defaults, and `subscribe(listener)` reports the keys that changed. The model owns one registry and is its only writer (5.2).
+- Each setting reaches every place that uses its value: shader inputs for the picture, the model's rules for layout, paths, filters, scope and hulls, CSS custom properties `--gv-*` for text and panels, and the words of 6.14 and 7.8. No value is written twice in the code.
+- `applies: 'load'` marks the settings that take effect with the next graph, such as the layout's; the Settings dialog says so.
+- The view's controls belong to the view: module/view/settings/ holds one Svelte component per control, and `SettingControl` picks it by the setting's control (D79).
+
+**The settings file.** A store keeps the values that differ from their defaults, and the pins:
+
+```json
+{ "format": "graphview-settings/1", "revision": 3, "values": { "labels.size": 14 }, "pinned": ["display.size"] }
+```
+
+- Keys that name no setting, and refused values, stay in the file and are reported; they are not applied. A file of another format is set aside with a note.
+- The stores: `HttpSettingsStore(address)` reads and writes the file through a host's route (5.10); `BrowserSettingsStore(key)` keeps it in browser storage; `MemorySettingsStore` holds it, for tests; `FallbackSettingsStore(first, second)` uses the second store when the first cannot be reached.
+- The values come in layers, each over the one before: the defaults; the host's base values (GraphView's `settings` prop); the stored file; and, for the display factors and hulls only, a graph's own `meta.view` (8.12) while that graph is open. A change saves to the store half a second after the last one.
+- The file holds settings only. Type names and colours, the root, the path, the filters' window and the camera belong to a graph and travel in its `meta.view`.
+
+### 5.10 The settings handler
+
+**A host keeps the viewer's settings file through one handler, so that the file's rules stay in the module.** `createSettingsHandler({ read, write })` returns the `GET` and `PUT` functions of a SvelteKit route; `read()` resolves to the stored text or null, and `write(text)` stores it.
+
+- GET answers the file, or an empty file of revision 0.
+- PUT takes a file and checks its format. A revision other than the stored one is refused with status 409 and the stored file; otherwise the file is stored with its revision raised by one, and answered.
+- The shell stores the file at data/graphview-settings.json, outside the build and outside git. A host may store it anywhere, such as in its own database.
 
 ---
 
@@ -640,9 +831,18 @@ Further types take the context colour. A backward keypair type takes its forward
 - Without a threshold every line counts as above, with strength 0.
 - Rows that enter or leave the window fade over the transition; a line's strength eases too.
 
+**Filter rules narrow the view further, by what units and keypairs are.** Each rule tests one thing, and what fails it fades or hides:
+
+- a unit's class (3.9) or type (6.6), and its kind: each value shown, faded or hidden; the Types panel and the Filters panel share these states;
+- a keypair's pair type (3.9), or else its type: shown, faded or hidden;
+- superseded parts: shown at 35 percent (6.13), faded further, or hidden;
+- a range of relations per unit: units outside it fade or hide.
+
+A faded mark draws at `filters.fadeOpacity` of its opacity (default 0.15) and answers no click; a hidden one goes as the time window's do. A keypair fails when one of its units fails or its own type fails, and a line fails when all of its keypairs fail. Rules compound with the time window and the threshold.
+
 ### 6.8 Display overrides
 
-**Three factors scale the picture in the shaders:** unit size, line width and opacity, each from 0.25 (size, width and opacity) to 3 (size, width) or 1 (opacity), default 1. They apply to every mark at once: the size factor to units and chevrons, the width factor to lines, and the opacity factor to every mark and label.
+**Three factors scale the picture in the shaders:** unit size, line width and opacity, each from 0.25 (size, width and opacity) to 3 (size, width) or 1 (opacity), default 1. They apply to every mark at once: the size factor to units and chevrons, the width factor to lines, and the opacity factor to every mark and label. The three factors are settings (5.9); a graph's `meta.view` still carries them, and sets them while that graph is open.
 
 ### 6.9 Hulls
 
@@ -686,8 +886,12 @@ A click on a unit makes it the root; Shift and a click on another unit makes it 
 | Enter          | on a keypair, inspect its far unit; on a unit, make it the root                                                                       |
 | F              | make the inspected unit the root                                                                                                      |
 | Shift+Enter    | make the inspected unit the target                                                                                                    |
-| Escape         | clear the target, else the root; and the inspector                                                                                    |
-| /              | open the Root field                                                                                                                   |
+| Escape         | clear the target, else the root, else the selection; and the inspector                                                                |
+| /              | open the search field (6.19)                                                                                                          |
+| S              | show the neighbourhood of the inspected unit (6.21)                                                                                   |
+| A              | show all units, ending the scope                                                                                                      |
+
+A click with Ctrl (Cmd on macOS) adds a unit to the selection or takes it out (6.20). The keys are a setting, `keyboard.bindings` (5.9).
 
 A polite live region says what changed, one message per action: "Graph loaded: 81 units", "3D view" or "2D view", "Root unit_79", "Root cleared", "Shortest path from unit_79 to unit_77: 3 steps" ("1 step"), "No path from … to …", "Path cleared", "Inspecting unit …", "Inspecting keypair from … to …", "Inspecting relation between … and …", "Inspector cleared". When one action makes several changes, the inspector's words give way to the others: a click that makes a unit the root says "Root unit_79", and Escape says "Root cleared".
 
@@ -704,6 +908,52 @@ A polite live region says what changed, one message per action: "Graph loaded: 8
 **An interface is a disc divided between its two ends.** A line in the surface colour cuts it in two along the bisector of the angle between the directions to its two ends, as seen on screen, in 2D and 3D and at every point of a transition. When the interface sits on the straight line between its ends, the cut is perpendicular to that line; elsewhere each end's line still enters the half of that end. Each half takes the type colour of the end on its side, or the context colour for an end without a type. An interface with one end shows that end's colour on both halves. One with no end or more than two ends shows the context colour on both, and so does a half whose end is itself an interface.
 
 **Otherwise an interface is a unit like any other.** Its size, opacity, depth, picking, labels, filters and fading follow the unit rules, and it counts as a step in depth and paths. It joins no hull, whatever its type.
+
+### 6.18 Relation drawings
+
+**Relations draw by keypairs or by perspectives; the setting `drawing.relations` chooses.** The module's default is keypairs, so every rule of 6.2 to 6.17 holds unchanged; a host with interface graphs sets perspectives as its base value.
+
+|                                             | Keypairs              | Perspectives                                       |
+| ------------------------------------------- | --------------------- | -------------------------------------------------- |
+| Plain unit                                  | disc                  | disc; a class unit (3.9) a box                     |
+| Interface                                   | divided disc (6.17)   | oval in its type's colour, labelled with its class |
+| Chevrons on a relation through an interface | four, one per keypair | two, one per perspective                           |
+| A chevron points                            | along its keypair     | at the unit whose perspective it is                |
+| A chevron is named and coloured by          | its keypair's type    | the perspective's pair type                        |
+
+- The relation between A and B through the interface i keeps the chevrons of (A, i) and (B, i). The chevron on A's side points toward B and carries B's perspective; the chevron on B's side points toward A and carries A's perspective. So the two chevrons point at each other, each at the unit whose perspective it is.
+- An interface with one end carries one chevron on its line, pointing at that end. A direct relation, and an interface with more than two ends, draw by keypairs.
+- An interface's label is its class when it has one, else its label or key.
+- Picking, labels, the inspector and the scene snapshot follow the drawing. A chevron of the perspective drawing picks its perspective: the inspector shows the perspective's type, its two keypairs and its two ends.
+
+### 6.19 Search
+
+**One field searches the loaded graph by label, key, class and attribute values, and lists what it finds by rank.** The field sits in the viewer's bar. Enter shows the first result; the Search section lists up to `search.limit` results (default 50).
+
+- Each unit is indexed by its label, its key as JSON text, its class and type, and the texts and numbers of its attributes, in lower case.
+- Rank: an exact label or key first; then labels that start with the text; then labels with a word that starts with it; then labels that contain it; then attribute values that contain it. Ties go to the unit with more relations, then to file order.
+- A result's row names the unit, its class or type, and where the text matched. Its buttons: Show (its neighbourhood, 6.21), Root, Paths to (as Shift and a click), Highlight (adds it to the group Search results, 6.20) and Inspect.
+- The live region says "3 results for "unit_7"", or "No result for "x"".
+
+### 6.20 Selection and highlights
+
+**A selection marks units by hand; highlight groups draw units emphasised while the rest dims.**
+
+- A click with Ctrl (Cmd on macOS) adds a unit to the selection, or takes it out. With Box selection on in the viewer's bar, a drag draws a box and the units drawn inside it join the selection; with Ctrl they leave it. Escape clears the selection once the target and the root are clear.
+- The Highlights section lists the groups: Selection; Search results; Neighbours, the units within `highlight.hops` steps of the selection (default 1); Issues, the units that data issues name; and the groups a person saved from the selection under a name.
+- Each group is on or off; Selection is on by default. While a group is on, its units carry the outline of 6.2 and draw at `highlight.scale` of their size (default 1.15), their labels show as forced labels do (6.12), and every other unit, line and chevron draws at `highlight.dim` of its opacity (default 0.25).
+- With one unit selected and `highlight.direction` on, the chevrons of its outgoing keypairs take the outgoing colour and those of its incoming keypairs the incoming colour (4.6); their shapes still show the direction.
+- Highlights change no scope and no filter; picking ignores the dimming.
+
+### 6.21 Scope
+
+**The scope chooses which units of the loaded graph the view shows: all of them, or the neighbourhood of chosen units.**
+
+- Show neighbourhood takes the chosen units and the units within `scope.hops` steps of them, in either direction (default 1, from 1 to 3), up to `scope.limit` units (default 500): nearer units first, then those with more relations. It comes from a search result, the inspector, the Scope section, or the key S on the inspected unit.
+- Expand adds the neighbours of the chosen units; Hide takes units out; Show all ends the scope. The Scope section names the scope's centre units and its size, and offers these actions and Lay out scope.
+- A unit with relations to units outside the scope shows their number after its label, such as "unit_7 +12".
+- Units outside the scope go as filtered units do (6.7): they fade out over the transition and answer no click. The layout keeps every place, so a scope that grows or shrinks moves no unit. Lay out scope runs the force layout on the scope alone, from the current places.
+- Fit fits the scope when there is one. Making a unit outside the scope the root, the target or the inspected unit adds it to the scope.
 
 ---
 
@@ -753,7 +1003,7 @@ Four rows always show: First plane (degree 1), Second plane (degree 2), Third pl
 
 ### 7.7 Types
 
-**Unit types, and keypair types side by side with their complements.** "Units by type (field)" lists each unit type with a colour input, an editable name and its count. "Keypairs by type (field)" is a table with the columns Type and Complement; each cell holds a colour input and an editable name, or "the same type", or "none". A host may put its own controls first under each heading.
+**Unit types, and keypair types side by side with their complements.** "Units by type (field)" lists each unit type with a colour input, an editable name and its count. "Keypairs by type (field)" is a table with the columns Type and Complement; each cell holds a colour input and an editable name, or "the same type", or "none". A host may put its own controls first under each heading. Each type has a three-way switch, Shown, Faded or Hidden, which sets its filter rule (6.7).
 
 ### 7.8 Data issues
 
@@ -761,7 +1011,30 @@ Four rows always show: First plane (degree 1), Second plane (degree 2), Third pl
 
 ### 7.9 GraphView
 
-**GraphView is the whole viewer in one component.** It makes its own model, and shows a bar (2D, 3D, Hulls, Fit), the canvas, and the panels Root and depth, Paths, Inspector, Filters, Display and Data issues. Props: `graph`, `settings`, `theme`, `motion`, the callbacks `onready`, `onroot`, `oninspect`, and the extension points `profile`, `looks` and `sections` (5.7).
+**GraphView is the whole viewer in one component: its bar, the canvas, its side bar and the Settings dialog.** It makes its own model and needs nothing from its host but a graph.
+
+- The bar: 2D and 3D, Hulls, Fit, the drawing (Keypairs or Perspectives, 6.18), the search field (6.19), Box selection (6.20), Panels (opens and closes the side bar), and Settings (opens the dialog, 7.10).
+- Above the canvas, the rule banner of 8.1 shows while the graph has issues.
+- The side bar holds these sections, in this order: Search, Scope, Root and depth, Paths, Inspector, Highlights, Filters, Types, Display, Data issues and Pinned settings. Each opens and closes; Display ends with Save picture and its Background switch (6.15).
+- Props: `graph` (a document) or `source` (5.8); `settings` (the host's base values, 5.9); `settingsStore` (a `BrowserSettingsStore` unless given); `view` (view settings to apply, 5.3); the extension points `profile`, `looks` and `sections` (5.7); and the callbacks `onready`, `onroot`, `oninspect`, `onselect`, `onsettings` and `onpicture`.
+- The props `theme` and `motion` remain as base values of the settings `theme.scheme` and `motion.enabled`.
+
+### 7.10 The Settings dialog and pins
+
+**The Settings dialog shows every setting, grouped, each with its control; a pin shows a setting in the side bar as well.**
+
+- The bar's Settings button opens a modal dialog with the heading "Settings". A filter field narrows the list by label, key or description. The groups follow module/settings/registry.ts; each opens and closes.
+- Each row holds the setting's label, its control, its default when the value differs ("Default: 12"), Reset and Pin. A setting that takes effect with the next graph says "Applies to the next graph". Refused input says why, such as "From 8 to 24".
+- The footer holds Reset all, Import… (a settings file), Export (downloads graphview-settings.json), Close, and the store's state: "Saved", "Saving…" or "Not saved: <reason>".
+- The side bar's Pinned settings section shows the pinned settings with the same controls, each with its pin to unpin it. Without pins it says "Pin a setting in the Settings dialog to keep it here."
+
+### 7.11 Search, Scope and Highlights
+
+**Three sections serve 6.19 to 6.21.**
+
+- _Search:_ the results of the bar's field, as 6.19 describes, or "Type in the search field above the canvas." before a search.
+- _Scope:_ "All units" without a scope; with one, "Neighbourhood of <names>, <n> units", with the hops (from 1 to 3), Expand selected, Hide selected, Lay out scope and Show all.
+- _Highlights:_ one row per group, with its switch, its name and its number of units; Save selection as… with a name field; Clear selection; and the Direction switch.
 
 ---
 
@@ -769,33 +1042,39 @@ Four rows always show: First plane (degree 1), Second plane (degree 2), Third pl
 
 ### 8.1 Page layout
 
-**Controls on the left, the picture in the middle, the module's panels on the right.**
+**The host tools on the left, the viewer filling the rest.** The shell plays the host: its Data and Generate sections choose a graph and hand it to the viewer as JSON. The viewer brings its own bar, canvas and side bar (7.9).
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│ Controls  graphview  [2D][3D]  ☑ Hulls  Fit     Sample graph, 81 units, …  Panels │
-├────────────────┬──────────────────────────────────────┬──────────────────────┤
-│ ▾ Data         │                                      │ ▾ Root and depth     │
-│ ▾ Generate     │          the canvas                  │ ▾ Paths              │
-│ ▸ Types        │                                      │ ▾ Inspector          │
-│ ▸ Look         │                                      │ ▸ Filters            │
-│                │                                      │ ▸ Display            │
-│                │                                      │ ▾ Data issues        │
-└────────────────┴──────────────────────────────────────┴──────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│ Host  graphview                        Sample graph, 81 units, 84 relations, no issues │
+├────────────────┬─────────────────────────────────────────────────────────────────┤
+│ ▾ Data         │ [2D][3D] ☑ Hulls Fit  Keypairs ▾  [search…]  ▢ Box  Panels  Settings │
+│ ▾ Generate     ├───────────────────────────────────────────┬─────────────────────┤
+│                │                                           │ ▾ Search            │
+│                │              the canvas                   │ ▸ Scope             │
+│                │                                           │ ▾ Root and depth    │
+│                │                                           │ ▾ Paths             │
+│                │                                           │ ▾ Inspector         │
+│                │                                           │ ▸ Highlights        │
+│                │                                           │ ▸ Filters           │
+│                │                                           │ ▸ Types             │
+│                │                                           │ ▸ Display           │
+│                │                                           │ ▾ Data issues       │
+│                │                                           │ ▾ Pinned settings   │
+└────────────────┴───────────────────────────────────────────┴─────────────────────┘
 ```
 
-The top bar is 48 pixels high, the left sidebar 300 pixels wide, the right 360. Controls and Panels open and close the sidebars; each section opens and closes. Sections start open as drawn (▾) or closed (▸). At a width of 900 pixels or less, both sidebars start closed and open as drawers over the canvas. A rule banner under the top bar says "This graph breaks the graph rules; the data issues panel lists each breach." while a graph has issues. A file dropped anywhere on the page opens.
+The top bar is 48 pixels high and the host tools 300 pixels wide; the viewer's side bar is 360 pixels wide. Host opens and closes the host tools, and the viewer's Panels its side bar; each section opens and closes, and starts open as drawn (▾) or closed (▸). At a width of 900 pixels or less, both start closed and open as drawers over the canvas. The viewer shows the rule banner "This graph breaks the graph rules; the data issues panel lists each breach." above its canvas while a graph has issues (7.9). A file dropped anywhere on the page opens.
 
 ### 8.2 Top bar
 
-**The top bar holds the view, not the data.** Controls, the name graphview, the 2D and 3D buttons (aria-pressed), the Hulls switch, Fit, the headline, and Panels. There is no Load and no Generate button. The headline reads "<name>, <n> units, <m> relations, <k> issues" in plain words ("no issues", "1 issue"), or "Refused file". <m> counts the relations with both keypairs, as `relationCount` does; a relation with one keypair still draws its line.
+**The top bar holds the host, not the view.** Host, the name graphview, and the headline. The view's controls are the viewer's own (7.9). There is no Load and no Generate button. The headline reads "<name>, <n> units, <m> relations, <k> issues" in plain words ("no issues", "1 issue"), or "Refused file". <m> counts the relations with both keypairs, as `relationCount` does; a relation with one keypair still draws its line.
 
 ### 8.3 Data
 
-**Three groups: File, Picture and Web.**
+**Two groups: File and Web.** The picture is the viewer's (7.9).
 
 - _File:_ Browse… opens a JSON file; Save writes the graph with its view (8.12); the selected file's name shows below, or "No file selected". A note says a file can be dropped on the page.
-- _Picture:_ Save picture (6.15) and a Background switch, on by default.
 - _Web:_ a Web address field and Fetch; Share link (8.13), with the link shown in a read-only field and put on the clipboard.
 - Messages appear under the groups, such as "Saved <name>.", "Overwrote <name>.", "Downloaded <name>.", "The server at <address> refused the request, or sent no JSON.", "The link is on the clipboard." or "Copy the link below."
 
@@ -809,7 +1088,7 @@ A loaded file updates the whole page: headline, sections, panels and fields foll
 2. Seed.
 3. Relations through interfaces (share): from 0 to 1 by 0.05, default 0 (8.16).
 4. "Break the rules", a disclosure with: Drop reverse keypairs (share), Unknown keys, Repeated rows, Lone units (families only).
-5. "Add types, weights and times": on, it opens the Types section and turns on the next two sliders and the type numbers.
+5. "Add types, weights and times": on, it turns on "Unit types to add" (default 5, at most 64), "Relation types to add" (default 4, at most 13) and the next two sliders.
 6. Weights: a two-knob slider from 0 to 1, default 0 to 1.
 7. Times: a two-knob slider over 2024-01-01 to 2028-12-31, by days, default 2026-01-01 to 2026-12-31.
 8. The Generate button.
@@ -862,13 +1141,13 @@ The random numbers come from mulberry32: a 32-bit state seeded with the seed as 
 - "Types, weights and times": off, the graph keeps what it brings; on, each setting with its value, naming the relation types it will use.
 - "Break the rules", when any option is above 0, each option with its value.
 
-### 8.9 Types and Look sections
+### 8.9 Types and look
 
-**Types sits under Generate in the left sidebar.** It shows the Types panel (7.7), with "Unit types to add" and "Relation types to add" first under their headings; both are enabled only while "Add types, weights and times" is on. **Look** holds Theme (As the system, Light, Dark) and Motion (As the system, On, Off).
+**Types, theme and motion are the viewer's.** The Types panel is a section of the viewer's side bar (7.7). Theme (As the system, Light, Dark) and Motion (As the system, On, Off) are the settings `theme.scheme` and `motion.enabled`, in the Settings dialog; the shell's page follows the viewer's theme.
 
 ### 8.10 Examples
 
-**The examples are the fixtures as they are, then the shell's own.** A Vite virtual module bundles them when the shell is built.
+**The examples are the fixtures as they are, then the shell's own.** The shell serves each as JSON at /graphview/examples/<id>.json, written at build time, and hands it to the viewer through a `JsonFileSource`, as a host's data module would (8.17).
 
 - The database fixture is the sample graph, with the id `sample`: 81 units and 84 relations, labels `unit_<key>`, unit types `type_<n>`, keypair types in complementary pairs (rel_ab and rel_ba, rel_cd and rel_dc, rel_ef and rel_fe), and weights. Its description reads "A hierarchy of parts with a few relations across it: hubs with many leaves. Units carry types; keypairs carry types and weights."
 - Every other example keeps its fixture's name as its id.
@@ -904,7 +1183,7 @@ The menu lists the fixtures in fixture order, then the shell's examples: 26 load
 
 ### 8.15 The test hook
 
-**The shell exposes `window.graphview` for browser tests and the console.** It holds `model`, `canvas()` (the canvas component with `clickAt`, `pickAt`, `fit`, `getScene`, `whenSettled`, `getCamera`, `setCamera`, `picture`), `ready()` (the count of finished loads), `nextReady()`, `loadExample(id, withAttributes, interfaces)`, `generate(family, params, seed, breaks, withAttributes, interfaces)` and `setLook({ theme, motion })`. `interfaces` is the share of 8.16, default 0. The page under the fragment #embed shows `GraphView` alone with the sample graph, as the simplest host embeds it; `window.embed` holds `model()` and `events()`, the callbacks GraphView made, in order.
+**The shell exposes `window.graphview` for browser tests and the console.** It holds `model`, `canvas()` (the canvas component with `clickAt`, `pickAt`, `fit`, `getScene`, `whenSettled`, `getCamera`, `setCamera`, `picture`), `ready()` (the count of finished loads), `nextReady()`, `loadExample(id, withAttributes, interfaces)`, `generate(family, params, seed, breaks, withAttributes, interfaces)` and `setLook({ theme, motion })`, which sets the viewer's settings `theme.scheme` and `motion.enabled`. `interfaces` is the share of 8.16, default 0. The page under the fragment #embed shows `GraphView` alone with the sample graph, as the simplest host embeds it; `window.embed` holds `model()` and `events()`, the callbacks GraphView made, in order.
 
 ### 8.16 Relations through interfaces
 
@@ -915,6 +1194,20 @@ The menu lists the fixtures in fixture order, then the shell's examples: 26 load
 - Each edge row (a, b) of a chosen relation becomes (a, i) and (i, b) in its place, both with the row's other fields, attributes and superseded mark included. Rows that are not edges between two different keys stay as they are.
 
 The explanation (8.8) gains "Relations through interfaces": off, or the share with its meaning.
+
+### 8.17 Routes and builds
+
+**The shell is a SvelteKit app under the base path /graphview.**
+
+| Route                           | Does                                                                                               |
+| ------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `/graphview/`                   | the host tools and the viewer; the fragments `#bench` and `#embed` show the pages of 8.14 and 8.15 |
+| `/graphview/api/settings`       | GET and PUT of the viewer's settings file, through the module's handler (5.10)                     |
+| `/graphview/examples/<id>.json` | each example's graph, as a host's data module would serve it; written at build time                |
+
+- `npm run build:shell` builds the static demo into dist/shell, for GitHub Pages. It has no server route, so the viewer keeps its settings in browser storage there, through a `FallbackSettingsStore`.
+- `npm run build:server` builds the app with its server into dist/server; the browser tests run against it with `vite preview`.
+- The shell's page renders in the browser only. The viewer itself also renders on a server without error, as a host's server-side rendering needs (11.3).
 
 ---
 
@@ -949,11 +1242,14 @@ docs/                     the specification and its page, the requests (docs/3d)
 fixtures/                 test graphs, expected answers, the reference; read-only
 module/index.ts           the module's only entry point
 module/core/              pure TypeScript: format, issues, fingerprint, aids, tokens
-module/model/             the model, its contracts and rules
+module/settings/          the setting classes, the registry of settings, the settings file and its stores
+module/model/             the model, its sources, contracts and rules
 module/render/            the three.js scene and its parts: buffers, camera, picking, hulls, labels, snapshot, shapes, looks; shaders/ for the GLSL
-module/view/              Svelte components: canvas, panels, sections; inspector/ for the inspector's sections
+module/view/              Svelte components: the viewer, canvas, panels, sections, the Settings dialog; inspector/ for the inspector's sections; settings/ for the controls of the settings
 module/workers/           force layout, distances and path sets
-shell/                    the static page, the bench page and the embed page; shell/lib for the shell's store, examples, generators, types and times, interfaces, explanations, files, links, the importer; shell/sections for the left sections; shell/examples for the shell's own examples
+module/server/            the settings handler for a host's route
+shell/                    the SvelteKit app: routes/ for the page, the settings route and the example graphs; lib/ for the host's store, examples, generators, types and times, interfaces, explanations, files, links and the importer; sections/ for the host sections; examples/ for the shell's own examples; the bench and embed pages
+data/                     the shell's settings file; not in git
 tests/gates/              gate tests fixed before the build; read-only
 tests/unit/               unit tests
 tests/e2e/                browser tests
@@ -965,26 +1261,28 @@ scripts/                  type declarations, screenshots, the specification page
 
 **Few tools, pinned exactly; package-lock.json is committed.** TypeScript in strict mode with module resolution "bundler" and `allowImportingTsExtensions`; files import each other with the .ts extension.
 
-| Kind        | Packages                                                                                                                                                                                                                                                                                          |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime     | svelte 5.57.2; three 0.186.1; graphology 0.26.0 and graphology-layout-forceatlas2 0.10.1; @fontsource/atkinson-hyperlegible-next 5.3.0                                                                                                                                                            |
-| Development | vite 8.3.4; @sveltejs/vite-plugin-svelte 7.3.1; typescript 6.0.3; vitest 5.0.4; @playwright/test 1.64.1; svelte-check 4.7.6; svelte2tsx 0.7.61; prettier 3.9.10 with prettier-plugin-svelte 4.1.1; @axe-core/playwright 4.13.0; @types/node 26.6.5; @types/three 0.186.0; graphology-types 0.24.8 |
+| Kind        | Packages                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime     | svelte 5.57.2; three 0.186.1; graphology 0.26.0 and graphology-layout-forceatlas2 0.10.1; @fontsource/atkinson-hyperlegible-next 5.3.0                                                                                                                                                                                                                                                                               |
+| Development | vite 8.3.4; @sveltejs/vite-plugin-svelte 7.3.1; @sveltejs/kit 3.1.0 with @sveltejs/adapter-node 6.0.0 and @sveltejs/adapter-static 4.0.0; @sveltejs/package 3.0.1; typescript 6.0.3; vitest 5.0.4; @playwright/test 1.64.1; svelte-check 4.7.6; svelte2tsx 0.7.61; prettier 3.9.10 with prettier-plugin-svelte 4.1.1; @axe-core/playwright 4.13.0; @types/node 26.6.5; @types/three 0.186.0; graphology-types 0.24.8 |
 
 TypeScript 6, not 7: svelte-check 4.7.6 accepts only TypeScript 5 or 6. Add no other runtime dependency without a reason in docs/decisions.md.
 
 ### 10.3 Scripts
 
-| Script                 | Does                                                                                                |
-| ---------------------- | --------------------------------------------------------------------------------------------------- |
-| `npm run dev`          | the shell for development, at /graphview/                                                           |
-| `npm run check`        | svelte-check, `prettier --check .`, and Vitest on tests/gates and tests/unit                        |
-| `npm run build:module` | the module as a library into dist/module, with CSS, then type declarations with svelte2tsx          |
-| `npm run build:shell`  | the shell as static files into dist/shell, for the base path /graphview/                            |
-| `npm run build`        | both builds                                                                                         |
-| `npm run e2e`          | builds the shell, serves it with `vite preview` on port 4173 under /graphview/, and runs Playwright |
-| `npm test`             | `check`, then `e2e`                                                                                 |
+| Script                 | Does                                                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `npm run dev`          | the shell for development, with its server, at /graphview/                                                 |
+| `npm run check`        | svelte-check, `prettier --check .`, and Vitest on tests/gates and tests/unit                               |
+| `npm run build:module` | the module as a library into dist/module, with CSS, then type declarations with svelte2tsx                 |
+| `npm run build:shell`  | the shell as static files into dist/shell, for the base path /graphview/ (8.17)                            |
+| `npm run build:server` | the shell with its server into dist/server (8.17)                                                          |
+| `npm run package`      | the module as Svelte sources for a SvelteKit host, into dist/package, with svelte-package                  |
+| `npm run build`        | the module, both shell builds and the package                                                              |
+| `npm run e2e`          | builds the server build, serves it with `vite preview` on port 4173 under /graphview/, and runs Playwright |
+| `npm test`             | `check`, then `e2e`                                                                                        |
 
-The module build keeps svelte, three and graphology external.
+The module build and the package keep svelte, three and graphology external.
 
 ### 10.4 Browser tests
 
@@ -1034,12 +1332,14 @@ fixtures/expected/<name>.json holds each fixture's load result, issues, fingerpr
 | G15  | the colour tokens equal 4.6, with their contrast                                                                                                                                                                                                          | tests/gates/tokens.gate.test.ts      |
 | G16  | the module imports nothing outside module/; the core imports only the core and uses no browser globals; the shell reaches the module only through module/index.ts                                                                                         | tests/gates/boundaries.gate.test.ts  |
 | G17  | speed in the test browser: the sample graph's first picture within 1 second; the random graph's within 5 seconds at given positions; the complete graph of nine's path set within 2 seconds; median zoom frame on the sample graph within 50 milliseconds | tests/e2e, numbers in the report     |
-| G18  | both builds succeed, and every browser test runs against the shell's production build under /graphview/                                                                                                                                                   | `npm run build`, `npm run e2e`       |
+| G18  | the module build, both shell builds and the package succeed, and every browser test runs against the shell's server build under /graphview/                                                                                                               | `npm run build`, `npm run e2e`       |
 | G19  | a visual review of sixteen fixed views (11.5)                                                                                                                                                                                                             | docs/report.md and docs/screenshots/ |
 
 ### 11.3 Unit tests
 
 **Unit tests cover what the gates do not.** At least: keys near the integer limits; schema reflection; depth rules and planes in 2D and 3D; filters and line weights; picking geometry and hull groups; the type registry's pairing, colours and custom names; the worker against the core; the model's consolidation, aspects, planes, paths, reverse, path steps, find, reset on a new graph, settings round trip, refusals, and a newer load winning; label placement (no two labels closer than 2 pixels, obstacles kept clear, forced labels first); the generators; types, weights and times (ranges, complements, each row that lacks a value, determinism); the explanations, with every family's relation count; parameter names; the examples and every text file of the repository (no private term); share links and their checks; the importer; given positions only when every unit has one; hulls above 3,000 units; kinds, ends and the interface issues; the halves' colours and the unit shapes; relations through interfaces at 0, a share and 1, by seed; share links with interfaces; a profile with invented names that adds a kind with its own shape, look, check, words and section, classes, declared pairs, a superseded rule, perspective types and a projection, without editing the module.
+
+Version 4.0 adds: every setting's check (allowed and refused values for each class); the registry's defaults equal the values sections 4 to 9 give; the settings file round trip, with unknown keys and refused values kept and reported; the layers of values, a graph's `meta.view` included; the stores (memory, browser with a stand-in storage, fallback); the handler's revision rule and its 409; the sources; a profile from JSON (kinds by a field, perspectives from `pair`, superseding by pair type, self-relations allowed, direct relations reported); the perspective drawing's chevrons (which keypairs, where they point, their types); the search ranking; filter rules on units, keypairs and lines; highlight groups and the selection; the scope (hops, limit, ranking, counts outside, the root added); and `GraphView` rendered on a server without error.
 
 ### 11.4 Browser tests
 
@@ -1051,6 +1351,8 @@ fixtures/expected/<name>.json holds each fixture's load result, issues, fingerpr
 - _Generate:_ "Add types, weights and times" opens Types and turns on sliders and numbers; generated types, complements, weights and times fall in their ranges; an example keeps what it brings; the explanation follows each change.
 - _Interfaces:_ the three interface examples load with their kinds; in 2D, and in 3D with a root and a turned camera, each half of an interface shows the colour of the end on its side, in pixels; one end, no end, too many ends and an interface as an end give their colours; the inspector's interface section and the live region; the interface issues; the Generate setting and its link.
 - _Large graph:_ the random graph loads at its given positions, compared with the fixture's; a root counts every unit on its plane as the expected rings say; a pick answers; hulls start off and the switch turns them on.
+
+- _Version 4.0:_ the viewer's bar and side bar; the Settings dialog (open, filter, a slider that changes the picture, Reset, Reset all, an import and an export); a pin that shows a setting in the side bar; settings that survive a reload through /graphview/api/settings; a refused value; the drawing switch, with two chevrons per relation through an interface pointing at their units and named by pair type; the search field with Show, Root and Highlight; filter rules that fade and hide, from the Types panel too; a click with Ctrl and a box selection; a highlight group dimming the rest; the scope with Expand, Hide, "+n" labels and Show all; the keys S, A, / and Escape.
 
 ### 11.5 Visual review
 
@@ -1106,6 +1408,18 @@ fixtures/expected/<name>.json holds each fixture's load result, issues, fingerpr
 | M5 Look             | The eighteen screenshots of 11.5, judged and fixed; axe in both themes.                                                                                                                   | G14, G19                                         |
 | M6 Speed and builds | G17 numbers; both builds; every browser test against the production build; README.                                                                                                        | G17, G18; `npm test` passes from a clean install |
 | M7 Finish           | Complete the report; open the pull request.                                                                                                                                               | 12.4                                             |
+
+**Version 4.0 follows the same rules in its own milestones.**
+
+| Milestone              | Work                                                                                                         | Check                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| N0 Contract            | This version of the specification; decisions D79 and on.                                                     | the specification page builds             |
+| N1 SvelteKit shell     | The shell on SvelteKit (8.17), the same page as before; both shell builds.                                   | every earlier test passes                 |
+| N2 Settings            | 5.9, 5.10, 7.10: the classes, the registry, the stores, the handler, the dialog and pins; every value wired. | the tests of 11.3 and 11.4 for settings   |
+| N3 Viewer and sources  | 5.8, 7.9, 8.1 to 8.10: the viewer's bar and side bar; the shell as host; examples served as JSON.            | the shell's tests, updated to 8.1 and 8.2 |
+| N4 Profile and drawing | 3.8, 3.9, 5.7, 6.18: the profile from JSON and the perspective drawing.                                      | the drawing's tests                       |
+| N5 Data manipulation   | 6.7, 6.19 to 6.21, 7.7, 7.11.                                                                                | their tests                               |
+| N6 Package and report  | `npm run package`; the README for hosts; the report.                                                         | `npm test` passes from a clean install    |
 
 ### 12.3 Report
 
@@ -1195,3 +1509,22 @@ Version 3.0 adds interface graphs and the extension points. The source was split
 | 8.13, 8.15     | Links and the test hook carry the share of interfaces.                                                                                                         |
 | 8.16           | Relations through interfaces.                                                                                                                                  |
 | 10.1, 11, 12.2 | The new folders; the new unit and browser tests; views 17 and 18; the milestones.                                                                              |
+
+## Appendix E. Changes in version 4.0
+
+Version 4.0 makes the viewer one self-contained component for a host that supplies only graphs, and turns the shell into a SvelteKit app that simulates such a host.
+
+| Section                           | Change                                                                                                                                                                             |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.1, 1.2, 1.4                     | The viewer and the host; the settings and server parts; the module runs no server but offers a handler.                                                                            |
+| 2.1                               | The words source, setting, control, settings file and store, pin, class unit, pair type, drawing, selection, highlight group and scope.                                            |
+| 3.8, 3.9                          | A profile may allow self-relations and report direct relations; classes and perspectives in the data.                                                                              |
+| 4.6                               | The tokens are the defaults of the Theme settings.                                                                                                                                 |
+| 5.1 to 5.3, 5.5, 5.6              | The settings layer; the model's settings, source, selection, highlights, scope and rules, with their methods and aspects; the snapshot's drawing, emphasis and scope; new exports. |
+| 5.7                               | A profile from JSON; the shapes box and oval.                                                                                                                                      |
+| 5.8 to 5.10                       | Sources, settings and the settings handler.                                                                                                                                        |
+| 6.7, 6.8, 6.14                    | Filter rules; the display factors as settings; the keys S and A, Ctrl and a click, and / for search.                                                                               |
+| 6.18 to 6.21                      | The perspective drawing, search, selection and highlights, and the scope.                                                                                                          |
+| 7.7, 7.9 to 7.11                  | The Types panel's switches; GraphView as the whole viewer; the Settings dialog and pins; the Search, Scope and Highlights sections.                                                |
+| 8.1 to 8.3, 8.9, 8.10, 8.15, 8.17 | The shell as host: its page, top bar and Data section; types and look in the viewer; examples served as JSON; the hook's look; routes and builds.                                  |
+| 10.1 to 10.3, 11, 12.2            | The new folders, packages and scripts; the new tests; G18 over every build; the milestones N0 to N6.                                                                               |

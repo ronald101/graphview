@@ -1,6 +1,6 @@
 # graphview: decisions
 
-**Each entry records a choice the specification leaves open: the choice, the reason, and the alternative.** Decisions D1 to D54, made while building release 1 and the 3D viewer, are folded into docs/specifications.md. The entries below were made in the order the work met them: D55 to D64 while settling the discrepancies of docs/spec_discrepancies.md, and D65 to D78 while adding interface graphs and the extension points of version 3.0.
+**Each entry records a choice the specification leaves open: the choice, the reason, and the alternative.** Decisions D1 to D54, made while building release 1 and the 3D viewer, are folded into docs/specifications.md. The entries below were made in the order the work met them: D55 to D64 while settling the discrepancies of docs/spec_discrepancies.md, D65 to D78 while adding interface graphs and the extension points of version 3.0, and D79 on for version 4.0.
 
 ## D55. A file's saved settings reach every part of the picture
 
@@ -145,3 +145,51 @@
 - **Choice.** Every kind that joins units has ends and the two interface checks, with the interface's words. An interface's perspectives run from its first end to its second and back; one end gives one perspective.
 - **Reason.** A family with several classes of interface keeps them as classes of one kind; a separate joining kind is still an interface in every rule.
 - **Alternative.** Codes per kind, such as `<kind>-ends`. More codes, and more words, for one rule.
+
+## D79. Setting classes name their control; the view maps controls to components
+
+- **Choice.** Each class of setting carries the name of its control, such as `slider`. module/view/settings/ holds one Svelte component per control, and `SettingControl` picks the component by that name.
+- **Reason.** Settings sit below the model (5.1): the model reads layout, path and hull settings, and must not import Svelte components. The relation between a setting and its component stays one table in the view.
+- **Alternative.** Each setting holds its component. The settings layer would then import the view, and the model with it.
+
+## D80. The settings file holds flat keys and only the values that differ
+
+- **Choice.** The file holds `format`, `revision`, `values` keyed by the setting's dotted key, and `pinned`. A value equal to its default is left out.
+- **Reason.** A file stays valid when settings are added or renamed defaults change; the defaults stay in one place, the code; a host's database stores one small document.
+- **Alternative.** The nested file of the settings analysis, or a snapshot of every value. Each would freeze the defaults of the day it was written.
+
+## D81. Display factors and hulls stay in a graph's view, as a layer over the settings
+
+- **Choice.** `meta.view` still carries the display factors and hulls. While that graph is open its values lie over the stored settings; a person who changes one writes the setting, and the graph's layer for that key ends.
+- **Reason.** Saved files and links keep working as before, a graph opens as it was left, and a graph's values never leak into the person's settings.
+- **Alternative.** Move them out of `meta.view`. Saved graphs would lose their look.
+
+## D82. Two shell builds: static for Pages, with a server for tests and settings
+
+- **Choice.** `build:shell` writes the static demo into dist/shell; `build:server` writes the app with its server into dist/server, and the browser tests run against it.
+- **Reason.** The Pages workflow publishes dist/shell and may not change (1.3). The settings route needs a server, as a host's does.
+- **Alternative.** One static build with a development-only settings route. The tests would then never run the route a host runs.
+
+## D83. The perspective drawing keeps the chevrons that point into the interface
+
+- **Choice.** For a relation between A and B through i, the drawing keeps the chevrons of (A, i) and (B, i). The one on A's side points toward B and carries B's perspective; the one on B's side carries A's.
+- **Reason.** The request reads: two chevrons per relation, pointing at each other, each pointing at the unit whose perspective it is. These two chevrons already point that way in the keypair drawing, so their places, picking and fading carry over unchanged.
+- **Alternative.** Chevrons beside the unit they point at, pointing away from each other. This reading is wrong if the host's drawing places them so; then only the places change.
+
+## D84. The scope hides units, and the loaded graph keeps one layout
+
+- **Choice.** Units outside the scope go as filtered units do, and every unit keeps its place. Lay out scope runs the force layout on the scope alone, on request.
+- **Reason.** Nothing moves while a person grows or shrinks the scope, so units stay where they were found; no layout runs per step.
+- **Alternative.** Lay out every scope afresh. Units would jump at each Expand.
+
+## D85. Settings save half a second after the last change
+
+- **Choice.** The registry reports each change; the store writes the file 500 milliseconds after the last one, and the dialog shows "Saving…", "Saved" or why it was not saved.
+- **Reason.** A person cannot forget to save, and a slider's drag writes once.
+- **Alternative.** A Save button. Changes would be lost on a reload before it.
+
+## D86. Defaults stay where they were; the registry points at them
+
+- **Choice.** The registry takes its defaults from the constants that already hold them, such as `tokens`, `DEPTH_RULES`, `SPACING`, `PATH_DEFAULTS` and `TYPE_PALETTE`. The code reads the registry's live value wherever it used the constant.
+- **Reason.** The exports of 5.6 and the gates keep their meaning, and each default is written once.
+- **Alternative.** Move every default into the registry and drop the constants. That breaks the public exports and G15's view of the tokens.
