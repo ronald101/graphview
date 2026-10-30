@@ -341,14 +341,18 @@
   }
   .gv-bar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px;
+    gap: 6px 10px;
     padding: 6px 10px;
     border-bottom: 1px solid var(--gv-hairline);
   }
   .gv-search {
     min-width: 0;
     width: 14em;
+  }
+  .gv-bar label {
+    white-space: nowrap;
   }
   .gv-banner {
     margin: 0;

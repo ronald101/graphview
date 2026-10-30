@@ -12,6 +12,7 @@ import {
   type GraphModel,
   type GraphSource,
   type ViewSettings,
+  viewCss,
 } from '../../module/index.ts';
 import { breakRules, NO_BREAKS, type BreakOptions } from './breakRules.ts';
 import { decorate, DECORATE_DEFAULTS, type DecorateOptions } from './decorate.ts';
@@ -77,6 +78,8 @@ export class Shell {
   private viewer: Viewer | null = null;
   /** What the viewer shows, for the headline and the sections. */
   info = $state({ name: 'Graph', units: 0, relations: 0, issues: 0, refused: false, hasDoc: false });
+  /** The viewer's text and panel properties (--gv-*), which the host tools wear too, as they use the module's controls. */
+  css = $state('');
 
   // ---------------------------------------------------------------- page
   leftOpen = $state(wide());
@@ -151,7 +154,10 @@ export class Shell {
       hasDoc: m.doc !== null,
     };
     if (JSON.stringify(info) !== JSON.stringify(this.info)) this.info = info;
-    if (!a || a.has('theme') || a.has('settings')) wearTokens(m.theme, m.colours(m.theme));
+    if (!a || a.has('theme') || a.has('settings')) {
+      wearTokens(m.theme, m.colours(m.theme));
+      this.css = viewCss(m);
+    }
   }
 
   /** The graph's name, for the headline and file names. */

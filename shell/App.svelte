@@ -43,6 +43,7 @@
 
 <div
   class="shell"
+  style={shell.css}
   class:dragging
   role="presentation"
   ondragover={(e) => {

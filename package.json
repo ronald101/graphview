@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "svelte": "./dist/package/index.js",
+  "types": "./dist/package/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/package/index.d.ts",
+      "svelte": "./dist/package/index.js",
+      "default": "./dist/package/index.js"
+    }
+  },
+  "files": [
+    "dist/package"
+  ],
   "description": "A graph viewer in 2D and 3D: a reusable Svelte 5 module and a static shell with a graph generator.",
   "engines": {
     "node": ">=22.17"
@@ -14,7 +26,8 @@
     "build:module": "vite build --config module/vite.config.ts && node scripts/build-types.mjs",
     "build:shell": "vite build --config shell/vite.config.ts --mode static",
     "build:server": "vite build --config shell/vite.config.ts",
-    "build": "npm run build:module && npm run build:shell && npm run build:server",
+    "package": "svelte-package -i module -o dist/package --tsconfig tsconfig.package.json && node scripts/package.mjs",
+    "build": "npm run build:module && npm run build:shell && npm run build:server && npm run package",
     "e2e": "npm run build:server && playwright test",
     "test": "npm run check && npm run e2e"
   },

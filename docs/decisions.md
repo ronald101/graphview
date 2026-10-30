@@ -373,3 +373,9 @@
 - **Choice.** module/model/narrowing.ts holds the selection, the groups, the search, the rules and the scope; the model owns one and offers the methods and fields of 5.2, which emit the aspects. Pure functions in filterRules.ts, search.ts and reach.ts do the work.
 - **Reason.** model.ts was already the largest file; the narrowing has a state and rules of its own that tests can reach directly.
 - **Alternative.** All of it in model.ts.
+
+## D117. The package is the module's sources, finished by a script
+
+- **Choice.** `npm run package` runs svelte-package on module/ with tsconfig.package.json, which turns on `rewriteRelativeImportExtensions`, so that every import names the built .js file. scripts/package.mjs then points the workers' `new URL(…)` addresses at their .js files, removes the module's build configuration, and fails if any import still names a .ts file. package.json names dist/package in `exports`, `svelte` and `types`; the package stays private, for hosts that depend on it by git or path.
+- **Reason.** A SvelteKit host compiles the components itself, with its own Svelte; svelte, three and graphology stay its dependencies. TypeScript rewrites imports but not the workers' addresses, which are strings.
+- **Alternative.** Publish the bundled library of dist/module. A host would then get compiled components and a second copy of the CSS, and could not tree-shake the panels it leaves out.

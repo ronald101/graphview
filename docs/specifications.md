@@ -1272,7 +1272,7 @@ data/                     the shell's settings files; not in git
 tests/gates/              gate tests fixed before the build; read-only
 tests/unit/               unit tests
 tests/e2e/                browser tests
-scripts/                  type declarations, screenshots, the specification page, session start
+scripts/                  type declarations, the package's last step, screenshots, the specification page, session start
 .github/workflows/        checks on every push; publishing to GitHub Pages from main
 ```
 
@@ -1352,7 +1352,7 @@ fixtures/expected/<name>.json holds each fixture's load result, issues, fingerpr
 | G16  | the module imports nothing outside module/; the core imports only the core and uses no browser globals; the shell reaches the module only through module/index.ts                                                                                         | tests/gates/boundaries.gate.test.ts  |
 | G17  | speed in the test browser: the sample graph's first picture within 1 second; the random graph's within 5 seconds at given positions; the complete graph of nine's path set within 2 seconds; median zoom frame on the sample graph within 50 milliseconds | tests/e2e, numbers in the report     |
 | G18  | the module build, both shell builds and the package succeed, and every browser test runs against the shell's server build under /graphview/                                                                                                               | `npm run build`, `npm run e2e`       |
-| G19  | a visual review of sixteen fixed views (11.5)                                                                                                                                                                                                             | docs/report.md and docs/screenshots/ |
+| G19  | a visual review of the fixed views of 11.5                                                                                                                                                                                                                | docs/report.md and docs/screenshots/ |
 
 ### 11.3 Unit tests
 
@@ -1387,7 +1387,7 @@ Version 4.0 adds: every setting's check (allowed and refused values for each cla
 8. The random graph of 10,000 units, dark.
 9. Generate with a small-world graph and the explanation open, light.
 10. text-keys with labels, light.
-11. The shell at 800 pixels with the Controls drawer open, light.
+11. The shell at 800 pixels with the Host drawer open, light.
 12. 3D first picture of the sample graph with hulls, light.
 13. 3D, root unit 1, camera turned to show the planes, light.
 14. 3D, path 79 to 77, turned, dark.
@@ -1395,6 +1395,9 @@ Version 4.0 adds: every setting's check (allowed and refused values for each cla
 16. 3D, communities, threshold 0.6 and a time window, light.
 17. Fully interfaced graph, close to the interface between A and B, 2D, light.
 18. Grid with half of the relations through interfaces and types, 3D, root unit 6, turned and close to the interface i2, dark.
+19. Classes and perspectives, by perspectives, close to the teaching between Ada and Algebra, light.
+20. Sample graph with the scope around unit_7, its +n labels, and unit_10 selected, light.
+21. The Settings dialog filtered to the Drawing group, dark.
 
 ---
 
@@ -1424,7 +1427,7 @@ Version 4.0 adds: every setting's check (allowed and refused values for each cla
 | M2 Model            | module/model and module/workers: 3.8, 5.2 to 5.4, the profile of 5.7, 6.1, 6.4 to 6.7, 6.9 geometry; unit tests of 11.3.                                                                  | G9, G13                                          |
 | M3 Render and view  | module/render and module/view: 5.5, 5.6, the looks and sections of 5.7, sections 6 and 7.                                                                                                 | G11, G16                                         |
 | M4 Shell            | Section 8: layout, Data, Generate with families, breaking rules, types, relations through interfaces, explanation, examples, files, share links, bench page, embed page, test hook.       | G10; every example loads                         |
-| M5 Look             | The eighteen screenshots of 11.5, judged and fixed; axe in both themes.                                                                                                                   | G14, G19                                         |
+| M5 Look             | The screenshots of 11.5, judged and fixed; axe in both themes.                                                                                                                            | G14, G19                                         |
 | M6 Speed and builds | G17 numbers; both builds; every browser test against the production build; README.                                                                                                        | G17, G18; `npm test` passes from a clean install |
 | M7 Finish           | Complete the report; open the pull request.                                                                                                                                               | 12.4                                             |
 
@@ -1546,4 +1549,4 @@ Version 4.0 makes the viewer one self-contained component for a host that suppli
 | 6.18 to 6.21                      | The perspective drawing, search, selection and highlights, and the scope.                                                                                                          |
 | 7.7, 7.9 to 7.11                  | The Types panel's switches; GraphView as the whole viewer; the Settings dialog and pins; the Search, Scope and Highlights sections.                                                |
 | 8.1 to 8.3, 8.9, 8.10, 8.15, 8.17 | The shell as host: its page, top bar and Data section; types and look in the viewer; examples served as JSON; the hook's look; routes and builds.                                  |
-| 10.1 to 10.3, 11, 12.2            | The new folders, packages and scripts; the new tests; G18 over every build; the milestones N0 to N6.                                                                               |
+| 10.1 to 10.3, 11, 12.2            | The new folders, packages and scripts; the new tests and views 19 to 21; G18 over every build; the milestones N0 to N6.                                                            |

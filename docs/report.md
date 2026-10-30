@@ -1,13 +1,16 @@
 # graphview: report
 
-**graphview draws interface graphs, its source is ready for other families of graphs, and every gate passes.** This round followed the plan of 27 October 2026 in four steps, each committed after its tests passed:
+**graphview 4.0 is one viewer component for a host that supplies only graphs, and every gate passes.** Version 4.0 followed the plan of 28 October 2026 in seven milestones, each committed after its checks passed:
 
-1. **Seams, no change in behaviour.** The model, the scene and the shell split along their seams; issue words, inspector sections and unit shapes moved into registries. No source file is far above 400 lines; model.ts, the largest, has 407.
-2. **Interface graphs.** A vertex row with `"interface": true` is an interface, drawn as a disc divided between the colours of its two ends, in 2D and 3D. The model reports interfaces with other than two ends and interfaces related directly. The shell has a fully and a partly interfaced example, a broken one, and Generate's "Relations through interfaces (share)".
-3. **Extension points.** A profile for the model, looks for the canvas and sections for the inspector let another build add kinds, classes, declared pairs, checks, a superseded rule, perspective types and a projection without editing the module. A test profile with invented names proves it.
-4. **Guard and document.** The private class, pair-type and space names joined the hashed term list; the specification is version 3.0.
+1. **N0 Contract.** The specification 4.0, and decisions from D79.
+2. **N1 SvelteKit shell.** The shell moved to SvelteKit 3 without a change in what it shows, with a static and a server build.
+3. **N2 Settings.** Every value that changes the viewer is a setting: a class per kind of control, an instance per setting, each with its default, its control, and the places that read it. The Settings dialog shows them by group, any setting can be pinned to the side bar, and a store keeps the person's file, in the browser or behind a host's route.
+4. **N3 Viewer and sources.** `GraphView` became the whole viewer, with its own bar, side bar, banner and dialog; it reads a graph or a source. The shell plays the host: it serves its examples as JSON and hands them over as sources.
+5. **N4 Profile and drawing.** A profile can come from JSON. Relations draw by keypairs or by perspectives: class units as boxes, interfaces as ovals named by their class, and two chevrons per relation, each pointing at the unit whose perspective it carries.
+6. **N5 Data manipulation.** Search, filter rules, the selection with highlight groups, and the scope of chosen units with its +n counts, with their sections and keys.
+7. **N6 Package and report.** `npm run package` makes the viewer's sources for a SvelteKit host; the README explains how a host embeds it; twenty-one views were judged.
 
-`npm run check` passes with 282 unit and gate tests; the 96 browser tests pass against the production build. Run of 27 October 2026. The public repository starts from this tree, as one commit without history (section 7).
+`npm run check` passes with 353 unit and gate tests; the 109 browser tests pass against the server build. Run of 30 October 2026; `npm test` passed the same way in a fresh clone of the branch after `npm ci`.
 
 **Not verified here: 60 frames per second on graphics hardware.** This machine draws with SwiftShader, in software. The bench page (#bench) measures it on a real machine.
 
@@ -29,31 +32,32 @@
 | N3 Viewer and sources  | done   | sources; examples as JSON; the shell as host; the profile from JSON came with it      |
 | N4 Profile and drawing | done   | the perspective drawing: chevrons, boxes, ovals, picking, inspector; Drawing settings |
 | N5 Data manipulation   | done   | search, filter rules, selection and highlight groups, scope; their sections and keys  |
+| N6 Package and report  | done   | `npm run package`; the README for hosts; twenty-one views; this report                |
 
 ## 2. Gates
 
-| Gate | Status | Evidence                                                                                                                                                                |
-| ---- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| G0   | pass   | tests/gates/core.gate.test.ts: 27 fixtures                                                                                                                              |
-| G1   | pass   | tests/gates/manifest.gate.test.ts: every file matches fixtures/MANIFEST.sha256                                                                                          |
-| G2   | pass   | tests/gates/core.gate.test.ts: loading, issues in order, refusal codes                                                                                                  |
-| G3   | pass   | tests/gates/core.gate.test.ts: stored and current fingerprints                                                                                                          |
-| G4   | pass   | tests/gates/core.gate.test.ts: counts and components of both graphs                                                                                                     |
-| G5   | pass   | tests/gates/core.gate.test.ts: degrees                                                                                                                                  |
-| G6   | pass   | tests/gates/core.gate.test.ts: rings as sets                                                                                                                            |
-| G7   | pass   | tests/gates/core.gate.test.ts: path sets and the default limits                                                                                                         |
-| G8   | pass   | tests/gates/core.gate.test.ts: 2,628 of 3,240 pairs have exactly one path within two extra steps                                                                        |
-| G9   | pass   | tests/unit/layout.test.ts and tests/unit/generate.test.ts: the same seed gives the same layout and graph; three fixed fingerprints                                      |
-| G10  | pass   | tests/unit/generate.test.ts: every family over 200 seeds, without issues and with the characteristics asked                                                             |
-| G11  | pass   | tests/e2e/view.spec.ts: "§6.11 and §7.4 Picking and the inspector (G11)" and "§6.11 Picking (G11): the hit zones reach past the drawing"                                |
-| G12  | pass   | every subsection of sections 6 to 8 has a passing test named after it (section 3)                                                                                       |
-| G13  | pass   | tests/unit/model.test.ts: changes reach listeners through the model by aspect, saved settings bring a graph back; tests/e2e/data.spec.ts: a file reopened from 2D or 3D |
-| G14  | pass   | tests/e2e/a11y.spec.ts: axe in both themes on the sample and broken-mixed, with every section open; the keyboard and live-region tests in tests/e2e/view.spec.ts        |
-| G15  | pass   | tests/gates/tokens.gate.test.ts                                                                                                                                         |
-| G16  | pass   | tests/gates/boundaries.gate.test.ts                                                                                                                                     |
-| G17  | pass   | section 4: the sample's first picture in 405 ms, the random graph's in 516 ms, the complete graph of nine's path set in 7.6 ms, the sample's median zoom frame 33.4 ms  |
-| G18  | pass   | `npm run build` builds the module and the shell; every browser test runs against the shell's production build under /graphview/                                         |
-| G19  | pass   | section 5: eighteen views taken, looked at and judged                                                                                                                   |
+| Gate | Status | Evidence                                                                                                                                                                             |
+| ---- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| G0   | pass   | tests/gates/core.gate.test.ts: 27 fixtures                                                                                                                                           |
+| G1   | pass   | tests/gates/manifest.gate.test.ts: every file matches fixtures/MANIFEST.sha256                                                                                                       |
+| G2   | pass   | tests/gates/core.gate.test.ts: loading, issues in order, refusal codes                                                                                                               |
+| G3   | pass   | tests/gates/core.gate.test.ts: stored and current fingerprints                                                                                                                       |
+| G4   | pass   | tests/gates/core.gate.test.ts: counts and components of both graphs                                                                                                                  |
+| G5   | pass   | tests/gates/core.gate.test.ts: degrees                                                                                                                                               |
+| G6   | pass   | tests/gates/core.gate.test.ts: rings as sets                                                                                                                                         |
+| G7   | pass   | tests/gates/core.gate.test.ts: path sets and the default limits                                                                                                                      |
+| G8   | pass   | tests/gates/core.gate.test.ts: 2,628 of 3,240 pairs have exactly one path within two extra steps                                                                                     |
+| G9   | pass   | tests/unit/layout.test.ts and tests/unit/generate.test.ts: the same seed gives the same layout and graph; three fixed fingerprints                                                   |
+| G10  | pass   | tests/unit/generate.test.ts: every family over 200 seeds, without issues and with the characteristics asked                                                                          |
+| G11  | pass   | tests/e2e/view.spec.ts: "§6.11 and §7.4 Picking and the inspector (G11)" and "§6.11 Picking (G11): the hit zones reach past the drawing"                                             |
+| G12  | pass   | every subsection of sections 6 to 8 has a passing test named after it (section 3)                                                                                                    |
+| G13  | pass   | tests/unit/model.test.ts: changes reach listeners through the model by aspect, saved settings bring a graph back; tests/e2e/data.spec.ts: a file reopened from 2D or 3D              |
+| G14  | pass   | tests/e2e/a11y.spec.ts: axe in both themes on the sample and broken-mixed, with every section open; the keyboard and live-region tests in tests/e2e/view.spec.ts                     |
+| G15  | pass   | tests/gates/tokens.gate.test.ts                                                                                                                                                      |
+| G16  | pass   | tests/gates/boundaries.gate.test.ts                                                                                                                                                  |
+| G17  | pass   | section 4: the sample's first picture in 284 ms, the random graph's in 827 ms, the complete graph of nine's path set in 6.7 ms, the sample's median zoom frame 33.3 ms               |
+| G18  | pass   | `npm run build` builds the module, both shells and the package; every browser test runs against the shell's server build under /graphview/; a scratch host built and ran the package |
+| G19  | pass   | section 5: twenty-one views taken, looked at and judged                                                                                                                              |
 
 The gate tests in tests/gates/ did not change, and neither did fixtures/ in this round. The fixtures changed once before, with the owner's approval (section 7).
 
@@ -116,38 +120,41 @@ The gate tests in tests/gates/ did not change, and neither did fixtures/ in this
 
 **Measured in the test browser on this machine: Chromium 141 on SwiftShader, 4 processors of an Intel Xeon at 2.10 GHz, 15 GB of memory, Linux 6.18.** The numbers come from tests/e2e/speed.spec.ts, which runs alone after the other tests.
 
-| Measure                                     | Sample graph  | Random graph of 10,000 units               | Limit (G17)  |
-| ------------------------------------------- | ------------- | ------------------------------------------ | ------------ |
-| First picture                               | 405 ms        | 516 ms                                     | 1 s; 5 s     |
-| Zoom frames over 2 s in 2D, median and 95th | 33.4, 50.1 ms | 2,983.2 ms, 1 frame                        | median 50 ms |
-| Turn frames over 2 s in 3D, median and 95th | 33.4, 66.7 ms | 16.7, 2,849.8 ms, 5 frames, 1 of them full | none         |
+| Measure                                     | Sample graph  | Random graph of 10,000 units | Limit (G17)  |
+| ------------------------------------------- | ------------- | ---------------------------- | ------------ |
+| First picture                               | 284 ms        | 827 ms                       | 1 s; 5 s     |
+| Zoom frames over 2 s in 2D, median and 95th | 33.3, 50 ms   | 4,349.9 ms, 1 frame          | median 50 ms |
+| Turn frames over 2 s in 3D, median and 95th | 33.3, 83.3 ms | 16.7, 8,483 ms, 5 frames     | none         |
 
-The path set of the complete graph of nine, from unit 1 to unit 2 with 2 extra steps, took 7.6 ms for 50 paths, the worker's round trip included; the limit is 2 seconds. The random graph's frames show what software drawing costs: one full frame of 10,000 units takes about 3 seconds, as before this round. Units now carry their ends for interfaces; the sample's frame times did not change. Graphics hardware is needed for the random graph's frame times; the bench page measures them.
+The path set of the complete graph of nine, from unit 1 to unit 2 with 2 extra steps, took 6.7 ms for 50 paths, the worker's round trip included; the limit is 2 seconds. These are the numbers of the run of 30 October 2026, from test-results/speed.json. The random graph's frames show what software drawing costs: one full frame of 10,000 units took 4.3 seconds to zoom and up to 8.5 seconds to turn, where version 3.0 took about 3 seconds. Version 4.0 gives each line and chevron one more attribute, for highlights; this run does not tell that cost apart from the machine's load. The sample's median frame times did not change. Graphics hardware is needed for the random graph's frame times; the bench page measures them.
 
 ## 5. Visual review
 
-**Eighteen views, taken with scripts/screenshots.mjs at 1440 by 900 from the production build, and looked at one by one.** Views 1 to 16 are those of the last round; this round added 17 and 18. Two findings were fixed before the final pictures: hulls stayed bright behind an active path (now they dim with it), and superseded units had no labels (now they keep faded ones).
+**Twenty-one views, taken with scripts/screenshots.mjs at 1440 by 900 from the static build, and looked at one by one.** Version 4.0 retook views 1 to 18 in the new layout (the host tools on the left, the viewer with its bar and side bar on the right) and added 19 to 21. The first pass found four faults, fixed before the final pictures. The host tools lacked the viewer's text and panel properties, so their two-knob sliders drew as a dark bar without knobs; the shell now wears them too. The Data issues and Types sections sat below the fold in views 6 and 15; the script scrolls them into view. The bar's labels wrapped at 800 pixels; the bar now wraps whole controls. View 19 was too close to show both ends of the teaching.
 
-| View                                                    | Verdict | Note                                                                                                      |
-| ------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------- |
-| 01 Sample graph, 2D, light                              | pass    | Types in colour, chevrons in their keypair types' colours, hulls behind, labels clear of each other.      |
-| 02 The same, dark                                       | pass    | The same picture on the dark surface; hulls and labels stay readable.                                     |
-| 03 Root unit 1 in 2D, light                             | pass    | The view centres on unit_1; far units fade; the planes count 5, 48, 13 and 14; deepest degree 4.          |
-| 04 Keypair 76 to 80 in the inspector, light             | pass    | "Keypair from unit_76 to unit_80", type rel_cd, weight 1, and the note on its reverse.                    |
-| 05 Paths 79 to 77, one step longer, dark                | pass    | The path in green with its glow; everything else dims, hulls included; the table lists types and weights. |
-| 06 broken-mixed with its issues, light                  | pass    | The rule banner, the dashed half of the missing reverse, the lone unit 5, seven issues with icons.        |
-| 07 superseded, light                                    | pass    | Units 3 and 6 and the relation 1 to 4 at 35 percent, with faded labels.                                   |
-| 08 The random graph of 10,000 units, dark               | pass    | Given positions, hulls off above 3,000 units, labels capped; dense at Fit, as expected.                   |
-| 09 Generate, small world, explanation open, light       | pass    | Fields n, k and β; "Family: Small world" with n × k/2 relations; each parameter with its value.           |
-| 10 text-keys with labels, light                         | pass    | Look-alike keys stay distinct in Atkinson Hyperlegible Next.                                              |
-| 11 The shell at 800 pixels, Controls drawer open, light | pass    | The drawer lies over the canvas; the top bar fits.                                                        |
-| 12 3D first picture of the sample with hulls, light     | pass    | The same as 2D until a root or a turn.                                                                    |
-| 13 3D, root unit 1, turned, light                       | pass    | The planes show: deeper units smaller and fainter; hulls follow their units.                              |
-| 14 3D, path 79 to 77, turned, dark                      | pass    | The path at the front with its glow; the rest and the hulls dim.                                          |
-| 15 Generate, communities with types, Types open, light  | pass    | Fields groups g, p-in and p-out; unit types with swatches, editable names and counts.                     |
-| 16 3D, communities, threshold 0.6 and a time window     | pass    | "At least 0.6"; lines below the threshold thin, in the ring colour, without chevrons.                     |
-| 17 Fully interfaced graph, close to i, 2D, light        | pass    | Blue half toward A, orange toward B, a surface-coloured line across the relation; the label clear.        |
-| 18 3D grid, half through interfaces, root 6, dark       | pass    | i2 cut across the bend between 6 and 11: green toward the root, blue toward 11; deeper units fade.        |
+| View                                                    | Verdict | Note                                                                                                                                      |
+| ------------------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 01 Sample graph, 2D, light                              | pass    | Types in colour, chevrons in their keypair types' colours, hulls behind, labels clear of each other; the new layout.                      |
+| 02 The same, dark                                       | pass    | The same picture on the dark surface; the host tools and the side bar follow the viewer's theme.                                          |
+| 03 Root unit 1 in 2D, light                             | pass    | The view centres on unit_1; far units fade; the planes count 5, 48, 13 and 14; deepest degree 4.                                          |
+| 04 Keypair 76 to 80 in the inspector, light             | pass    | "Keypair from unit_76 to unit_80", type rel_cd, weight 1, and the note on its reverse.                                                    |
+| 05 Paths 79 to 77, one step longer, dark                | pass    | The path in green with its glow; everything else dims; the table lists types and weights.                                                 |
+| 06 broken-mixed with its issues, light                  | pass    | The rule banner above the canvas, the dashed half of the missing reverse, the lone unit 5, seven issues with icons.                       |
+| 07 superseded, light                                    | pass    | Units 3 and 6 and the relation 1 to 4 at 35 percent, with faded labels.                                                                   |
+| 08 The random graph of 10,000 units, dark               | pass    | Given positions, hulls off above 3,000 units, labels capped; dense at Fit, as expected.                                                   |
+| 09 Generate, small world, explanation open, light       | pass    | Fields n, k and β; "Family: Small world" with n × k/2 relations; the sliders with their knobs, off until types.                           |
+| 10 text-keys with labels, light                         | pass    | Look-alike keys stay distinct in Atkinson Hyperlegible Next.                                                                              |
+| 11 The shell at 800 pixels, Host drawer open, light     | pass    | The drawer lies over the canvas; the viewer's side bar starts closed; the bar wraps whole controls.                                       |
+| 12 3D first picture of the sample with hulls, light     | pass    | The same as 2D until a root or a turn.                                                                                                    |
+| 13 3D, root unit 1, turned, light                       | pass    | The planes show: deeper units smaller and fainter; hulls follow their units.                                                              |
+| 14 3D, path 79 to 77, turned, dark                      | pass    | The path at the front with its glow; the rest and the hulls dim.                                                                          |
+| 15 Generate, communities with types, Types open, light  | pass    | The numbers of types in Generate; the viewer's Types section with swatches, names, counts and Shown switches.                             |
+| 16 3D, communities, threshold 0.6 and a time window     | pass    | "At least 0.6"; lines below the threshold thin, in the ring colour, without chevrons.                                                     |
+| 17 Fully interfaced graph, close to i, 2D, light        | pass    | Blue half toward A, orange toward B, a surface-coloured line across the relation; the label clear.                                        |
+| 18 3D grid, half through interfaces, root 6, dark       | pass    | i2 cut across the bend between 6 and 11: green toward the root, blue toward 11; deeper units fade.                                        |
+| 19 Classes and perspectives, by perspectives, light     | pass    | The teaching as an oval named Teaching; its two chevrons point at each other; Algebra, superseded, fades.                                 |
+| 20 Sample, scope around unit_7, unit_10 selected, light | pass    | Only the neighbourhood shows, with +n after labels; unit_10 grows with its outline; its chevrons in the direction colours; the rest dims. |
+| 21 The Settings dialog, filtered to Drawing, dark       | pass    | The four drawing settings with their controls, Reset and Pin; the store says Saved.                                                       |
 
 ## 6. Decisions in short
 
@@ -241,6 +248,7 @@ Version 4.0 adds:
 
 ## 8. Open items
 
+- **The pull request.** The branch could not be pushed: the git proxy answered 403, because this session may not write to the repository. Once access is granted, the branch goes up and a pull request to main carries this report's summary (12.4).
 - **60 frames per second on graphics hardware.** Open #bench on a machine with a graphics card and read the frame times.
 - **GitHub Pages.** Publishing runs from main once the repository's Pages source is GitHub Actions.
 - **The private version.** Deeper classes, typed interfaces and their pair types come later, locally, through a profile, looks and sections (5.7); nothing private is in this repository.
@@ -252,7 +260,8 @@ You need Node.js 22.17 or later.
 ```sh
 npm ci
 npm run dev        # the shell with its server at http://localhost:5173/graphview/
-npm run build      # the module into dist/module, the static shell into dist/shell, the shell with its server into dist/server
+npm run build      # the module into dist/module, the static shell into dist/shell, the shell with its server into dist/server, the package into dist/package
+npm run package    # only the package: the viewer's Svelte sources for a SvelteKit host
 npm run check      # types, format, unit and gate tests
 npm run e2e        # the browser tests against the server build
 npm test           # both
