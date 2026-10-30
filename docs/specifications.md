@@ -378,7 +378,8 @@ Two examples from the fixtures. In the database graph, from unit 79 to unit 77 w
 | theme                                       | 'light' or 'dark'                                                                                                                                |
 | settings, changedSettings, depth, extent    | the settings registry (5.9), of which the model is the only writer; the keys of the last change; the depth rules; the extent laid out to         |
 | source                                      | the source of the graph held (5.8)                                                                                                               |
-| selection, highlights                       | the selected units and the highlight groups (6.20)                                                                                               |
+| selection, highlights                       | the selected units and the highlight groups, each with its units now (6.20)                                                                      |
+| search                                      | the search text and its results (6.19)                                                                                                           |
 | scope                                       | the scope (6.21)                                                                                                                                 |
 | rules                                       | the filter rules (6.7)                                                                                                                           |
 
@@ -405,12 +406,14 @@ Its methods:
 | `setHighlight(name, on)`, `saveHighlight(name)`, `removeHighlight(name)`    | Turns a highlight group on or off, saves the selection as a group, or removes a saved group.                                                                      | highlight                                      |
 | `setRule(rule)`, `clearRules()`                                             | Sets or clears filter rules (6.7).                                                                                                                                | filters                                        |
 | `showNeighbourhood(keys)`, `expand(keys)`, `hide(keys)`, `showAll()`        | Sets, grows or shrinks the scope, or ends it (6.21).                                                                                                              | scope                                          |
+| `layOutScope()`                                                             | Runs the force layout on the scope alone, from the current places (6.21).                                                                                         | scope                                          |
+| `setSearch(text)`, `highlightResult(key)`                                   | Searches the loaded graph; adds a result to the group Search results and turns the group on (6.19).                                                               | search; highlight                              |
 | `subscribe(listener)`                                                       | Returns an unsubscribe function.                                                                                                                                  | —                                              |
 | `dispose()`                                                                 | Ends the model's workers.                                                                                                                                         | —                                              |
 
 The `graph` aspect means that everything changed: a listener that hears it redraws every part, the mode, display factors, palettes and camera controls included. The `settings` aspect comes with the keys that changed (`model.changedSettings`); a listener redraws what those settings touch.
 
-Its queries: `label(key)`, `find(text)` (a label, a key as JSON text, or a bare word naming a text key), `keypairsOf(key)` (outgoing first, then incoming, each in file order), `activePath()`, `unitType(key)`, `keypairType(a, b)`, `kindOf(key)`, `endsOf(key)` (an interface's ends, or null), `perspectivesOf(key)` and `perspectiveType(interface, from, to)` (5.7), `pathSteps()`, `planeCounts()`, `fieldRange(field, kind)`, `viewSettings()` (the view settings to save with the graph), `colours(theme?)` and `colour(value)` (the colour tokens of the settings, and a colour setting's value as a colour), `relationCount()`.
+Its queries: `label(key)`, `find(text)` (a label, a key as JSON text, or a bare word naming a text key), `keypairsOf(key)` (outgoing first, then incoming, each in file order), `activePath()`, `unitType(key)`, `keypairType(a, b)`, `kindOf(key)`, `endsOf(key)` (an interface's ends, or null), `perspectivesOf(key)` and `perspectiveType(interface, from, to)` (5.7), `pathSteps()`, `planeCounts()`, `fieldRange(field, kind)`, `viewSettings()` (the view settings to save with the graph), `colours(theme?)` and `colour(value)` (the colour tokens of the settings, and a colour setting's value as a colour), `relationCount()`, `relationsOf(index)` (a unit's number of relations), `emphasis()` (which units the highlight groups that are on hold, or null), `inScope()` and `outside()` (whether each unit is in the scope, and its relations that leave it, or null without a scope), and `ruleFacts()` (what the filter rules read).
 
 `setTarget` asks with the core's default limits (`PATH_DEFAULTS`). A slow answer never overwrites a newer state: each load has a run number, and each answer checks it, and checks that the root or target it was asked for is still the one held.
 
@@ -434,7 +437,8 @@ type Aspect =
   | 'settings'
   | 'selection'
   | 'highlight'
-  | 'scope';
+  | 'scope'
+  | 'search';
 type Listener = (aspects: ReadonlySet<Aspect>) => void;
 interface TypeInfo {
   id: string;
@@ -518,6 +522,11 @@ interface HighlightGroup {
 interface Scope {
   centres: Key[];
   units: Key[];
+}
+interface SearchResult {
+  key: Key;
+  rank: number; // 0 an exact label or key, to 4 another value (6.19)
+  where: string; // label, key, class, type or an attribute's name
 }
 ```
 
@@ -840,12 +849,12 @@ Further types take the context colour. A backward keypair type takes its forward
 
 **Filter rules narrow the view further, by what units and keypairs are.** Each rule tests one thing, and what fails it fades or hides:
 
-- a unit's class (3.9) or type (6.6), and its kind: each value shown, faded or hidden; the Types panel and the Filters panel share these states;
+- a unit's class (3.9) or type (6.6), and its kind: each value shown, faded or hidden; the Types panel holds the switches of types (its types are the classes when the profile gives them), and the Filters panel those of kinds;
 - a keypair's pair type (3.9), or else its type: shown, faded or hidden;
 - superseded parts: shown at 35 percent (6.13), faded further, or hidden;
 - a range of relations per unit: units outside it fade or hide.
 
-A faded mark draws at `filters.fadeOpacity` of its opacity (default 0.15) and answers no click; a hidden one goes as the time window's do. A keypair fails when one of its units fails or its own type fails, and a line fails when all of its keypairs fail. Rules compound with the time window and the threshold.
+A faded mark draws at `filters.fadeOpacity` of its opacity (default 0.15) and answers no click; a hidden one goes as the time window's do. A keypair fails when one of its units fails or its own type fails, and a line fails when all of its keypairs fail. Rules compound with the time window and the threshold: a unit takes the strictest rule that names it, and a line shows as much as its most shown keypair. A rule for a value replaces the earlier rule for that value; a rule that shows removes it. The Filters panel adds, under "Rules": a switch per kind, one for superseded parts, a two-knob slider "Relations per unit" with "Outside the range" (Faded or Hidden), and Clear rules.
 
 ### 6.8 Display overrides
 
@@ -898,7 +907,7 @@ A click on a unit makes it the root; Shift and a click on another unit makes it 
 | S              | show the neighbourhood of the inspected unit (6.21)                                                                                   |
 | A              | show all units, ending the scope                                                                                                      |
 
-A click with Ctrl (Cmd on macOS) adds a unit to the selection or takes it out (6.20). The keys are a setting, `keyboard.bindings` (5.9).
+A click with Ctrl (Cmd on macOS) adds a unit to the selection or takes it out (6.20). The keys are a setting, `keyboard.bindings` (5.9). The live region also says "3 results for "unit_7"" or "No result for "x"" (6.19), "2 units selected" or "Selection cleared", and "Showing 7 units around unit_7" or "Showing all units" (6.21).
 
 A polite live region says what changed, one message per action: "Graph loaded: 81 units", "3D view" or "2D view", "Root unit_79", "Root cleared", "Shortest path from unit_79 to unit_77: 3 steps" ("1 step"), "No path from … to …", "Path cleared", "Inspecting unit …", "Inspecting keypair from … to …", "Inspecting relation between … and …", "Inspector cleared". When one action makes several changes, the inspector's words give way to the others: a click that makes a unit the root says "Root unit_79", and Escape says "Root cleared".
 
@@ -937,10 +946,10 @@ A polite live region says what changed, one message per action: "Graph loaded: 8
 
 ### 6.19 Search
 
-**One field searches the loaded graph by label, key, class and attribute values, and lists what it finds by rank.** The field sits in the viewer's bar. Enter shows the first result; the Search section lists up to `search.limit` results (default 50).
+**One field searches the loaded graph by label, key, class and attribute values, and lists what it finds by rank.** The field sits in the viewer's bar and searches as a person types. Enter shows the first result: its neighbourhood (6.21), and the inspector on it. The Search section lists up to `search.limit` results (default 50).
 
 - Each unit is indexed by its label, its key as JSON text, its class and type, and the texts and numbers of its attributes, in lower case.
-- Rank: an exact label or key first; then labels that start with the text; then labels with a word that starts with it; then labels that contain it; then attribute values that contain it. Ties go to the unit with more relations, then to file order.
+- Rank: an exact label or key first (a text key also without its quotes); then labels that start with the text; then labels with a word that starts with it; then labels that contain it; then keys, classes, types and attribute values that contain it. Ties go to the unit with more relations, then to file order.
 - A result's row names the unit, its class or type, and where the text matched. Its buttons: Show (its neighbourhood, 6.21), Root, Paths to (as Shift and a click), Highlight (adds it to the group Search results, 6.20) and Inspect.
 - The live region says "3 results for "unit_7"", or "No result for "x"".
 
@@ -949,8 +958,8 @@ A polite live region says what changed, one message per action: "Graph loaded: 8
 **A selection marks units by hand; highlight groups draw units emphasised while the rest dims.**
 
 - A click with Ctrl (Cmd on macOS) adds a unit to the selection, or takes it out. With Box selection on in the viewer's bar, a drag draws a box and the units drawn inside it join the selection; with Ctrl they leave it. Escape clears the selection once the target and the root are clear.
-- The Highlights section lists the groups: Selection; Search results; Neighbours, the units within `highlight.hops` steps of the selection (default 1); Issues, the units that data issues name; and the groups a person saved from the selection under a name.
-- Each group is on or off; Selection is on by default. While a group is on, its units carry the outline of 6.2 and draw at `highlight.scale` of their size (default 1.15), their labels show as forced labels do (6.12), and every other unit, line and chevron draws at `highlight.dim` of its opacity (default 0.25).
+- The Highlights section lists the groups: Selection; Search results, the results a person highlighted with their row's button, which also turns the group on; Neighbours, the units within `highlight.hops` steps of the selection, the selection left out (default 1); Issues, the units that data issues name; and the groups a person saved from the selection under a name, which start on.
+- Each group is on or off; Selection is on by default. While a group is on, its units carry the outline of 6.2 and draw at `highlight.scale` of their size (default 1.15), their labels show as forced labels do (6.12), and every other unit, and every line and chevron that touches no highlighted unit, draws at `highlight.dim` of its opacity (default 0.25). A group without units changes nothing. `highlight.direction` is on by default.
 - With one unit selected and `highlight.direction` on, the chevrons of its outgoing keypairs take the outgoing colour and those of its incoming keypairs the incoming colour (4.6); their shapes still show the direction.
 - Highlights change no scope and no filter; picking ignores the dimming.
 
@@ -958,8 +967,8 @@ A polite live region says what changed, one message per action: "Graph loaded: 8
 
 **The scope chooses which units of the loaded graph the view shows: all of them, or the neighbourhood of chosen units.**
 
-- Show neighbourhood takes the chosen units and the units within `scope.hops` steps of them, in either direction (default 1, from 1 to 3), up to `scope.limit` units (default 500): nearer units first, then those with more relations. It comes from a search result, the inspector, the Scope section, or the key S on the inspected unit.
-- Expand adds the neighbours of the chosen units; Hide takes units out; Show all ends the scope. The Scope section names the scope's centre units and its size, and offers these actions and Lay out scope.
+- Show neighbourhood takes the chosen units and the units within `scope.hops` steps of them, in either direction (default 1, from 1 to 3), up to `scope.limit` units (default 500): nearer units first, then those with more relations, then file order. It comes from a search result, the inspector, the Scope section (for the selection), or the key S on the inspected unit.
+- Expand adds the neighbours of the chosen units, those with more relations first, while the scope holds fewer than `scope.limit`; Hide takes units out, and without a scope makes one of every other unit; Show all ends the scope. The Scope section names the scope's centre units and its size, and offers these actions and Lay out scope, which keeps the scope's centre and size.
 - A unit with relations to units outside the scope shows their number after its label, such as "unit_7 +12".
 - Units outside the scope go as filtered units do (6.7): they fade out over the transition and answer no click. The layout keeps every place, so a scope that grows or shrinks moves no unit. Lay out scope runs the force layout on the scope alone, from the current places.
 - Fit fits the scope when there is one. Making a unit outside the scope the root, the target or the inspected unit adds it to the scope.
@@ -1043,7 +1052,7 @@ Four rows always show: First plane (degree 1), Second plane (degree 2), Third pl
 **Three sections serve 6.19 to 6.21.**
 
 - _Search:_ the results of the bar's field, as 6.19 describes, or "Type in the search field above the canvas." before a search.
-- _Scope:_ "All units" without a scope; with one, "Neighbourhood of <names>, <n> units", with the hops (from 1 to 3), Expand selected, Hide selected, Lay out scope and Show all.
+- _Scope:_ "All units" without a scope; with one, "Neighbourhood of <names>, <n> units", with the hops (from 1 to 3), Show neighbourhood (of the selection), Expand selected, Hide selected, Lay out scope and Show all.
 - _Highlights:_ one row per group, with its switch, its name and its number of units; Save selection as… with a name field; Clear selection; and the Direction switch.
 
 ---

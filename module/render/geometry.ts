@@ -10,12 +10,12 @@ export interface UnitBuffers extends EndBuffers {
   filterState: Float32Array;
   /** The palette slots of the unit's two halves (looks.ts). */
   halves: Float32Array;
-  /** Marked with an outline (0 or 1); fade (1, or less when superseded); the slot of its shape (shapes.ts); unused. */
+  /** Marked with an outline (0 or 1); fade (1, or less when superseded); the slot of its shape (shapes.ts); emphasis (1 highlighted, -1 dimmed, 0 neither). */
   look: Float32Array;
 }
 
 /** The look attribute's parts. */
-export const LOOK = { marked: 0, fade: 1, shape: 2 } as const;
+export const LOOK = { marked: 0, fade: 1, shape: 2, emphasis: 3 } as const;
 
 export interface EndBuffers {
   aPrevA: Float32Array;
@@ -33,6 +33,8 @@ export interface LineBuffers extends EndBuffers {
   aLine2: Float32Array;
   /** Opacity factor (1, or less for superseded parts); missing keypair (0 none, 1 (a, b), 2 (b, a)). */
   aStatic: Float32Array;
+  /** Highlights: 1 drawn whole, 0 dimmed; unused. */
+  aEmph: Float32Array;
 }
 
 export interface ChevronBuffers extends EndBuffers {
@@ -42,6 +44,8 @@ export interface ChevronBuffers extends EndBuffers {
   aChevState: Float32Array;
   /** Above the threshold before and after. */
   aAbove: Float32Array;
+  /** Highlights: 1 drawn whole, 0 dimmed; colour: 0 its type's, 1 outgoing, 2 incoming. */
+  aEmph: Float32Array;
 }
 
 export const SIZES: Record<string, number> = {
@@ -64,6 +68,7 @@ export const SIZES: Record<string, number> = {
   aChev: 4,
   aChevState: 4,
   aAbove: 2,
+  aEmph: 2,
 };
 
 export function instanced(base: THREE.BufferGeometry, count: number, data: object): THREE.InstancedBufferGeometry {

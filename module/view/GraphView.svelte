@@ -17,12 +17,15 @@
   import DisplayPanel from './DisplayPanel.svelte';
   import FiltersPanel from './FiltersPanel.svelte';
   import GraphCanvas from './GraphCanvas.svelte';
+  import HighlightsPanel from './HighlightsPanel.svelte';
   import InspectorPanel from './InspectorPanel.svelte';
   import type { CanvasHandle } from './handle.ts';
   import type { UnitSections } from './inspector/sections.ts';
   import IssuesPanel from './IssuesPanel.svelte';
   import PathsPanel from './PathsPanel.svelte';
   import RootPanel from './RootPanel.svelte';
+  import ScopePanel from './ScopePanel.svelte';
+  import SearchPanel from './SearchPanel.svelte';
   import Section from './Section.svelte';
   import PinnedPanel from './settings/PinnedPanel.svelte';
   import SettingsDialog from './settings/SettingsDialog.svelte';
@@ -81,10 +84,12 @@
   const saver = new SettingsSaver(model.settings, store, (file) => model.applySettingsFile(file));
   let canvas: ReturnType<typeof GraphCanvas> | undefined = $state();
   let dialogOpen = $state(false);
+  let boxSelect = $state(false);
+  let searchText = $state('');
   // The side bar starts closed on a narrow page, and opens as a drawer over the canvas (8.1).
   let panelsOpen = $state(typeof innerWidth !== 'number' || innerWidth > 900);
   let background = $state(model.settings.get('picture.background'));
-  const w = watch(() => model, ['graph', 'mode', 'display', 'theme', 'settings']);
+  const w = watch(() => model, ['graph', 'mode', 'display', 'theme', 'settings', 'search']);
   const t = (text: string) => say(model, text);
 
   const bar = $derived.by(() => {
@@ -105,13 +110,33 @@
     Object.fromEntries(SECTIONS.map(([id]) => [id, openAtStart.has(id)])) as Record<SectionId, boolean>,
   );
 
-  /** The canvas's key for finding a unit: opens the side bar and the Root field, and puts the cursor in it. */
+  /** The canvas's key for finding a unit: the search field in the bar, or else the Root field in the side bar. */
   async function findUnit() {
+    const field = document.getElementById('gv-search');
+    if (field) return field.focus();
     panelsOpen = true;
     open.root = true;
     await tick();
     document.getElementById('gv-root')?.focus();
   }
+
+  /** The bar's search field searches as a person types (6.19); Enter shows the first result. */
+  function search(text: string) {
+    searchText = text;
+    model.setSearch(text);
+    if (text.trim()) open.search = true;
+  }
+  function showFirst() {
+    const first = model.search.results[0];
+    if (!first) return;
+    model.showNeighbourhood([first.key]);
+    model.inspect({ kind: 'unit', key: first.key });
+  }
+  // A new graph empties the field, as the model's search starts again.
+  $effect(() => {
+    void w.v;
+    if (!model.search.text) searchText = '';
+  });
 
   // The props are base values of their settings (7.9); keys a new base no longer holds lose theirs.
   let based: string[] = [];
@@ -202,6 +227,9 @@
   }
 
   const PANELS: Partial<Record<SectionId, { title: string; panel: Component<{ model: GraphModel }> }>> = {
+    search: { title: 'Search', panel: SearchPanel },
+    scope: { title: 'Scope', panel: ScopePanel },
+    highlights: { title: 'Highlights', panel: HighlightsPanel },
     root: { title: 'Root and depth', panel: RootPanel },
     paths: { title: 'Paths', panel: PathsPanel },
     filters: { title: 'Filters', panel: FiltersPanel },
@@ -240,6 +268,21 @@
         <option value="perspectives">{t('Perspectives')}</option>
       </select>
     {/if}
+    {#if bar.shows.has('search')}
+      <input
+        id="gv-search"
+        type="search"
+        class="gv-search"
+        aria-label={t('Search')}
+        placeholder={t('Search…')}
+        value={searchText}
+        oninput={(e) => search(e.currentTarget.value)}
+        onkeydown={(e) => e.key === 'Enter' && showFirst()}
+      />
+    {/if}
+    {#if bar.shows.has('select')}
+      <label><input type="checkbox" bind:checked={boxSelect} /> {t('Box selection')}</label>
+    {/if}
     <span class="gv-grow"></span>
     {#if bar.shows.has('panels')}
       <button
@@ -260,7 +303,7 @@
   {/if}
   <div class="gv-view-body">
     <div class="gv-view-canvas">
-      <GraphCanvas bind:this={canvas} {model} {looks} onfind={findUnit} />
+      <GraphCanvas bind:this={canvas} {model} {looks} {boxSelect} onfind={findUnit} />
     </div>
     <aside id="gv-view-panels" class="gv-view-panels" aria-label={t('Panels')} hidden={!panelsOpen}>
       {#each bar.sections as id (id)}
@@ -302,6 +345,10 @@
     gap: 10px;
     padding: 6px 10px;
     border-bottom: 1px solid var(--gv-hairline);
+  }
+  .gv-search {
+    min-width: 0;
+    width: 14em;
   }
   .gv-banner {
     margin: 0;

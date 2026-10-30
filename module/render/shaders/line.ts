@@ -6,6 +6,8 @@ ${endsGlsl(slots)}
 attribute vec4 aLine;
 attribute vec4 aLine2;
 attribute vec2 aStatic;
+attribute vec2 aEmph;
+uniform vec2 uHighlight;
 uniform float uWidth;
 uniform float uWidthScale;
 uniform vec4 uLineGain; // width gain by strength, width below the threshold, extra width on the path, opacity below
@@ -47,7 +49,7 @@ void main() {
   w *= 1.0 + uLineGain.z * onPath * hasPath;
   float op = mix(sa.z, sb.z, t);
   op = mix(op, mix(uDepthC.w, 1.0, onPath), hasPath);
-  op *= mix(aLine.x, aLine.y, uT) * aStatic.x * uOpacityScale;
+  op *= mix(aLine.x, aLine.y, uT) * aStatic.x * uOpacityScale * mix(uHighlight.y, 1.0, aEmph.x);
   op *= mix(uLineGain.w, 1.0, above);
   vec4 c = mix(ca, cb, t);
   float halfPx = w * 0.5 + uFeather;

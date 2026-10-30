@@ -4,6 +4,7 @@ import { emptySettingsFile, type SettingsFile } from './file.ts';
 import { pathSettings, displaySettings, filterSettings, motionSettings } from './groups/behaviour.ts';
 import { drawingSettings } from './groups/drawing.ts';
 import { extensionSettings } from './groups/extensions.ts';
+import { highlightSettings, scopeSettings, searchSettings } from './groups/finding.ts';
 import { layoutSettings, schemaSettings, viewSettings } from './groups/data.ts';
 import { accessibilitySettings, cameraSettings, keyboardSettings, pointerSettings } from './groups/input.ts';
 import { textSettings, themeSettings, typeSettings } from './groups/look.ts';
@@ -36,6 +37,9 @@ export const viewerSettings = () =>
     ...labelSettings(),
     ...pathSettings(),
     ...filterSettings(),
+    ...searchSettings(),
+    ...highlightSettings(),
+    ...scopeSettings(),
     ...displaySettings(),
     ...motionSettings(),
     ...cameraSettings(),
@@ -68,6 +72,9 @@ export const SETTING_GROUPS = [
   'Labels',
   'Paths',
   'Filters',
+  'Search',
+  'Highlights',
+  'Scope',
   'Display',
   'Motion',
   'Camera',

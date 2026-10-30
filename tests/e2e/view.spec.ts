@@ -625,9 +625,9 @@ test('§6.14 Keyboard: arrows pan, + and − zoom, [ and ] turn in 3D, 0 fits; T
   await canvas.focus();
   await page.keyboard.press('Shift+Enter');
   await expect.poll(async () => (await snap(page)).target).toBe(77);
-  // / opens the Root field.
+  // / opens the search field (6.19).
   await page.keyboard.press('/');
-  await expect(page.getByLabel('Root', { exact: true })).toBeFocused();
+  await expect(page.getByRole('searchbox', { name: 'Search' })).toBeFocused();
 });
 
 test('§6.14 Live region: it says what changed, in words', async ({ page }) => {

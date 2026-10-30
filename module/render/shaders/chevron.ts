@@ -6,6 +6,10 @@ ${endsGlsl(slots)}
 attribute vec4 aChev;
 attribute vec4 aChevState;
 attribute vec2 aAbove;
+attribute vec2 aEmph;
+uniform vec2 uHighlight;
+uniform vec3 uOutgoing;
+uniform vec3 uIncoming;
 uniform float uChevronPx;
 uniform vec2 uChevronPath; // growth along the travel direction, opacity against it
 uniform vec2 uChevronRoom; // room and fade-in, in chevron sizes
@@ -44,10 +48,11 @@ void main() {
   float pathOp = aligned + opposing * uChevronPath.y + (1.0 - aligned - opposing) * uDepthC.w;
   op = mix(op, pathOp, hasPath);
   float above = mix(mix(aAbove.x, aAbove.y, uT), 1.0, uBelowChevrons);
-  op *= mix(aChevState.z, aChevState.w, uT) * above * aChev.w * uOpacityScale;
+  op *= mix(aChevState.z, aChevState.w, uT) * above * aChev.w * uOpacityScale * mix(uHighlight.y, 1.0, aEmph.x);
   // A chevron needs room: it fades out where the line is too short for it.
   op *= clamp((len - uChevronRoom.x * size) / (uChevronRoom.y * size), 0.0, 1.0);
-  vColor = uKeypairPalette[int(aChev.z + 0.5)];
+  // One selected unit colours its chevrons by direction (6.20).
+  vColor = aEmph.y > 1.5 ? uIncoming : aEmph.y > 0.5 ? uOutgoing : uKeypairPalette[int(aChev.z + 0.5)];
   vOpacity = op;
   vGlow = hasPath * aligned;
   if (op < uCull) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);

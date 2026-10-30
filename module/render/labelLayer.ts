@@ -41,6 +41,8 @@ export class LabelLayer {
         marks.includes('target') ? m.target : null,
         marks.includes('inspected') && m.inspected?.kind === 'unit' ? m.inspected.key : null,
         ...(marks.includes('path') ? (m.activePath() ?? []) : []),
+        // Highlighted units show their labels as forced labels do (6.20).
+        ...m.ids.flatMap((_, i) => (s.highlighted(i) ? [m.graph!.units[i]] : [])),
       ]
         .filter((k): k is Key => k !== null)
         .map(keyId),
@@ -82,7 +84,8 @@ export class LabelLayer {
       x: snap.screen[i].x,
       y: snap.screen[i].y,
       r: Math.max(clear, s.unitReach(i, snap) - extra),
-      text: s.labelText(i, showKey),
+      // A unit with relations that leave the scope says how many (6.21).
+      text: s.labelText(i, showKey) + (s.outside?.[i] ? ` +${s.outside[i]}` : ''),
       forced: forced.has(m.ids[i]),
     }));
     const measure = (t: string) => {
@@ -108,7 +111,7 @@ export class LabelLayer {
     for (const p of placeLabels(candidates, measure, g.width, g.height, set.get('labels.maxPlaced'), [], placement)) {
       const c = byIndex.get(p.index)!;
       const v = snap.st[p.index];
-      ctx.globalAlpha = Math.min(1, v.s.opacity * v.filter * opacity + boost);
+      ctx.globalAlpha = Math.min(1, v.s.opacity * v.filter * opacity * s.unitDim(p.index) + boost);
       if (haloWidth > 0) {
         ctx.strokeStyle = halo;
         ctx.lineWidth = haloWidth;

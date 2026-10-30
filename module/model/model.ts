@@ -19,8 +19,10 @@ import { isToken, TOKEN_NAMES } from '../settings/setting.svelte.ts';
 import { graphWorker } from '../workers/index.ts';
 import type {
   Aspect,
+  FilterRule,
   Filters,
   GraphWorker,
+  HighlightGroup,
   Inspected,
   Listener,
   Mode,
@@ -30,15 +32,20 @@ import type {
   PathStep,
   Perspective,
   PlaneCounts,
+  Scope,
+  SearchResult,
+  SelectHow,
   TypeInfo,
   ViewSettings,
 } from './contracts.ts';
 import { DEFAULT_DEPTH, type DepthRules } from './depth.ts';
 import { fieldRange, NO_FILTERS } from './filters.ts';
+import { isRule, type RuleFacts } from './filterRules.ts';
 import { NO_KINDS, type Kind, type Kinds } from './kinds.ts';
+import { Narrowing } from './narrowing.ts';
 import { profileFromJson } from './profileJson.ts';
 import type { GraphSource } from './source.ts';
-import { EXTENT, placeUnits, type LayoutRules } from './placement.ts';
+import { EXTENT, placePart, placeUnits, type LayoutRules } from './placement.ts';
 import { prepare, type Prepared } from './prepare.ts';
 import { PUBLIC_PROFILE, type Profile } from './profile.ts';
 import { activePath, findUnit, keypairsOf, labelOf, pathSteps, perspectivesOf, planeCounts } from './queries.ts';
@@ -99,6 +106,8 @@ export class GraphModel {
   depth: DepthRules = DEFAULT_DEPTH;
   inspected: Inspected = null;
   theme: Theme = 'light';
+  /** The filter rules, the search, the selection, the highlight groups and the scope (6.7, 6.19 to 6.21). */
+  private narrowing = new Narrowing();
 
   private custom: { unit: Custom; keypair: Custom } = { unit: new Map(), keypair: new Map() };
   /** Hulls a person turned on or off while this graph is open; null until then. */
@@ -222,7 +231,7 @@ export class GraphModel {
         message: loaded.message,
         ...('reason' in loaded && { reason: loaded.reason }),
       };
-      this.hold(null, []);
+      this.hold(null, [], false);
       this.filters = { ...NO_FILTERS };
       this.laidOut = true;
       this.emit('graph');
@@ -231,7 +240,7 @@ export class GraphModel {
     const p = prepare(loaded.graph, this.profile);
     const g = p.graph;
     this.refused = null;
-    this.hold(p, [...loaded.issues, ...p.issues]);
+    this.hold(p, [...loaded.issues, ...p.issues], keep.has('filters'));
     // Kept filters stay when the new graph has their fields.
     const kept =
       keep.has('filters') &&
@@ -265,7 +274,7 @@ export class GraphModel {
   }
 
   /** Holds a prepared graph, or nothing for a refused file. */
-  private hold(p: Prepared | null, issues: ModelIssue[]) {
+  private hold(p: Prepared | null, issues: ModelIssue[], keepRules: boolean) {
     const t = p?.topology ?? noTopology();
     this.stored = p?.stored ?? null;
     this.graph = p?.graph ?? null;
@@ -278,6 +287,7 @@ export class GraphModel {
     this.superseded = p?.superseded ?? new Uint8Array(0);
     this.types = p ? this.buildTypes(p.graph, this.settings.get('types.slots')) : EMPTY_TYPES;
     this.positions = new Float32Array(2 * this.ids.length);
+    this.narrowing.hold({ graph: this.graph, index: this.index, relations: this.relations, issues }, keepRules);
   }
 
   /** The schema of a graph; the profile's keypair type field comes first when keypairs carry it. */
@@ -304,6 +314,7 @@ export class GraphModel {
   /** Makes a unit the root, or clears the root. A new root drops the path, which ran from the old one. */
   async setRoot(key: Key | null): Promise<void> {
     if (key !== null && !this.index.has(keyId(key))) return;
+    if (key !== null && this.narrowing.include(key)) this.emit('scope');
     const run = this.run;
     this.root = key;
     this.target = null;
@@ -330,6 +341,7 @@ export class GraphModel {
       return null;
     }
     if (this.root === null || !this.worker || !this.index.has(keyId(key))) return null;
+    if (this.narrowing.include(key)) this.emit('scope');
     const run = this.run;
     const from = this.root;
     this.target = key;
@@ -402,7 +414,136 @@ export class GraphModel {
 
   inspect(what: Inspected) {
     this.inspected = what;
-    this.emit('inspect');
+    const joins = what?.kind === 'unit' && this.narrowing.include(what.key);
+    this.emit('inspect', ...(joins ? (['scope'] as const) : []));
+  }
+
+  // ---------------------------------------------------------------- narrowing (6.7, 6.19 to 6.21)
+
+  /** The selected units (6.20). */
+  get selection(): Key[] {
+    return this.narrowing.selection;
+  }
+  /** The highlight groups with their units now (6.20). */
+  get highlights(): HighlightGroup[] {
+    return this.narrowing.groups(this.settings.get('highlight.hops'));
+  }
+  /** The scope, or null while every unit shows (6.21). */
+  get scope(): Scope | null {
+    return this.narrowing.scope;
+  }
+  /** The filter rules (6.7). */
+  get rules(): FilterRule[] {
+    return this.narrowing.rules;
+  }
+  /** The search text and what it found (6.19). */
+  get search(): { text: string; results: SearchResult[] } {
+    return { text: this.narrowing.searchText, results: this.narrowing.results };
+  }
+
+  select(keys: Key[], how: SelectHow) {
+    if (this.narrowing.select(keys, how)) this.emit('selection', 'highlight');
+  }
+  setHighlight(name: string, on: boolean) {
+    if (this.narrowing.setHighlight(name, on)) this.emit('highlight');
+  }
+  /** Saves the selection as a group under a name; false when the name or the selection does not allow it. */
+  saveHighlight(name: string): boolean {
+    const done = this.narrowing.saveHighlight(name);
+    if (done) this.emit('highlight');
+    return done;
+  }
+  removeHighlight(name: string) {
+    if (this.narrowing.removeHighlight(name)) this.emit('highlight');
+  }
+  /** Sets a filter rule; a rule that is not one changes nothing and says why. */
+  setRule(rule: FilterRule): string | null {
+    if (!isRule(rule)) return 'Not a filter rule';
+    if (this.narrowing.setRule(rule)) this.emit('filters');
+    return null;
+  }
+  clearRules() {
+    if (this.narrowing.clearRules()) this.emit('filters');
+  }
+  /** Searches the loaded graph (6.19); the group Search results follows. */
+  setSearch(text: string) {
+    const g = this.graph;
+    this.narrowing.setSearch(
+      text,
+      {
+        label: (i) => this.label(g!.units[i]),
+        classOf: (i) => this.classOf(i),
+        typeOf: (i) => this.types.unitOf[i] ?? null,
+        relations: (i) => this.narrowing.relations(i),
+      },
+      this.settings.get('search.limit'),
+    );
+    this.emit('search');
+  }
+  /** Adds a unit to the group Search results, which turns on (6.19). */
+  highlightResult(key: Key) {
+    if (this.narrowing.highlightResult(key)) this.emit('highlight');
+  }
+  showNeighbourhood(keys: Key[]) {
+    const s = this.settings;
+    if (this.narrowing.showNeighbourhood(keys, s.get('scope.hops'), s.get('scope.limit'))) this.emit('scope');
+  }
+  expand(keys: Key[]) {
+    if (this.narrowing.expand(keys, this.settings.get('scope.limit'))) this.emit('scope');
+  }
+  hide(keys: Key[]) {
+    if (this.narrowing.hide(keys)) this.emit('scope');
+  }
+  showAll() {
+    if (this.narrowing.showAll()) this.emit('scope');
+  }
+  /** Runs the force layout on the scope alone, from the current places; the other units stay (6.21). */
+  async layOutScope(): Promise<boolean> {
+    const inside = this.narrowing.inScope();
+    if (!inside || !this.laidOut) return false;
+    const run = this.run;
+    const part = [...inside].flatMap((v, i) => (v ? [i] : []));
+    const next = await placePart(this.ids, this.positions, part, this.relations, this.layoutRules());
+    if (run !== this.run) return false;
+    this.positions = next;
+    this.emit('scope');
+    return true;
+  }
+
+  /** Which units the highlight groups that are on hold (1), or null when they hold none (6.20). */
+  emphasis(): Uint8Array | null {
+    return this.narrowing.emphasis(this.settings.get('highlight.hops'));
+  }
+  /** Whether each unit is in the scope, or null without one; and each unit's relations that leave it (6.21). */
+  inScope(): Uint8Array | null {
+    return this.narrowing.inScope();
+  }
+  outside(): Uint32Array | null {
+    return this.narrowing.outside();
+  }
+  /** A unit's number of relations, by index. */
+  relationsOf(i: number): number {
+    return this.narrowing.relations(i);
+  }
+
+  /** What the filter rules read of units and keypairs (6.7). */
+  ruleFacts(): RuleFacts {
+    const g = this.graph;
+    return {
+      classOf: (i) => this.classOf(i),
+      typeOf: (i) => this.types.unitOf[i] ?? null,
+      kindOf: (i) => this.kinds.of[i],
+      superseded: (i) => this.superseded[i] === 1,
+      relations: (i) => this.narrowing.relations(i),
+      keypairType: (a, b) => this.keypairType(a, b)?.id ?? null,
+      keypairSuperseded: (a, b) => g?.keypairInfo.get(keypairId(a, b))?.superseded === true,
+    };
+  }
+
+  /** A unit's class (3.9), by index: the profile's, or none. */
+  private classOf(i: number): string | null {
+    const g = this.graph;
+    return g ? (this.profile.classOf?.(g.unitInfo.get(this.ids[i]), g.units[i]) ?? null) : null;
   }
 
   setTheme(theme: Theme) {

@@ -1,4 +1,4 @@
-<!-- The inspector's unit: its key, label, type, depth and other attributes. -->
+<!-- The inspector's unit: its key, label, type, depth and other attributes, and Show neighbourhood (6.21). -->
 <script lang="ts">
   import { keyId } from '../../core/index.ts';
   import { plane } from '../../model/depth.ts';
@@ -46,3 +46,6 @@
   {#each view.attrs as [k, v] (k)}<dt>{k}</dt>
     <dd data-field={k}>{fmt(v)}</dd>{/each}
 </dl>
+<div class="gv-row gv-actions">
+  <button type="button" onclick={() => model.showNeighbourhood([inspected.key])}>{t('Show neighbourhood')}</button>
+</div>

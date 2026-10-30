@@ -1,6 +1,10 @@
-<!-- Filters (specification 7.5): a time window and a weight threshold, compounded. The sliders' steps,
-     the threshold's decimals and the dates' format are settings of the group "Filters". -->
+<!-- Filters (specification 7.5 and 6.7): a time window and a weight threshold, compounded, and the
+     filter rules for kinds, superseded parts and relations per unit; the Types panel holds the rules of
+     types. The sliders' steps, the threshold's decimals and the dates' format are settings of the group
+     "Filters". -->
 <script lang="ts">
+  import type { FilterMode } from '../model/contracts.ts';
+  import { modeOf } from '../model/filterRules.ts';
   import type { GraphModel } from '../model/model.ts';
   import RangeSlider from './RangeSlider.svelte';
   import { watch } from './watch.svelte.ts';
@@ -24,8 +28,27 @@
       weightSteps: s.get('filters.weightSteps'),
       decimals: s.get('filters.thresholdDecimals'),
       format: s.get('filters.dateFormat'),
+      rules: model.rules,
+      kinds: [...new Set(model.kinds.of)],
+      degree: model.rules.find((r) => r.field === 'degree') ?? null,
+      most: Math.max(0, ...model.ids.map((_, i) => model.relationsOf(i))),
+      superseded: model.superseded.some((x) => x === 1),
     };
   });
+
+  const MODES: [FilterMode, string][] = [
+    ['show', 'Shown'],
+    ['fade', 'Faded'],
+    ['hide', 'Hidden'],
+  ];
+  let degreeMode: FilterMode = $state('fade');
+  const mode = (e: Event) => (e.target as HTMLSelectElement).value as FilterMode;
+
+  /** Relations per unit: the range that stays shown; the whole range removes the rule. */
+  function setDegree(lo: number, hi: number, m: FilterMode = degreeMode) {
+    const all = lo <= 0 && hi >= view.most;
+    model.setRule({ field: 'degree', value: null, range: [lo, hi], mode: all ? 'show' : m });
+  }
 
   /** A time as the setting "Dates" writes it, in universal time. */
   function day(ms: number): string {
@@ -108,4 +131,53 @@
   <button type="button" onclick={() => model.setFilters({ from: null, to: null, threshold: null })}
     >{t('Clear filters')}</button
   >
+  <h3>{t('Rules')}</h3>
+  {#snippet modes(label: string, current: FilterMode, onpick: (m: FilterMode) => void)}
+    <label class="gv-field"
+      >{label}
+      <select value={current} onchange={(e) => onpick(mode(e))}>
+        {#each MODES as [m, words] (m)}<option value={m}>{t(words)}</option>{/each}
+      </select>
+    </label>
+  {/snippet}
+  {#each view.kinds as kind (kind)}
+    {@render modes(say(model, 'Kind {kind}', { kind }), modeOf(view.rules, 'kind', kind), (m) =>
+      model.setRule({ field: 'kind', value: kind, range: null, mode: m }),
+    )}
+  {/each}
+  {#if view.superseded}
+    {@render modes(t('Superseded'), modeOf(view.rules, 'superseded', null), (m) =>
+      model.setRule({ field: 'superseded', value: null, range: null, mode: m }),
+    )}
+  {/if}
+  {#if view.most > 0}
+    {@const range = view.degree?.range ?? [0, view.most]}
+    <RangeSlider
+      label={t('Relations per unit')}
+      testid="relations-per-unit"
+      min={0}
+      max={view.most}
+      step={1}
+      low={range[0]}
+      high={range[1]}
+      to={t('to')}
+      lowest={t('lowest')}
+      highest={t('highest')}
+      onchange={(lo, hi) => setDegree(lo, hi)}
+    />
+    <label class="gv-field"
+      >{t('Outside the range')}
+      <select
+        value={view.degree?.mode ?? degreeMode}
+        onchange={(e) => {
+          degreeMode = mode(e);
+          if (view.degree) setDegree(range[0], range[1], degreeMode);
+        }}
+      >
+        <option value="fade">{t('Faded')}</option>
+        <option value="hide">{t('Hidden')}</option>
+      </select>
+    </label>
+  {/if}
+  <button type="button" onclick={() => model.clearRules()} disabled={!view.rules.length}>{t('Clear rules')}</button>
 </div>

@@ -6,7 +6,7 @@ import type { Aspect, Inspected } from '../model/contracts.ts';
 import type { GraphModel } from '../model/model.ts';
 import type { V3 } from '../model/picking.ts';
 import { paletteOf } from '../model/typeRegistry.ts';
-import { allocate, statics, step } from './buffers.ts';
+import { allocate, emphasize, statics, step } from './buffers.ts';
 import { CameraRig, type Nudge } from './camera.ts';
 import { FrameState } from './frame.ts';
 import { LOOK } from './geometry.ts';
@@ -116,8 +116,9 @@ export class Scene {
     }
     if (a.has('root') && m.root !== null && m.settings.get('camera.followRoot'))
       this.camera.centreOn(m.index.get(keyId(m.root))!);
-    if (a.has('mode') || a.has('root') || a.has('paths') || a.has('filters')) this.apply(true);
+    if (a.has('mode') || a.has('root') || a.has('paths') || a.has('filters') || a.has('scope')) this.apply(true);
     else if (a.has('inspect')) this.mark();
+    if (a.has('selection') || a.has('highlight')) this.emphasize();
     if (a.has('types') || a.has('display') || a.has('settings')) this.hulls.refresh(this.state);
   }
 
@@ -131,6 +132,7 @@ export class Scene {
     if (this.model.graph && this.uploaded) {
       statics(s);
       this.mark();
+      this.emphasize();
       this.gpu?.touch('lines', ['aStatic']);
       this.gpu?.touch('chevrons', ['aChev']);
     }
@@ -171,6 +173,15 @@ export class Scene {
     ]
       .filter((k): k is Key => k !== null)
       .map(keyId);
+  }
+
+  /** Highlights change at once; nothing moves (6.20). */
+  private emphasize() {
+    if (!this.model.graph || !this.uploaded) return;
+    emphasize(this.state);
+    this.gpu?.touch('units', ['look']);
+    this.gpu?.touch('lines', ['aEmph']);
+    this.gpu?.touch('chevrons', ['aEmph']);
   }
 
   /** Outlines change at once; nothing moves. */
@@ -237,14 +248,15 @@ export class Scene {
     if (!this.model.graph) return;
     const first = !this.uploaded;
     step(this.state, first, this.marks());
+    emphasize(this.state);
     const gpu = this.gpu;
     if (first) {
       this.upload();
       this.uploaded = true;
     } else if (gpu) {
       gpu.touch('units', ['posPrev', 'posNext', 'currentDegree', 'isOnActivePath', 'filterState', 'look', ...ENDS]);
-      gpu.touch('lines', [...ENDS, 'aLine', 'aLine2']);
-      gpu.touch('chevrons', [...ENDS, 'aChevState', 'aAbove']);
+      gpu.touch('lines', [...ENDS, 'aLine', 'aLine2', 'aEmph']);
+      gpu.touch('chevrons', [...ENDS, 'aChevState', 'aAbove', 'aEmph']);
     }
     if (gpu) {
       const f = this.state.flags;

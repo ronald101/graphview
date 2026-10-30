@@ -87,6 +87,13 @@ export function announce(m: GraphModel, a: ReadonlySet<Aspect>): Message | null 
   if (a.has('graph'))
     return m.graph ? say('graphLoaded', { units: count(m.graph.units.length, 'unit', 'units', locale) }) : null;
   if (a.has('mode')) return say(m.mode === '3d' ? 'mode3d' : 'mode2d');
+  if (a.has('search')) {
+    const { text, results } = m.search;
+    if (!text.trim()) return null;
+    return results.length
+      ? say('searchFound', { results: count(results.length, 'result', 'results', locale), text: text.trim() })
+      : say('searchNone', { text: text.trim() });
+  }
   if (a.has('root')) return m.root === null ? say('rootCleared') : say('root', { unit: m.label(m.root) });
   if (a.has('paths')) {
     if (m.root === null) return null;
@@ -105,6 +112,16 @@ export function announce(m: GraphModel, a: ReadonlySet<Aspect>): Message | null 
     if (i.kind === 'perspective') return say('inspectPerspective', { from: m.label(i.from), to: m.label(i.to) }, true);
     return say('inspectRelation', { a: m.label(i.a), b: m.label(i.b) }, true);
   }
+  if (a.has('scope')) {
+    const s = m.scope;
+    if (!s) return say('scopeAll');
+    const names = s.centres.map((k) => m.label(k)).join(', ');
+    return say('scopeShown', { units: count(s.units.length, 'unit', 'units', locale), names });
+  }
+  if (a.has('selection'))
+    return m.selection.length
+      ? say('selected', { units: count(m.selection.length, 'unit', 'units', locale) })
+      : say('selectionCleared');
   return null;
 }
 

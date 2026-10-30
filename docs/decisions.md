@@ -313,3 +313,63 @@
 - **Choice.** The group Drawing, after Root and depth, holds the drawing, the two shapes and the class labels: 28 groups in all.
 - **Reason.** The drawing touches units, lines and labels alike, so none of their groups is its home; its key names the group.
 - **Alternative.** Put the drawing under Units or Chevrons. A person would look for it in the other.
+
+## D107. Filter rules and the scope ride on the filter states
+
+- **Choice.** A unit's filter state is the time window's 1 or 0, times its share by the rules (1, `filters.fadeOpacity` or 0), times 0 outside the scope; a keypair's is the lesser of its units' and of the rules that name it; a line's the most of its keypairs'. The shaders already multiply these states into opacity, and picking already skips units below `pointer.minFilter`.
+- **Reason.** Fading, hiding and the scope then ease over the transition like the time window, and a faded unit answers no click without a rule of its own.
+- **Alternative.** Separate attributes for rules and scope. The shaders, picking, labels and hulls would each need to read them.
+
+## D108. Highlights live in the unit's free look slot and a new pair of attributes
+
+- **Choice.** The unit's fourth look value marks it highlighted (1), dimmed (−1) or neither (0), with the size and dim factors as shader inputs; lines and chevrons gain `aEmph`: whole or dimmed, and for chevrons the direction's colour. Highlights change at once, without a transition. A line or chevron stays whole when it touches a highlighted unit. Picking reads none of it.
+- **Reason.** Units already use 14 of 16 vertex attributes (D71); the free look value fits. A selected unit's relations stay readable, and its direction colours stay visible.
+- **Alternative.** Dim every line not between two highlighted units. One selected unit would then sit alone, its coloured chevrons dimmed.
+
+## D109. The group Search results holds what a person highlights
+
+- **Choice.** A result's Highlight button adds that unit to the group Search results and turns the group on; typing a search changes no group.
+- **Reason.** 6.19 says Highlight adds the result to the group; a group that followed every keystroke would light half the graph while a person types.
+- **Alternative.** The group holds every current result.
+
+## D110. Search ranks keys, classes and types with attribute values
+
+- **Choice.** Exact matches are a label, a key as JSON text, or a text key without its quotes; keys, classes and types that only contain the text rank with attribute values, fifth.
+- **Reason.** A person types a key as it reads, without quotes; a key or class that merely contains the text is as weak a match as an attribute value.
+- **Alternative.** Index only the JSON text of keys. Text keys would then never match exactly.
+
+## D111. How the scope grows, shrinks and lays out
+
+- **Choice.** Expand adds the neighbours of the chosen units, those with more relations first, while the scope holds fewer than `scope.limit`; Hide without a scope makes one of every other unit; a scope lists its units in file order; Lay out scope runs the force layout on the scope's units alone and scales the result back to the box they had.
+- **Reason.** The limit keeps a scope readable however it grows; file order makes the scope the same however it was reached; keeping the box leaves the camera and the other units where they are.
+- **Alternative.** No limit for Expand, and a free layout. A few clicks could then show the whole graph, and the scope would jump away from the rest.
+
+## D112. Direction colours are on by default
+
+- **Choice.** `highlight.direction` starts on.
+- **Reason.** It acts only while exactly one unit is selected, when the direction of its keypairs is what a person looks for.
+- **Alternative.** Off, with the switch in the Highlights section to turn it on.
+
+## D113. The live region speaks for search, selection and scope
+
+- **Choice.** Besides 6.19's words for the search, it says "2 units selected", "Selection cleared", "Showing 7 units around unit_7" and "Showing all units"; inspection words go first when inspecting a unit also grows the scope.
+- **Reason.** Every change a person makes is said in words (6.14); the inspection is what a click is about.
+- **Alternative.** Silence for the selection and the scope.
+
+## D114. Enter in the search field shows the first result
+
+- **Choice.** Enter shows the first result's neighbourhood and opens it in the inspector, as its Show button and the inspector together would.
+- **Reason.** "Show" is the word 6.19 uses for a result's neighbourhood; the inspector names what was shown.
+- **Alternative.** Enter inspects the first result only. The view would then not change.
+
+## D115. Search, highlights and scope have settings groups of their own
+
+- **Choice.** The groups Search, Highlights and Scope follow Filters: 31 groups in all.
+- **Reason.** Each answers its own section of the side bar, where a person looks for it.
+- **Alternative.** One group for all three.
+
+## D116. The narrowing state lives beside the model
+
+- **Choice.** module/model/narrowing.ts holds the selection, the groups, the search, the rules and the scope; the model owns one and offers the methods and fields of 5.2, which emit the aspects. Pure functions in filterRules.ts, search.ts and reach.ts do the work.
+- **Reason.** model.ts was already the largest file; the narrowing has a state and rules of its own that tests can reach directly.
+- **Alternative.** All of it in model.ts.

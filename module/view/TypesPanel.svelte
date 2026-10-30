@@ -1,8 +1,10 @@
 <!-- Types (specification 7.7): unit types, and keypair types in complementary pairs
-     side by side. Every colour and every name can be changed; the model keeps them. -->
+     side by side. Every colour and every name can be changed; the model keeps them. Each type
+     shows, fades or hides by its filter rule (6.7). -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import type { TypeInfo } from '../model/contracts.ts';
+  import type { FilterMode, TypeInfo } from '../model/contracts.ts';
+  import { modeOf } from '../model/filterRules.ts';
   import type { GraphModel } from '../model/model.ts';
   import { watch } from './watch.svelte.ts';
   import { say } from './words.ts';
@@ -15,7 +17,7 @@
   }
   let { model, unitExtra, keypairExtra }: Props = $props();
   const tr = (text: string, vars?: Record<string, string | number>) => say(model, text, vars);
-  const w = watch(() => model, ['types']);
+  const w = watch(() => model, ['types', 'filters']);
 
   const view = $derived.by(() => {
     void w.v;
@@ -25,6 +27,7 @@
       unitField: model.profile.classOf ? null : model.schema.unitTypeField,
       keypairField: model.schema.keypairTypeField,
       unit: model.types.unit,
+      rules: model.rules,
       pairs: model.types.pairs.map((p) => ({
         forward: byId.get(p.forward)!,
         backward: p.backward === null ? null : (byId.get(p.backward) ?? null),
@@ -34,6 +37,13 @@
   });
 
   const value = (e: Event) => (e.target as HTMLInputElement).value;
+  const MODES: [FilterMode, string][] = [
+    ['show', 'Shown'],
+    ['fade', 'Faded'],
+    ['hide', 'Hidden'],
+  ];
+  /** The rule field of a type: unit types by their type (or class), keypair types by their pair type. */
+  const fieldOf = (kind: 'unit' | 'keypair') => (kind === 'unit' ? 'type' : 'pairType');
 </script>
 
 {#snippet cell(kind: 'unit' | 'keypair', t: TypeInfo)}
@@ -55,6 +65,16 @@
       })}
       onchange={(e) => model.setTypeLabel(kind, t.id, value(e))}
     />
+    <select
+      class="gv-type-mode"
+      aria-label={say(model, kind === 'unit' ? 'Show the unit type {name}' : 'Show the keypair type {name}', {
+        name: t.label,
+      })}
+      value={modeOf(view.rules, fieldOf(kind), t.id)}
+      onchange={(e) => model.setRule({ field: fieldOf(kind), value: t.id, range: null, mode: value(e) as FilterMode })}
+    >
+      {#each MODES as [m, words] (m)}<option value={m}>{tr(words)}</option>{/each}
+    </select>
   </span>
 {/snippet}
 

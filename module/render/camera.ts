@@ -83,14 +83,29 @@ export class CameraRig {
     const s = this.model.settings;
     // The vertical field of view is fixed; a canvas narrower than tall needs more distance for the width.
     const half = Math.tan(((g.camera.fov / 2) * Math.PI) / 180);
-    const d = ((this.model.extent / 2 / half) * s.get('camera.fitMargin')) / Math.min(1, g.camera.aspect);
-    g.controls.target.set(0, 0, 0);
-    g.camera.position.set(0, 0, d);
+    // With a scope, its units' box; else the whole extent (6.21).
+    const box = this.scopeBox();
+    const d =
+      (((box?.side ?? this.model.extent) / 2 / half) * s.get('camera.fitMargin')) / Math.min(1, g.camera.aspect);
+    g.controls.target.set(box?.cx ?? 0, box?.cy ?? 0, 0);
+    g.camera.position.set(box?.cx ?? 0, box?.cy ?? 0, d);
     g.camera.near = s.get('camera.near');
     g.camera.far = d * s.get('camera.farPerFit');
     g.camera.updateProjectionMatrix();
     g.controls.update();
     g.request();
+  }
+
+  /** The centre and larger side of the scope's units, or null without a scope; a tenth of the extent at least. */
+  private scopeBox(): { cx: number; cy: number; side: number } | null {
+    const m = this.model;
+    const inside = m.inScope();
+    if (!inside) return null;
+    const [xs, ys] = [[] as number[], [] as number[]];
+    inside.forEach((v, i) => v && (xs.push(m.positions[2 * i]), ys.push(m.positions[2 * i + 1])));
+    if (!xs.length) return null;
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, side: Math.max(x1 - x0, y1 - y0, m.extent / 10) };
   }
 
   /**

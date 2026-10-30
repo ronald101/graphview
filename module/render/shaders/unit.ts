@@ -17,6 +17,7 @@ uniform float uSize;
 uniform float uSizeScale;
 uniform float uOpacityScale;
 uniform vec2 uUnitGlow; // reach past the disc, opacity at its edge
+uniform vec2 uHighlight; // size of highlighted units, opacity of the rest
 uniform vec3 uUnitPalette[${slots}];
 varying vec2 vUv;
 varying vec3 vColor;
@@ -58,15 +59,18 @@ void main() {
   vec3 p = mix(posPrev, posNext, uT);
   p.z += st.x;
   float halo = 1.0 + uUnitGlow.x * st.w;
+  // Highlighted units grow and carry the outline; while a group is on, the rest dims.
+  float grow = look.w > 0.5 ? uHighlight.x : 1.0;
+  float rest = look.w < -0.5 ? uHighlight.y : 1.0;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  mv.xy += position.xy * 2.0 * uSize * uSizeScale * st.y * halo;
+  mv.xy += position.xy * 2.0 * uSize * uSizeScale * st.y * halo * grow;
   gl_Position = projectionMatrix * mv;
   vUv = position.xy * 2.0 * halo;
   vColor = uUnitPalette[int(halves.x + 0.5)];
   vColor2 = uUnitPalette[int(halves.y + 0.5)];
-  vOpacity = st.z * mix(filterState.x, filterState.y, uT) * look.y * uOpacityScale;
+  vOpacity = st.z * mix(filterState.x, filterState.y, uT) * look.y * uOpacityScale * rest;
   vGlow = st.w;
-  vMarked = look.x;
+  vMarked = max(look.x, step(0.5, look.w));
   vHalo = halo;
   vShape = look.z;
   // Shapes other than the disc may divide the unit between its two ends.

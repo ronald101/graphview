@@ -82,3 +82,44 @@ export async function placeUnits(
   });
   return positions;
 }
+
+/**
+ * The force layout on some units alone, from their places (6.21): the others stay, and the part keeps
+ * the centre and the larger side of its box. Returns every unit's place.
+ */
+export async function placePart(
+  ids: string[],
+  positions: Float32Array,
+  part: readonly number[],
+  relations: readonly Relation[],
+  rules: LayoutRules = DEFAULT_LAYOUT,
+): Promise<Float32Array<ArrayBuffer>> {
+  const at = new Map(part.map((i, n) => [i, n]));
+  const box = (pts: { x: number; y: number }[]) => {
+    const xs = pts.map((p) => p.x);
+    const ys = pts.map((p) => p.y);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, side: Math.max(x1 - x0, y1 - y0) };
+  };
+  const start = part.map((i) => ({ x: positions[2 * i], y: positions[2 * i + 1] }));
+  const out = await runForce(
+    {
+      units: part.map((i) => ids[i]),
+      links: relations.flatMap((r) =>
+        at.has(r.a) && at.has(r.b) ? [[at.get(r.a)!, at.get(r.b)!] as [number, number]] : [],
+      ),
+      start,
+      pinned: [],
+      settings: rules.force,
+    },
+    rules.inline,
+  );
+  const [was, now] = [box(start), box(out.positions)];
+  const s = was.side > 0 && now.side > 0 ? was.side / now.side : 1;
+  const next = Float32Array.from(positions);
+  part.forEach((i, n) => {
+    next[2 * i] = was.cx + (out.positions[n].x - now.cx) * s;
+    next[2 * i + 1] = was.cy + (out.positions[n].y - now.cy) * s;
+  });
+  return next;
+}

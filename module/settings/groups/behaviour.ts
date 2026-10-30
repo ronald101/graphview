@@ -90,6 +90,16 @@ export const pathSettings = () =>
 
 export const filterSettings = () =>
   [
+    new SliderSetting({
+      key: 'filters.fadeOpacity',
+      group: 'Filters',
+      label: 'Faded opacity',
+      description: 'What a filter rule fades draws at this factor of its opacity, and answers no click.',
+      default: 0.15,
+      min: 0,
+      max: 1,
+      step: 0.01,
+    }),
     new NumberSetting({
       key: 'filters.timeSteps',
       group: 'Filters',

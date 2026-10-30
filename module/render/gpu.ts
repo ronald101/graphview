@@ -155,6 +155,9 @@ export class Gpu {
       uLinePathColour: { value: colour() },
       uStrengthColour: { value: colour() },
       uIssue: { value: colour() },
+      uHighlight: { value: v2() },
+      uOutgoing: { value: colour() },
+      uIncoming: { value: colour() },
     };
     this.hullGroup.renderOrder = this.order.hulls;
     this.scene.add(this.hullGroup);
@@ -238,6 +241,8 @@ export class Gpu {
     shaderColour(c.linePath, u.uLinePathColour.value);
     shaderColour(c.strength, u.uStrengthColour.value);
     shaderColour(c.issue, u.uIssue.value);
+    shaderColour(c.outgoing, u.uOutgoing.value);
+    shaderColour(c.incoming, u.uIncoming.value);
     this.surface = c.surface;
     this.renderer.setClearColor(c.surface, 1);
     this.request();
@@ -268,6 +273,7 @@ export class Gpu {
     u.uBelowChevrons.value = r.chevrons.below ? 1 : 0;
     u.uGlyph.value.set(...r.chevrons.glyph);
     u.uChevronGlow.value.set(...r.chevrons.glow);
+    u.uHighlight.value.set(r.highlight.scale, r.highlight.dim);
     this.request();
   }
 

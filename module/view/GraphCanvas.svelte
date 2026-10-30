@@ -27,12 +27,14 @@
     /** Base values of the settings "Colours" and "Motion"; without them the settings decide. */
     theme?: 'light' | 'dark' | 'system';
     motion?: 'on' | 'off' | 'system';
-    /** The / key asks the host to open its search, such as the Root field. */
+    /** The / key asks the host to open its search, such as the search field (6.19). */
     onfind?: () => void;
     /** How each kind of unit draws, and the shapes it may take (render/looks.ts); kept from the start. */
     looks?: Looks;
+    /** Box selection (6.20): a drag draws a box, and the units drawn inside it join the selection; with Ctrl they leave it. */
+    boxSelect?: boolean;
   }
-  let { model, theme, motion, onfind, looks = PUBLIC_LOOKS }: Props = $props();
+  let { model, theme, motion, onfind, looks = PUBLIC_LOOKS, boxSelect = false }: Props = $props();
 
   // The scene follows the model and looks it was made with; new ones need a new canvas.
   // svelte-ignore state_referenced_locally
@@ -159,24 +161,67 @@
 
   const BUTTON = { left: 0, middle: 1, right: 2 } as const;
   let down: { x: number; y: number } | null = null;
+  /** The box being drawn, in canvas pixels, while Box selection is on. */
+  let box: { x0: number; y0: number; x1: number; y1: number } | null = $state(null);
   const local = (e: PointerEvent) => {
     const b = input.getBoundingClientRect();
     return { x: e.clientX - b.left, y: e.clientY - b.top };
   };
+  const adds = (e: { ctrlKey: boolean; metaKey: boolean }) => !(e.ctrlKey || e.metaKey);
+
+  function onDown(e: PointerEvent) {
+    down = local(e);
+    if (boxSelect && e.button === BUTTON.left && gpu) {
+      // The camera holds still while the box is drawn.
+      gpu.controls.enabled = false;
+      box = { x0: down.x, y0: down.y, x1: down.x, y1: down.y };
+      input.setPointerCapture?.(e.pointerId);
+    }
+  }
 
   async function onUp(e: PointerEvent) {
     const p = local(e);
     const d = down;
     down = null;
+    if (box) {
+      const b = box;
+      box = null;
+      if (gpu) gpu.controls.enabled = true;
+      if (Math.hypot(b.x1 - b.x0, b.y1 - b.y0) > set('pointer.dragThreshold')) return selectIn(b, adds(e));
+    }
     if (!d || Math.hypot(p.x - d.x, p.y - d.y) > set('pointer.dragThreshold')) return;
     if (e.button !== BUTTON[set('pointer.button')]) return;
+    // Ctrl (Cmd on macOS) and a click add a unit to the selection, or take it out (6.20).
+    if (e.ctrlKey || e.metaKey) {
+      const hit = scene.pick(p.x, p.y);
+      if (hit?.kind === 'unit') model.select([hit.key], 'toggle');
+      return;
+    }
     await clickAt(p.x, p.y, e.shiftKey);
+  }
+
+  /** The units drawn inside a box join the selection, or leave it. */
+  function selectIn(b: { x0: number; y0: number; x1: number; y1: number }, add: boolean) {
+    const [x0, x1, y0, y1] = [Math.min(b.x0, b.x1), Math.max(b.x0, b.x1), Math.min(b.y0, b.y1), Math.max(b.y0, b.y1)];
+    const keys = scene
+      .snapshotForTests()
+      .units.filter(
+        (u) =>
+          u.visible && u.opacity > set('pointer.minOpacity') && u.sx >= x0 && u.sx <= x1 && u.sy >= y0 && u.sy <= y1,
+      )
+      .map((u) => u.key);
+    model.select(keys, add ? 'add' : 'remove');
   }
 
   // The pointer's shape follows what is under it, checked once the pointer rests.
   let hover = 0;
   function onMove(e: PointerEvent) {
     clearTimeout(hover);
+    if (box) {
+      const p = local(e);
+      box = { ...box, x1: p.x, y1: p.y };
+      return;
+    }
     if (down) return;
     const p = local(e);
     hover = window.setTimeout(
@@ -216,8 +261,16 @@
     else if (action === 'clear') {
       if (model.target !== null) void model.setTarget(null);
       else if (model.root !== null) void model.setRoot(null);
+      else if (model.selection.length) model.select([], 'clear');
       model.inspect(null);
       stepping = null;
+    } else if (action === 'neighbourhood') {
+      // S shows the neighbourhood of the inspected unit (6.21).
+      const c = current();
+      if (c.unit === null) return;
+      model.showNeighbourhood([c.unit]);
+    } else if (action === 'show-all') {
+      model.showAll();
     } else if (action === 'find') {
       if (!onfind) return;
       onfind();
@@ -302,7 +355,7 @@
     role={info.role}
     aria-label={info.name}
     data-testid="canvas"
-    onpointerdown={(e) => (down = local(e))}
+    onpointerdown={onDown}
     onpointerup={onUp}
     onpointermove={onMove}
     onkeydown={onKey}
@@ -312,6 +365,15 @@
       <p><strong>This file was refused.</strong></p>
       <p>{info.refusal}</p>
     </div>
+  {/if}
+  {#if box}
+    <div
+      class="gv-box"
+      data-testid="selection-box"
+      style="left: {Math.min(box.x0, box.x1)}px; top: {Math.min(box.y0, box.y1)}px; width: {Math.abs(
+        box.x1 - box.x0,
+      )}px; height: {Math.abs(box.y1 - box.y0)}px"
+    ></div>
   {/if}
   {#if info.hint}<p class="gv-hint">{info.hint}</p>{/if}
   <p class="gv-live" aria-live={info.politeness} data-testid="live">{live}</p>

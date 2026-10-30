@@ -31,6 +31,12 @@ export const LIVE_TEMPLATES: Record<string, string> = {
   inspectKeypair: 'Inspecting keypair from {from} to {to}',
   inspectRelation: 'Inspecting relation between {a} and {b}',
   inspectPerspective: 'Inspecting perspective from {from} to {to}',
+  searchFound: '{results} for "{text}"',
+  searchNone: 'No result for "{text}"',
+  selected: '{units} selected',
+  selectionCleared: 'Selection cleared',
+  scopeShown: 'Showing {units} around {names}',
+  scopeAll: 'Showing all units',
 };
 
 export const REFUSAL_TEXTS: Record<string, string> = {

@@ -6,6 +6,7 @@ import type { Drawing } from '../model/drawing.ts';
 import { along } from '../model/picking.ts';
 import { paletteOf } from '../model/typeRegistry.ts';
 import type { FrameState } from './frame.ts';
+import { drawColours } from './rules.ts';
 
 export interface SceneSnapshot {
   width: number;
@@ -42,6 +43,13 @@ export interface SceneSnapshot {
     sy: number;
     /** The radius, in pixels, within which a click picks this unit. */
     reach: number;
+    selected: boolean;
+    /** 1 in a highlight group that is on, 0 otherwise (6.20). */
+    emphasis: number;
+    /** Whether the scope holds it; every unit, without a scope (6.21). */
+    inScope: boolean;
+    /** Its relations to units outside the scope. */
+    outside: number;
   }[];
   lines: {
     a: Key;
@@ -93,6 +101,9 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
   const size = g ? g.uniforms.uSizeScale.value : m.overrides.size;
   const opacity = g ? g.uniforms.uOpacityScale.value : m.overrides.opacity;
   const palette = paletteOf(m.types.unit, m.types.look);
+  const selected = new Set(m.selection.map(keyId));
+  const inside = m.inScope();
+  const colours = drawColours(m);
   const units: SceneSnapshot['units'] = (graph?.units ?? []).map((k, i) => {
     const v = snap.st[i];
     const d = m.degrees ? m.degrees[i] : null;
@@ -108,14 +119,18 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
       x: v.p[0],
       y: v.p[1],
       z: v.p[2],
-      scale: v.s.scale * size,
-      opacity: v.s.opacity * v.filter * opacity,
+      scale: v.s.scale * size * s.grow(i),
+      opacity: v.s.opacity * v.filter * opacity * s.unitDim(i),
       glow: v.s.glow,
       visible: s.now(s.u.filterState, i, 2, 0) > 0.5,
       onPath: onPath.has(m.ids[i]),
       sx: snap.screen[i].x,
       sy: snap.screen[i].y,
       reach: s.unitReach(i, snap),
+      selected: selected.has(m.ids[i]),
+      emphasis: s.highlighted(i) ? 1 : 0,
+      inScope: inside ? inside[i] === 1 : true,
+      outside: s.outside?.[i] ?? 0,
     };
   });
   const lines: SceneSnapshot['lines'] = m.relations.map((rel, i) => {
@@ -128,7 +143,7 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
       above: s.now(s.l.aLine, i, 4, 2) > 0.5,
       strength: s.now(s.l.aLine2, i, 4, 0),
       onPath: s.now(s.l.aLine2, i, 4, 2) > 0.5,
-      opacity: s.lineOpacity(i, snap),
+      opacity: s.lineOpacity(i, snap) * s.lineDim(i),
       sx: p.x,
       sy: p.y,
     };
@@ -149,10 +164,11 @@ export function sceneSnapshot(s: FrameState, extras: SnapshotExtras): SceneSnaps
       to,
       at,
       visible: s.chevronOpacity(i, snap) > s.rules.pointer.minOpacity,
-      opacity: s.chevronOpacity(i, snap),
+      opacity: s.chevronOpacity(i, snap) * s.chevronDim(i),
       flow: s.now(s.c.aChevState, i, 4, 0),
       type: type?.id ?? null,
-      colour: type?.colour ?? m.types.look.other,
+      // One selected unit colours its chevrons by direction (6.20).
+      colour: [type?.colour ?? m.types.look.other, colours.outgoing, colours.incoming][s.c.aEmph[2 * i + 1]],
       sx: p.x,
       sy: p.y,
       perspective: perspective ? { from: perspective.from, to: perspective.to } : null,

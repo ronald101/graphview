@@ -107,6 +107,39 @@
 .gv-grow {
   flex: 1 1 auto;
 }
+/* Small buttons for the actions of a list's rows, such as the search results. */
+.gv-actions {
+  gap: 4px;
+  margin: 2px 0 8px;
+}
+.gv-ui .gv-actions button {
+  padding: 1px 6px;
+  font-size: var(--gv-note);
+}
+.gv-results {
+  margin: 0;
+  padding-left: 1.4em;
+}
+.gv-result-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  align-items: baseline;
+  margin: 0;
+}
+.gv-groups {
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.gv-groups li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gv-groups label {
+  flex: 1 1 auto;
+}
 .gv-unit-input {
   flex: 1 1 90px;
   min-width: 0;
@@ -349,6 +382,13 @@
   margin: 0;
   font-size: var(--gv-note);
   color: var(--gv-muted);
+  pointer-events: none;
+}
+/* The box of Box selection (specification 6.20). */
+.gv-box {
+  position: absolute;
+  border: 1px dashed var(--gv-ink-1);
+  background: color-mix(in srgb, var(--gv-ink-1) 8%, transparent);
   pointer-events: none;
 }
 .gv-live {

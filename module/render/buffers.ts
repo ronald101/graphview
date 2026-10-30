@@ -4,6 +4,7 @@
 // fade-in, fade-out and trails of moving units (specification 6.10).
 import { keyId, keypairId, type Key } from '../core/index.ts';
 import { drawnChevrons } from '../model/drawing.ts';
+import { keypairShare, unitShares } from '../model/filterRules.ts';
 import { keypairPasses, lineWeight, unitPasses, weightOf } from '../model/filters.ts';
 import type { GraphModel } from '../model/model.ts';
 import type { Relation } from '../model/topology.ts';
@@ -47,6 +48,7 @@ export function allocate(s: FrameState) {
   const n = m.ids.length;
   const r = m.relations.length;
   const k = s.chevrons.length;
+  const whole = (count: number) => Float32Array.from({ length: 2 * count }, (_, j) => (j % 2 ? 0 : 1));
   const ends = (count: number) => ({
     aPrevA: new Float32Array(3 * count),
     aNextA: new Float32Array(3 * count),
@@ -70,12 +72,14 @@ export function allocate(s: FrameState) {
     aLine: new Float32Array(4 * r),
     aLine2: new Float32Array(4 * r),
     aStatic: new Float32Array(2 * r),
+    aEmph: whole(r),
   };
   s.c = {
     ...ends(k),
     aChev: new Float32Array(4 * k),
     aChevState: new Float32Array(4 * k),
     aAbove: new Float32Array(2 * k),
+    aEmph: whole(k),
   };
   const g = m.graph;
   s.relationsPer = new Uint32Array(n);
@@ -155,12 +159,21 @@ export function step(s: FrameState, first: boolean, marks: string[]) {
       flowOf.set(keypairId(seq[i + 1], seq[i]), -1);
     }
   }
+  // How much of each unit and keypair shows: the time window, the filter rules and the scope (6.7, 6.21).
   const f = m.filters;
   const rules = m.schema.rules;
-  const pass = new Uint8Array(n);
-  g.units.forEach((k, i) => (pass[i] = unitPasses(g, k, f, rules) ? 1 : 0));
-  const keypairShows = (a: Key, b: Key) =>
-    keypairPasses(g, a, b, f, rules) && pass[m.index.get(keyId(a))!] === 1 && pass[m.index.get(keyId(b))!] === 1;
+  const facts = m.ruleFacts();
+  const pass = unitShares(n, m.rules, facts, s.rules.fade);
+  const inside = m.inScope();
+  s.outside = m.outside();
+  g.units.forEach((k, i) => {
+    if (!unitPasses(g, k, f, rules) || (inside && !inside[i])) pass[i] = 0;
+  });
+  const keypairShows = (a: Key, b: Key) => {
+    if (!keypairPasses(g, a, b, f, rules)) return 0;
+    const units = Math.min(pass[m.index.get(keyId(a))!], pass[m.index.get(keyId(b))!]);
+    return keypairShare(m.rules, facts, a, b, units, s.rules.fade);
+  };
   const span = m.fieldRange(f.weightField, 'weight');
   const pair = (arr: Float32Array, i: number, next: number) => {
     arr[2 * i] = first ? next : arr[2 * i + 1];
@@ -205,7 +218,8 @@ export function step(s: FrameState, first: boolean, marks: string[]) {
   for (const [i, e] of m.kinds.ends) if (e.length) copyEnds(u, i, e[0], e[e.length > 1 ? 1 : 0]);
   m.relations.forEach((rel, i) => {
     copyEnds(s.l, i, rel.a, rel.b);
-    const visible = (rel.ab && keypairShows(rel.ka, rel.kb)) || (rel.ba && keypairShows(rel.kb, rel.ka));
+    // A line shows as much as its most shown keypair.
+    const visible = Math.max(rel.ab ? keypairShows(rel.ka, rel.kb) : 0, rel.ba ? keypairShows(rel.kb, rel.ka) : 0);
     const w = lineWeight(
       rel.ab ? weightOf(g, rel.ka, rel.kb, f.weightField) : null,
       rel.ba ? weightOf(g, rel.kb, rel.ka, f.weightField) : null,
@@ -230,10 +244,30 @@ export function step(s: FrameState, first: boolean, marks: string[]) {
     const flow = flowOf.get(keypairId(ch.from, ch.to)) ?? 0;
     S[4 * i] = first ? flow : S[4 * i + 1];
     S[4 * i + 1] = flow;
-    const shows = +keypairShows(ch.from, ch.to);
+    const shows = keypairShows(ch.from, ch.to);
     S[4 * i + 2] = first ? shows : S[4 * i + 3];
     S[4 * i + 3] = shows;
     s.c.aAbove[2 * i] = s.l.aLine[4 * ch.rel + 2];
     s.c.aAbove[2 * i + 1] = s.l.aLine[4 * ch.rel + 3];
   });
+}
+
+/**
+ * The highlights (6.20), at once and without a transition: units of the groups that are on grow and
+ * carry the outline while every other unit dims, and so does every line and chevron that touches no
+ * highlighted unit. With one unit selected, its chevrons take the direction's colours.
+ */
+export function emphasize(s: FrameState) {
+  const m = s.model;
+  const on = m.emphasis();
+  const whole = (a: number, b: number) => (on === null || on[a] || on[b] ? 1 : 0);
+  for (let i = 0; i < m.ids.length; i++) s.u.look[4 * i + LOOK.emphasis] = on === null ? 0 : on[i] ? 1 : -1;
+  m.relations.forEach((rel, i) => (s.l.aEmph[2 * i] = whole(rel.a, rel.b)));
+  const one = s.rules.highlight.direction && m.selection.length === 1 ? keyId(m.selection[0]) : null;
+  s.chevrons.forEach((ch, i) => {
+    const rel = m.relations[ch.rel];
+    s.c.aEmph[2 * i] = whole(rel.a, rel.b);
+    s.c.aEmph[2 * i + 1] = one === null ? 0 : keyId(ch.from) === one ? 1 : keyId(ch.to) === one ? 2 : 0;
+  });
+  s.forget();
 }

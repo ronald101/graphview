@@ -42,6 +42,8 @@ export class FrameState {
   drawing: Drawing = 'keypairs';
   chevrons: DrawnChevron[] = [];
   shapes: string[] = [];
+  /** Each unit's relations to units outside the scope, or null without a scope (6.21). */
+  outside: Uint32Array | null = null;
   gpu: Gpu | null = null;
   readonly model: GraphModel;
   /** How each kind of unit looks, and the shapes the unit shader holds: the host's, with the setting "Looks of kinds" over them for the graph loaded. */
@@ -210,11 +212,30 @@ export class FrameState {
     return (byClass ? m.unitType(k)?.label : undefined) ?? m.label(k);
   }
 
+  /** A unit's growth while highlighted, and the share of opacity a highlight leaves it, a line or a chevron (6.20). */
+  highlighted(i: number): boolean {
+    return this.u.look[4 * i + LOOK.emphasis] > 0.5;
+  }
+  grow(i: number): number {
+    return this.highlighted(i) ? this.rules.highlight.scale : 1;
+  }
+  unitDim(i: number): number {
+    return this.u.look[4 * i + LOOK.emphasis] < -0.5 ? this.rules.highlight.dim : 1;
+  }
+  lineDim(i: number): number {
+    return this.l.aEmph[2 * i] > 0.5 ? 1 : this.rules.highlight.dim;
+  }
+  chevronDim(i: number): number {
+    return this.c.aEmph[2 * i] > 0.5 ? 1 : this.rules.highlight.dim;
+  }
+
   /** The radius a unit is drawn with, in pixels. */
   unitDrawn(i: number, snap: Snapshot): number {
     const g = this.gpu;
     const v = snap.st[i];
-    return g ? (this.rules.units.radius * this.model.overrides.size * v.s.scale) / g.worldPerPixel(v.p) : 0;
+    return g
+      ? (this.rules.units.radius * this.model.overrides.size * v.s.scale * this.grow(i)) / g.worldPerPixel(v.p)
+      : 0;
   }
 
   /** The radius, in pixels, within which a click picks unit i. */

@@ -43,6 +43,10 @@ export interface DrawRules {
     glow: [number, number, number, number];
   };
   superseded: number;
+  /** What a filter rule fades draws at this share of its opacity (6.7). */
+  fade: number;
+  /** Highlighted units' size, the rest's opacity, and whether one selected unit colours its chevrons by direction (6.20). */
+  highlight: { scale: number; dim: number; direction: boolean };
   dash: [number, number];
   cull: number;
   discard: number;
@@ -71,6 +75,8 @@ export interface DrawColours {
   linePath: string;
   strength: string;
   issue: string;
+  outgoing: string;
+  incoming: string;
 }
 
 export function drawRules(m: GraphModel): DrawRules {
@@ -113,6 +119,12 @@ export function drawRules(m: GraphModel): DrawRules {
       ],
     },
     superseded: s.get('issues.supersededOpacity'),
+    fade: s.get('filters.fadeOpacity'),
+    highlight: {
+      scale: s.get('highlight.scale'),
+      dim: s.get('highlight.dim'),
+      direction: s.get('highlight.direction'),
+    },
     dash: [s.get('issues.missing.dash'), s.get('issues.missing.drawn')],
     cull: s.get('renderer.cullBelow'),
     discard: s.get('renderer.discardBelow'),
@@ -151,5 +163,7 @@ export function drawColours(m: GraphModel, theme: Theme = m.theme): DrawColours 
     linePath: c(s.get('lines.path.colour')),
     strength: c(s.get('lines.strength.towards')),
     issue: c(s.get('issues.missing.colour')),
+    outgoing: c('outgoing'),
+    incoming: c('incoming'),
   };
 }
