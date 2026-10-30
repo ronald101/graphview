@@ -1,10 +1,10 @@
-/* graphview's view: the canvas, sections and panels. Colours come from the tokens as --gv-* properties,
-   which the host sets (the composite GraphView sets them on its own root). */
+/* graphview's view: the canvas, sections and panels. Colours, text and panel sizes come from the
+   settings as --gv-* properties (view/css.ts), which GraphView sets on its own root and a host that lays
+   out the panels sets on its own. */
 .gv-ui {
-  --gv-font: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
   font-family: var(--gv-font);
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: var(--gv-text);
+  line-height: var(--gv-leading);
   color: var(--gv-ink-1);
 }
 .gv-ui *,
@@ -19,10 +19,10 @@
   color: var(--gv-ink-1);
   background: var(--gv-panel);
   border: 1px solid var(--gv-hairline);
-  border-radius: 4px;
+  border-radius: var(--gv-radius);
 }
 .gv-ui button {
-  padding: 3px 10px;
+  padding: var(--gv-control-pad);
   cursor: pointer;
 }
 .gv-ui button:hover:not(:disabled) {
@@ -32,9 +32,9 @@
   color: var(--gv-muted);
   cursor: default;
 }
-.gv-ui :is(button, input, select):focus-visible {
-  outline: 2px solid var(--gv-ink-1);
-  outline-offset: 1px;
+.gv-ui :is(button, input, select, textarea):focus-visible {
+  outline: var(--gv-focus-w) solid var(--gv-focus);
+  outline-offset: var(--gv-focus-off);
 }
 .gv-ui input[type='text'],
 .gv-ui input:not([type]),
@@ -48,16 +48,16 @@
 }
 .gv-section-h {
   margin: 0;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--gv-h2-size);
+  font-weight: var(--gv-h2-weight);
 }
 .gv-ui .gv-section-h button {
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 16px;
-  font-weight: 600;
+  padding: var(--gv-section-pad);
+  font-weight: var(--gv-h2-weight);
   text-align: left;
   background: none;
   border: none;
@@ -69,7 +69,7 @@
   border-right: 2px solid var(--gv-ink-2);
   border-bottom: 2px solid var(--gv-ink-2);
   transform: rotate(-45deg);
-  transition: transform 0.15s;
+  transition: transform var(--gv-turn);
 }
 [data-open='true'] > .gv-section-h .gv-chevron {
   transform: rotate(45deg);
@@ -84,13 +84,13 @@
 }
 .gv-panel-body h3 {
   margin: 12px 0 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--gv-h3-size);
+  font-weight: var(--gv-h3-weight);
 }
 .gv-panel-body h4 {
   margin: 6px 0 4px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--gv-h4-size);
+  font-weight: var(--gv-h4-weight);
 }
 .gv-panel-body p {
   margin: 6px 0;
@@ -105,6 +105,39 @@
   margin: 6px 0;
 }
 .gv-grow {
+  flex: 1 1 auto;
+}
+/* Small buttons for the actions of a list's rows, such as the search results. */
+.gv-actions {
+  gap: 4px;
+  margin: 2px 0 8px;
+}
+.gv-ui .gv-actions button {
+  padding: 1px 6px;
+  font-size: var(--gv-note);
+}
+.gv-results {
+  margin: 0;
+  padding-left: 1.4em;
+}
+.gv-result-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  align-items: baseline;
+  margin: 0;
+}
+.gv-groups {
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.gv-groups li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gv-groups label {
   flex: 1 1 auto;
 }
 .gv-unit-input {
@@ -126,11 +159,11 @@
   max-width: 100%;
 }
 .gv-note {
-  font-size: 12px;
+  font-size: var(--gv-note);
   color: var(--gv-muted);
 }
 .gv-num {
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--gv-figures);
 }
 .gv-dl {
   display: grid;
@@ -155,7 +188,7 @@
   width: 100%;
   margin: 8px 0;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--gv-table);
 }
 .gv-table caption {
   margin-bottom: 4px;
@@ -195,9 +228,9 @@
   min-width: 0;
 }
 .gv-ui .gv-type input[type='color'] {
-  flex: 0 0 26px;
-  width: 26px;
-  height: 22px;
+  flex: 0 0 var(--gv-swatch-w);
+  width: var(--gv-swatch-w);
+  height: var(--gv-swatch-h);
   padding: 1px;
 }
 .gv-ui .gv-type-name {
@@ -207,7 +240,7 @@
 .gv-count {
   margin-left: auto;
   color: var(--gv-muted);
-  font-size: 12px;
+  font-size: var(--gv-note);
 }
 
 /* The slider with two knobs: two range inputs on one track; only their knobs take the pointer. */
@@ -226,9 +259,9 @@
 .gv-range-track::before,
 .gv-range-fill {
   position: absolute;
-  top: 10px;
-  height: 4px;
-  border-radius: 2px;
+  top: calc(12px - var(--gv-track) / 2);
+  height: var(--gv-track);
+  border-radius: calc(var(--gv-track) / 2);
   content: '';
 }
 .gv-range-track::before {
@@ -254,9 +287,9 @@
   background: none;
 }
 .gv-range-track input[type='range']::-webkit-slider-thumb {
-  width: 16px;
-  height: 16px;
-  margin-top: 4px;
+  width: var(--gv-thumb);
+  height: var(--gv-thumb);
+  margin-top: calc(12px - var(--gv-thumb) / 2);
   background: var(--gv-panel);
   border: 2px solid var(--gv-ink-1);
   border-radius: 50%;
@@ -265,8 +298,8 @@
   appearance: none;
 }
 .gv-range-track input[type='range']::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: calc(var(--gv-thumb) - 2px);
+  height: calc(var(--gv-thumb) - 2px);
   background: var(--gv-panel);
   border: 2px solid var(--gv-ink-1);
   border-radius: 50%;
@@ -274,7 +307,7 @@
   cursor: pointer;
 }
 .gv-range-track.gv-disabled {
-  opacity: 0.45;
+  opacity: var(--gv-disabled);
 }
 
 /* Issues, and the inspector's two keypairs side by side. */
@@ -291,6 +324,9 @@
 }
 .gv-issue-icon {
   flex: 0 0 auto;
+  /* An icon must never take the size of an SVG without one, even where a host sets no properties. */
+  width: var(--gv-issue-icon, 1em);
+  height: var(--gv-issue-icon, 1em);
 }
 .gv-pair {
   display: grid;
@@ -324,7 +360,7 @@
   cursor: grab;
 }
 .gv-input:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--gv-ink-1);
+  box-shadow: inset 0 0 0 var(--gv-focus-w) var(--gv-focus);
 }
 .gv-refused {
   position: absolute;
@@ -344,8 +380,15 @@
   left: 12px;
   bottom: 8px;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--gv-note);
   color: var(--gv-muted);
+  pointer-events: none;
+}
+/* The box of Box selection (specification 6.20). */
+.gv-box {
+  position: absolute;
+  border: 1px dashed var(--gv-ink-1);
+  background: color-mix(in srgb, var(--gv-ink-1) 8%, transparent);
   pointer-events: none;
 }
 .gv-live {
@@ -355,4 +398,139 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* The Settings dialog, and the rows of settings in it and in the side bar (specification 7.10). */
+.gv-dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  color: var(--gv-ink-1);
+  background: var(--gv-panel);
+  border: 1px solid var(--gv-hairline);
+  border-radius: calc(var(--gv-radius) * 2);
+}
+.gv-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.gv-dialog::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+.gv-dialog-head,
+.gv-dialog-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+}
+.gv-dialog-head {
+  border-bottom: 1px solid var(--gv-hairline);
+}
+.gv-dialog-head h2 {
+  margin: 0;
+  font-size: var(--gv-h2-size);
+  font-weight: var(--gv-h2-weight);
+}
+.gv-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.gv-dialog-foot {
+  border-top: 1px solid var(--gv-hairline);
+}
+.gv-ui textarea {
+  font: inherit;
+  color: var(--gv-ink-1);
+  background: var(--gv-panel);
+  border: 1px solid var(--gv-hairline);
+  border-radius: var(--gv-radius);
+}
+.gv-setting {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gv-hairline);
+}
+.gv-setting:last-child {
+  border-bottom: none;
+}
+.gv-setting-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gv-setting-head > :first-child {
+  flex: 1 1 auto;
+  font-weight: 600;
+}
+.gv-setting-actions {
+  display: flex;
+  gap: 6px;
+}
+.gv-setting-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 6px 0;
+}
+.gv-setting-control > input[type='range'] {
+  flex: 1 1 160px;
+}
+.gv-setting-control textarea {
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: var(--gv-note);
+}
+.gv-setting p.gv-note {
+  margin: 2px 0;
+}
+.gv-refusal {
+  padding-left: 6px;
+  border-left: 3px solid var(--gv-issue);
+}
+.gv-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.gv-ui .gv-setting-control input[type='color'] {
+  width: var(--gv-swatch-w);
+  height: var(--gv-swatch-h);
+  padding: 1px;
+}
+.gv-palette,
+.gv-set {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  width: 100%;
+}
+.gv-palette {
+  gap: 4px;
+}
+.gv-order {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gv-order li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+}
+.gv-order li > :first-child {
+  flex: 1 1 auto;
+}
+.gv-keys {
+  border-collapse: collapse;
+  font-size: var(--gv-table);
+}
+.gv-keys :is(th, td) {
+  padding: 2px 4px;
+  text-align: left;
 }

@@ -3,7 +3,7 @@
   import type { GraphModel } from '../model/model.ts';
   import IssueIcon from './IssueIcon.svelte';
   import { watch } from './watch.svelte.ts';
-  import { issueWords } from './words.ts';
+  import { issueOf, say } from './words.ts';
 
   let { model }: { model: GraphModel } = $props();
   const w = watch(() => model, []);
@@ -15,12 +15,12 @@
 
 <div class="gv-panel-body" data-testid="issues-panel">
   {#if issues.length === 0}
-    <p class="gv-note">No issues.</p>
+    <p class="gv-note">{say(model, 'No issues.')}</p>
   {:else}
     <ol class="gv-issues">
       {#each issues as i, n (n)}
         <li data-code={i.code}>
-          <IssueIcon /><span>{issueWords(i, (k) => model.label(k), model.profile.checks)}</span>
+          <IssueIcon /><span>{issueOf(model, i)}</span>
         </li>
       {/each}
     </ol>

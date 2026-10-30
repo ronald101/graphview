@@ -2,7 +2,6 @@
 // and the colours of its two halves. A host may hand the scene its own looks and shapes; a kind
 // without a look draws as plain.
 import type { GraphModel } from '../model/model.ts';
-import { OTHER } from '../model/typeRegistry.ts';
 import { UNIT_SHAPES, type UnitShape } from './shapes.ts';
 
 export interface Look {
@@ -36,6 +35,7 @@ export const lookOf = (looks: Looks, kind: string): Look =>
  */
 export function halfSlots(m: GraphModel, i: number): [number, number] {
   const slots = m.types.unitSlot;
+  const OTHER = m.types.other;
   const slot = (j: number) => (m.kinds.ends.has(j) ? OTHER : (slots[j] ?? OTHER));
   const e = m.kinds.ends.get(i);
   if (!e) return [slots[i] ?? OTHER, slots[i] ?? OTHER];

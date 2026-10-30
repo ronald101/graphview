@@ -1,11 +1,11 @@
 // Where units start (specification 6.1): given positions, or seeded starting
 // positions for the force layout. Graph coordinates, y pointing down.
 import { keyId, type Graph, type Key } from '../core/index.ts';
+import { STEP } from '../settings/defaults.ts';
+
+export { STEP };
 
 export type Positions = Map<string, { x: number; y: number }>;
-
-/** The distance between neighbouring units, in graph coordinates. */
-export const STEP = 100;
 
 /** Seeded random numbers (mulberry32), for starting positions and offsets. */
 export function seeded(seed: number): () => number {
@@ -30,8 +30,8 @@ export function givenLayout(graph: Graph): Positions {
 }
 
 /** Seeded starting positions for the force layout, in a square that grows with the graph. */
-export function startPositions(units: Key[], seed: number): Positions {
+export function startPositions(units: Key[], seed: number, step = STEP): Positions {
   const rnd = seeded(seed);
-  const side = Math.sqrt(units.length) * STEP;
+  const side = Math.sqrt(units.length) * step;
   return new Map(units.map((k) => [keyId(k), { x: rnd() * side, y: rnd() * side }]));
 }

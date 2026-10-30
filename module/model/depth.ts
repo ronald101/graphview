@@ -1,23 +1,33 @@
-// The depth rules of the viewer (specification 6.4). The shaders in
-// render/gpu.ts compute the same values on the GPU; this file is their reference and serves
-// picking, the panels and the scene for tests.
+// The depth rules of the viewer (specification 6.4). The shaders compute the same values on the GPU;
+// this file is their reference and serves picking, the panels and the scene for tests. The values come
+// from the settings of the group "Root and depth".
+import { CHEVRON_AT, DEPTH_RULES, FOREGROUND, SPACING } from '../settings/defaults.ts';
+
+export { CHEVRON_AT, DEPTH_RULES, FOREGROUND, SPACING };
 
 /** Degree of separation: 0 for the root, -1 for a unit the root does not reach. */
 export type Degree = number;
 
-/** The distance between depth planes, in world units; the layout spans 1000. */
-export const SPACING = 300;
-/** The global foreground offset: the z of the active path (specification 6.4). */
-export const FOREGROUND = 0;
-
-export const DEPTH_RULES = {
-  second: { scale: 0.6, opacity: 0.6 },
-  far: { scale: 0.25, opacity: 0.15 },
-  path: { scale: 1.2, opacity: 1, glow: 1 },
-  dimmed: 0.05,
+/** The rules a depth state follows. */
+export interface DepthRules {
+  spacing: number;
+  foreground: number;
+  second: { scale: number; opacity: number };
+  far: { scale: number; opacity: number };
+  path: { scale: number; opacity: number; glow: number };
+  dimmed: number;
   /** Deepest plane, in steps of the depth spacing. */
-  maxPlanes: 6,
-} as const;
+  maxPlanes: number;
+  /** Degrees up to this share the front plane with the root. */
+  frontDegrees: number;
+}
+
+export const DEFAULT_DEPTH: DepthRules = {
+  spacing: SPACING,
+  foreground: FOREGROUND,
+  ...DEPTH_RULES,
+  frontDegrees: 1,
+};
 
 export interface DepthState {
   z: number;
@@ -36,34 +46,31 @@ export interface DepthInput {
 }
 
 /**
- * The plane a unit sits on, counted from the front: 0 for the root and degree 1, 1 for
- * degree 2, then one plane per degree up to the deepest; units out of reach sit deepest.
+ * The plane a unit sits on, counted from the front: 0 for the root and the degrees in front, then one
+ * plane per degree up to the deepest; units out of reach sit deepest.
  */
-export function plane(degree: Degree): number {
-  if (degree < 0) return DEPTH_RULES.maxPlanes;
-  return Math.min(DEPTH_RULES.maxPlanes, Math.max(0, degree - 1));
+export function plane(degree: Degree, r: DepthRules = DEFAULT_DEPTH): number {
+  if (degree < 0) return r.maxPlanes;
+  return Math.min(r.maxPlanes, Math.max(0, degree - r.frontDegrees));
 }
 
 /**
- * Where a unit sits and how it looks. Without a root everything sits on z = 0 at full size.
- * With a root: degree 0 and 1 in front at full size; degree 2 one plane back at 60 percent;
- * degree 3 and more further back, as points at 15 percent. With an active path, the path's
- * units come to the foreground at 1.2 times their size and glow, and the rest dims to 0.05.
+ * Where a unit sits and how it looks. Without a root everything sits on z = 0 at full size. With a
+ * root: the front plane at full size; the second plane back at its size and opacity; the planes
+ * behind at the far size and opacity. With an active path, the path's units come to the foreground
+ * at the path's size and glow, and the rest dims.
  */
-export function depthState(i: DepthInput): DepthState {
+export function depthState(i: DepthInput, r: DepthRules = DEFAULT_DEPTH): DepthState {
   let s: DepthState = { z: 0, scale: 1, opacity: 1, glow: 0 };
   if (i.hasRoot) {
-    const p = plane(i.degree);
-    if (p === 1) s = { z: -SPACING, scale: DEPTH_RULES.second.scale, opacity: DEPTH_RULES.second.opacity, glow: 0 };
-    else if (p > 1) s = { z: -SPACING * p, scale: DEPTH_RULES.far.scale, opacity: DEPTH_RULES.far.opacity, glow: 0 };
+    const p = plane(i.degree, r);
+    if (p === 1) s = { z: -r.spacing, scale: r.second.scale, opacity: r.second.opacity, glow: 0 };
+    else if (p > 1) s = { z: -r.spacing * p, scale: r.far.scale, opacity: r.far.opacity, glow: 0 };
   }
   if (i.hasPath) {
-    if (i.onPath) s = { z: FOREGROUND, ...DEPTH_RULES.path };
-    else s = { ...s, opacity: DEPTH_RULES.dimmed, glow: 0 };
+    if (i.onPath) s = { z: r.foreground, ...r.path };
+    else s = { ...s, opacity: r.dimmed, glow: 0 };
   }
   if (!i.depth) s = { ...s, z: 0 };
   return s;
 }
-
-/** The chevrons' places along a relation's line, as a share of its length from its first unit. */
-export const CHEVRON_AT = { forward: 1 / 3, backward: 2 / 3 } as const;

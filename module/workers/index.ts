@@ -21,17 +21,18 @@ function ask<T>(worker: Worker, message: Record<string, unknown>): Promise<T> {
   });
 }
 
-export function runForce(input: ForceInput): Promise<ForceOutput> {
-  if (!hasWorkers) return Promise.resolve(forceLayout(input));
+/** The force layout in a worker, or on the page where there are no workers or `inline` asks for it. */
+export function runForce(input: ForceInput, inline = false): Promise<ForceOutput> {
+  if (!hasWorkers || inline) return Promise.resolve(forceLayout(input));
   layoutWorker ??= new Worker(new URL('./layout.worker.ts', import.meta.url), { type: 'module' });
   return ask(layoutWorker, { input });
 }
 
 export type { ForceInput, ForceOutput };
 
-/** A worker that keeps one graph and answers distances and path sets about it. */
-export function graphWorker(units: Key[], keypairs: [Key, Key][]): GraphWorker {
-  if (!hasWorkers) {
+/** A worker that keeps one graph and answers distances and path sets about it; on the page with `inline`. */
+export function graphWorker(units: Key[], keypairs: [Key, Key][], inline = false): GraphWorker {
+  if (!hasWorkers || inline) {
     const r = loadGraph({
       format: 'graphview-graph/1',
       vertices: units.map((key) => ({ key })),

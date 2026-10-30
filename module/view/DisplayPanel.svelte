@@ -1,32 +1,45 @@
-<!-- Display (specification 6.8): factors for unit size, line width and opacity, applied in the shaders. -->
+<!-- Display (specification 6.8): factors for unit size, line width and opacity, applied in the shaders.
+     The sliders' ranges, step and decimals are settings of the group "Display". -->
 <script lang="ts">
   import type { Overrides } from '../model/contracts.ts';
   import type { GraphModel } from '../model/model.ts';
   import { watch } from './watch.svelte.ts';
+  import { say } from './words.ts';
 
   let { model }: { model: GraphModel } = $props();
   const w = watch(() => model, ['display']);
-  const overrides = $derived.by(() => {
+  const view = $derived.by(() => {
     void w.v;
-    return { ...model.overrides };
+    const s = model.settings;
+    return {
+      overrides: { ...model.overrides },
+      ranges: {
+        size: s.get('display.ranges.size'),
+        width: s.get('display.ranges.width'),
+        opacity: s.get('display.ranges.opacity'),
+      },
+      step: s.get('display.step'),
+      decimals: s.get('display.decimals'),
+    };
   });
-  const SLIDERS: [keyof Overrides, string, number][] = [
-    ['size', 'Unit size', 3],
-    ['width', 'Line width', 3],
-    ['opacity', 'Opacity', 1],
+  const SLIDERS: [keyof Overrides, string][] = [
+    ['size', 'Unit size'],
+    ['width', 'Line width'],
+    ['opacity', 'Opacity'],
   ];
 </script>
 
 <div class="gv-panel-body" data-testid="display-panel">
-  {#each SLIDERS as [k, label, max] (k)}
+  {#each SLIDERS as [k, words] (k)}
+    {@const label = say(model, words)}
     <label class="gv-field gv-block"
-      >{label} <span class="gv-num">{overrides[k].toFixed(2)}</span>
+      >{label} <span class="gv-num">{view.overrides[k].toFixed(view.decimals)}</span>
       <input
         type="range"
-        min="0.25"
-        {max}
-        step="0.05"
-        value={overrides[k]}
+        min={view.ranges[k][0]}
+        max={view.ranges[k][1]}
+        step={view.step}
+        value={view.overrides[k]}
         aria-label={label}
         oninput={(e) => model.setOverrides({ [k]: Number((e.target as HTMLInputElement).value) })}
       />

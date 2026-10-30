@@ -1,7 +1,7 @@
 // Multi-variable filtering (specification 6.7): a time window and a weight threshold, compounded.
 import { keyId, keypairId, type Graph, type Key } from '../core/index.ts';
 import type { Filters } from './contracts.ts';
-import { timeValue } from './schema.ts';
+import { SCHEMA_RULES, timeValue, type SchemaRules } from './schema.ts';
 
 export const NO_FILTERS: Filters = { timeField: null, from: null, to: null, weightField: null, threshold: null };
 
@@ -9,17 +9,17 @@ const inWindow = (t: number | null, f: Filters) =>
   t === null || ((f.from === null || t >= f.from) && (f.to === null || t <= f.to));
 
 /** Whether a unit passes the time window. A row without a time always passes. */
-export function unitPasses(g: Graph, k: Key, f: Filters): boolean {
+export function unitPasses(g: Graph, k: Key, f: Filters, rules: SchemaRules = SCHEMA_RULES): boolean {
   if (!f.timeField) return true;
   const v = g.unitInfo.get(keyId(k))?.attrs?.[f.timeField];
-  return inWindow(v === undefined ? null : timeValue(v, f.timeField), f);
+  return inWindow(v === undefined ? null : timeValue(v, f.timeField, rules), f);
 }
 
 /** Whether a keypair passes the time window. */
-export function keypairPasses(g: Graph, a: Key, b: Key, f: Filters): boolean {
+export function keypairPasses(g: Graph, a: Key, b: Key, f: Filters, rules: SchemaRules = SCHEMA_RULES): boolean {
   if (!f.timeField) return true;
   const v = g.keypairInfo.get(keypairId(a, b))?.attrs?.[f.timeField];
-  return inWindow(v === undefined ? null : timeValue(v, f.timeField), f);
+  return inWindow(v === undefined ? null : timeValue(v, f.timeField, rules), f);
 }
 
 export function weightOf(g: Graph, a: Key, b: Key, field: string | null): number | null {
@@ -59,10 +59,15 @@ export function lineWeight(
 }
 
 /** The range of a time field over all rows, or of a weight field over the keypairs. */
-export function fieldRange(g: Graph, field: string, kind: 'time' | 'weight'): { min: number; max: number } | null {
+export function fieldRange(
+  g: Graph,
+  field: string,
+  kind: 'time' | 'weight',
+  rules: SchemaRules = SCHEMA_RULES,
+): { min: number; max: number } | null {
   if (kind === 'weight') return range(g.keypairs.map(([a, b]) => weightOf(g, a, b, field)));
   const values: (number | null)[] = [];
-  const add = (v: unknown) => values.push(v === undefined ? null : timeValue(v, field));
+  const add = (v: unknown) => values.push(v === undefined ? null : timeValue(v, field, rules));
   for (const k of g.units) add(g.unitInfo.get(keyId(k))?.attrs?.[field]);
   for (const [a, b] of g.keypairs) add(g.keypairInfo.get(keypairId(a, b))?.attrs?.[field]);
   return range(values);

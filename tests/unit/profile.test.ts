@@ -164,9 +164,9 @@ describe('§5.7 Profiles', () => {
     expect(['a', 'h', 'x'].map((k) => of(k).shape)).toEqual(['disc', 'square', 'divided']);
     expect(of('c').opacity).toBeCloseTo(SUPERSEDED, 5);
     expect(of('a').opacity).toBeCloseTo(1, 5);
-    expect(shapeSlot('square', TOWN_LOOKS.shapes)).toBe(2);
+    expect(shapeSlot('square', TOWN_LOOKS.shapes)).toBe(UNIT_SHAPES.length);
     const fs = unitFs(TOWN_LOOKS.shapes);
-    expect(fs).toContain('if (shape < 2.5)');
+    expect(fs).toContain(`if (shape < ${UNIT_SHAPES.length}.5)`);
     expect(fs).toContain('max(abs(uv.x), abs(uv.y))');
   });
 

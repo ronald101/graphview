@@ -174,7 +174,7 @@ test('§8.12 Saving files: Save writes the graph with its view; Save again asks 
   expect([s.mode, s.root, s.target, s.hasPath]).toEqual(['3d', 1, 3, true]);
   expect(await read(page, 'choice')).toEqual(chosen);
   expect((await read<{ size: number }>(page, 'overrides')).size).toBe(1.5);
-  await expect(page.getByRole('banner').getByLabel('Hulls')).not.toBeChecked();
+  await expect(page.getByRole('toolbar', { name: 'View' }).getByLabel('Hulls')).not.toBeChecked();
   await expect(page.getByRole('button', { name: '3D', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Root', { exact: true })).toHaveValue(
     await page.evaluate(() => (window as any).graphview.model.label(1)),
@@ -262,6 +262,8 @@ test('§6.15 Picture: Save picture writes the picture as on screen, with its bac
         corner: [...g.getImageData(2, 2, 1, 1).data],
       };
     }, name);
+  // Save picture ends the viewer's Display section, which hands the picture to the shell to save.
+  await page.getByTestId('section-display').locator('h2 button').click();
   await page.evaluate(() => ((window as any).__saveAs = 'with.png'));
   await page.getByRole('button', { name: 'Save picture' }).click();
   await expect(page.getByTestId('message')).toHaveText('Saved with.png.');

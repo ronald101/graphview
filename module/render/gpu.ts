@@ -5,12 +5,13 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
 import type { V3 } from '../model/picking.ts';
-import { MAX_TYPES } from '../model/typeRegistry.ts';
+import { MAX_TYPES } from '../settings/defaults.ts';
 import { instanced, lineQuad, type ChevronBuffers, type LineBuffers, type UnitBuffers } from './geometry.ts';
-import { CHEVRON_FS, CHEVRON_VS } from './shaders/chevron.ts';
-import { LINE_FS, LINE_VS } from './shaders/line.ts';
+import type { DrawColours, DrawRules } from './rules.ts';
+import { CHEVRON_FS, chevronVs } from './shaders/chevron.ts';
+import { LINE_FS, lineVs } from './shaders/line.ts';
 import type { UnitShape } from './shapes.ts';
-import { unitFs, UNIT_VS } from './shaders/unit.ts';
+import { unitFs, unitVs } from './shaders/unit.ts';
 
 /**
  * A colour for the shaders' uniforms, in the same sRGB values as its text. three.js would
@@ -18,14 +19,45 @@ import { unitFs, UNIT_VS } from './shaders/unit.ts';
  */
 const shaderColour = (c: string, out = new THREE.Color()) => out.set(c).convertLinearToSRGB();
 
-export interface Colours {
-  surface: string;
-  ink: string;
-  context: string;
-  neutral: string;
-  path: string;
-  issue: string;
+/** What the renderer and the camera start with (the groups "Renderer" and "Camera"). */
+export interface GpuOptions {
+  antialias: boolean;
+  alpha: boolean;
+  preserveDrawingBuffer: boolean;
+  /** Null for the device's own ratio. */
+  pixelRatio: number | null;
+  fov: number;
+  near: number;
+  far: number;
+  start: V3;
 }
+
+export const GPU_DEFAULTS: GpuOptions = {
+  antialias: true,
+  alpha: true,
+  preserveDrawingBuffer: true,
+  pixelRatio: null,
+  fov: 45,
+  near: 1,
+  far: 100000,
+  start: [0, 0, 1500],
+};
+
+/** The orbit controls' settings that change at once. */
+export interface ControlOptions {
+  damping: boolean;
+  screenSpacePanning: boolean;
+  zoomSpeed: number;
+  rotateSpeed: number;
+  panSpeed: number;
+  zoomToCursor: boolean;
+  minDistance: number;
+  maxDistance: number | null;
+  minPolarAngle: number;
+  maxPolarAngle: number;
+}
+
+export type Layer = 'hulls' | 'lines' | 'chevrons' | 'units';
 
 export interface HullSpec {
   type: string;
@@ -48,6 +80,10 @@ export class Gpu {
   private frame = 0;
   private dirty = true;
   private surface = '#F6F8F9';
+  /** The palettes' slots, which the shaders are built for. */
+  private slots = MAX_TYPES;
+  private order: Record<Layer, number> = { hulls: 0, lines: 1, chevrons: 3, units: 4 };
+  readonly options: GpuOptions;
   /** Before each frame, for transitions. */
   onFrame: (() => void) | null = null;
   /** After each frame, for the label overlay. */
@@ -57,43 +93,78 @@ export class Gpu {
 
   private container: HTMLElement;
 
-  constructor(container: HTMLElement, input: HTMLElement) {
+  constructor(container: HTMLElement, input: HTMLElement, options: GpuOptions = GPU_DEFAULTS) {
     this.container = container;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(devicePixelRatio);
+    this.options = options;
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: options.antialias,
+      alpha: options.alpha,
+      preserveDrawingBuffer: options.preserveDrawingBuffer,
+    });
+    this.renderer.setPixelRatio(options.pixelRatio ?? devicePixelRatio);
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.style.display = 'block';
-    this.camera = new THREE.PerspectiveCamera(45, 1, 1, 100000);
-    this.camera.position.set(0, 0, 1500);
+    this.camera = new THREE.PerspectiveCamera(options.fov, 1, options.near, options.far);
+    this.camera.position.set(...options.start);
     this.controls = new OrbitControls(this.camera, input);
-    this.controls.enableDamping = false;
-    this.controls.screenSpacePanning = true;
     this.controls.addEventListener('change', () => this.request());
-    const palette = () => Array.from({ length: MAX_TYPES }, () => shaderColour('#74859A'));
+    // The values below are placeholders: the scene sets every one from the settings before the first frame.
+    const v2 = () => new THREE.Vector2();
+    const v3 = () => new THREE.Vector3();
+    const v4 = () => new THREE.Vector4();
+    const colour = () => new THREE.Color();
     this.uniforms = {
       uT: { value: 1 },
-      uHasRoot: { value: new THREE.Vector2(0, 0) },
-      uHasPath: { value: new THREE.Vector2(0, 0) },
-      uDepth: { value: new THREE.Vector2(0, 0) },
-      uSize: { value: 6 },
+      uHasRoot: { value: v2() },
+      uHasPath: { value: v2() },
+      uDepth: { value: v2() },
+      uDepthA: { value: v4() },
+      uDepthB: { value: v4() },
+      uDepthC: { value: v4() },
+      uCull: { value: 0 },
+      uDiscard: { value: 0 },
+      uSize: { value: 1 },
       uSizeScale: { value: 1 },
-      uWidth: { value: 1.5 },
+      uWidth: { value: 1 },
       uWidthScale: { value: 1 },
       uOpacityScale: { value: 1 },
-      uChevronPx: { value: 14 },
+      uChevronPx: { value: 1 },
       uResolution: { value: new THREE.Vector2(1, 1) },
-      uUnitPalette: { value: palette() },
-      uKeypairPalette: { value: palette() },
-      uInk: { value: shaderColour('#13222E') },
-      uSurface: { value: shaderColour('#F6F8F9') },
-      uContext: { value: shaderColour('#74859A') },
-      uNeutral: { value: shaderColour('#A9B4BE') },
-      uPathColour: { value: shaderColour('#17A070') },
-      uIssue: { value: shaderColour('#D03B3B') },
+      uUnitPalette: { value: this.palette() },
+      uKeypairPalette: { value: this.palette() },
+      uUnitGlow: { value: v2() },
+      uRing: { value: v2() },
+      uOutlineFrom: { value: 0 },
+      uCut: { value: v2() },
+      uLineGain: { value: v4() },
+      uFeather: { value: 0 },
+      uBrighten: { value: 0 },
+      uDash: { value: v2() },
+      uChevronPath: { value: v2() },
+      uChevronRoom: { value: v2() },
+      uBelowChevrons: { value: 0 },
+      uGlyph: { value: v3() },
+      uChevronGlow: { value: v4() },
+      uSurface: { value: colour() },
+      uRingColour: { value: colour() },
+      uOutlineColour: { value: colour() },
+      uGlowColour: { value: colour() },
+      uCutColour: { value: colour() },
+      uLineColour: { value: colour() },
+      uLineBelowColour: { value: colour() },
+      uLinePathColour: { value: colour() },
+      uStrengthColour: { value: colour() },
+      uIssue: { value: colour() },
+      uHighlight: { value: v2() },
+      uOutgoing: { value: colour() },
+      uIncoming: { value: colour() },
     };
-    // Hulls go first, so that lines, chevrons and units draw over them.
-    this.hullGroup.renderOrder = 0;
+    this.hullGroup.renderOrder = this.order.hulls;
     this.scene.add(this.hullGroup);
+  }
+
+  private palette(): THREE.Color[] {
+    return Array.from({ length: this.slots }, () => new THREE.Color());
   }
 
   private material(vs: string, fs: string): THREE.ShaderMaterial {
@@ -107,7 +178,7 @@ export class Gpu {
     });
   }
 
-  /** Replaces all geometry; the unit shader holds the shapes given. */
+  /** Replaces all geometry; the unit shader holds the shapes given, and the palettes the slots given. */
   setData(
     u: UnitBuffers,
     uCount: number,
@@ -116,6 +187,7 @@ export class Gpu {
     c: ChevronBuffers,
     cCount: number,
     shapes: readonly UnitShape[],
+    slots: number = MAX_TYPES,
   ) {
     for (const m of [this.units, this.lines, this.chevrons]) {
       if (!m) continue;
@@ -123,13 +195,16 @@ export class Gpu {
       m.geometry.dispose();
       (m.material as THREE.Material).dispose();
     }
+    if (slots !== this.slots) {
+      this.slots = slots;
+      this.uniforms.uUnitPalette.value = this.palette();
+      this.uniforms.uKeypairPalette.value = this.palette();
+    }
     const quad = new THREE.PlaneGeometry(1, 1);
-    this.lines = new THREE.Mesh(instanced(lineQuad(), lCount, l), this.material(LINE_VS, LINE_FS));
-    this.lines.renderOrder = 1;
-    this.chevrons = new THREE.Mesh(instanced(quad, cCount, c), this.material(CHEVRON_VS, CHEVRON_FS));
-    this.chevrons.renderOrder = 3;
-    this.units = new THREE.Mesh(instanced(quad, uCount, u), this.material(UNIT_VS, unitFs(shapes)));
-    this.units.renderOrder = 4;
+    this.lines = new THREE.Mesh(instanced(lineQuad(), lCount, l), this.material(lineVs(slots), LINE_FS));
+    this.chevrons = new THREE.Mesh(instanced(quad, cCount, c), this.material(chevronVs(slots), CHEVRON_FS));
+    this.units = new THREE.Mesh(instanced(quad, uCount, u), this.material(unitVs(slots), unitFs(shapes)));
+    this.applyOrder();
     for (const m of [this.lines, this.chevrons, this.units]) {
       m.frustumCulled = false;
       this.scene.add(m);
@@ -150,20 +225,95 @@ export class Gpu {
 
   setPalette(kind: 'unit' | 'keypair', colours: string[]) {
     const u = (kind === 'unit' ? this.uniforms.uUnitPalette : this.uniforms.uKeypairPalette).value as THREE.Color[];
-    colours.slice(0, MAX_TYPES).forEach((c, i) => shaderColour(c, u[i]));
+    colours.slice(0, u.length).forEach((c, i) => shaderColour(c, u[i]));
     this.request();
   }
 
-  setColours(c: Colours) {
-    shaderColour(c.surface, this.uniforms.uSurface.value);
-    shaderColour(c.ink, this.uniforms.uInk.value);
-    shaderColour(c.context, this.uniforms.uContext.value);
-    shaderColour(c.neutral, this.uniforms.uNeutral.value);
-    shaderColour(c.path, this.uniforms.uPathColour.value);
-    shaderColour(c.issue, this.uniforms.uIssue.value);
+  setColours(c: DrawColours) {
+    const u = this.uniforms;
+    shaderColour(c.surface, u.uSurface.value);
+    shaderColour(c.ring, u.uRingColour.value);
+    shaderColour(c.outline, u.uOutlineColour.value);
+    shaderColour(c.glow, u.uGlowColour.value);
+    shaderColour(c.cut, u.uCutColour.value);
+    shaderColour(c.line, u.uLineColour.value);
+    shaderColour(c.lineBelow, u.uLineBelowColour.value);
+    shaderColour(c.linePath, u.uLinePathColour.value);
+    shaderColour(c.strength, u.uStrengthColour.value);
+    shaderColour(c.issue, u.uIssue.value);
+    shaderColour(c.outgoing, u.uOutgoing.value);
+    shaderColour(c.incoming, u.uIncoming.value);
     this.surface = c.surface;
     this.renderer.setClearColor(c.surface, 1);
     this.request();
+  }
+
+  /** Every number the shaders draw with. */
+  setRules(r: DrawRules) {
+    const u = this.uniforms;
+    const d = r.depth;
+    u.uDepthA.value.set(d.spacing, d.foreground, d.maxPlanes, d.frontDegrees);
+    u.uDepthB.value.set(d.second.scale, d.second.opacity, d.far.scale, d.far.opacity);
+    u.uDepthC.value.set(d.path.scale, d.path.opacity, d.path.glow, d.dimmed);
+    u.uCull.value = r.cull;
+    u.uDiscard.value = r.discard;
+    u.uSize.value = r.units.radius;
+    u.uUnitGlow.value.set(...r.units.glow);
+    u.uRing.value.set(...r.units.ring);
+    u.uOutlineFrom.value = r.units.outlineFrom;
+    u.uCut.value.set(...r.units.cut);
+    u.uWidth.value = r.lines.width;
+    u.uLineGain.value.set(...r.lines.gain);
+    u.uFeather.value = r.lines.feather;
+    u.uBrighten.value = r.lines.brighten;
+    u.uDash.value.set(...r.dash);
+    u.uChevronPx.value = r.chevrons.size;
+    u.uChevronPath.value.set(...r.chevrons.path);
+    u.uChevronRoom.value.set(r.chevrons.room, r.chevrons.fadeIn);
+    u.uBelowChevrons.value = r.chevrons.below ? 1 : 0;
+    u.uGlyph.value.set(...r.chevrons.glyph);
+    u.uChevronGlow.value.set(...r.chevrons.glow);
+    u.uHighlight.value.set(r.highlight.scale, r.highlight.dim);
+    this.request();
+  }
+
+  /** The orbit controls' speeds, limits and glide. */
+  setControls(c: ControlOptions) {
+    const k = this.controls;
+    k.enableDamping = c.damping;
+    k.screenSpacePanning = c.screenSpacePanning;
+    k.zoomSpeed = c.zoomSpeed;
+    k.rotateSpeed = c.rotateSpeed;
+    k.panSpeed = c.panSpeed;
+    k.zoomToCursor = c.zoomToCursor;
+    k.minDistance = c.minDistance;
+    k.maxDistance = c.maxDistance ?? Infinity;
+    k.minPolarAngle = c.minPolarAngle;
+    k.maxPolarAngle = c.maxPolarAngle;
+    this.request();
+  }
+
+  /** The camera's field of view. */
+  setFov(fov: number) {
+    if (this.camera.fov === fov) return;
+    this.camera.fov = fov;
+    this.camera.updateProjectionMatrix();
+    this.request();
+  }
+
+  /** The order in which the layers draw, the last on top. */
+  setOrder(order: readonly Layer[]) {
+    order.forEach((layer, i) => (this.order[layer] = i));
+    this.applyOrder();
+    this.request();
+  }
+
+  private applyOrder() {
+    this.hullGroup.renderOrder = this.order.hulls;
+    for (const child of this.hullGroup.children) child.renderOrder = this.order.hulls;
+    if (this.lines) this.lines.renderOrder = this.order.lines;
+    if (this.chevrons) this.chevrons.renderOrder = this.order.chevrons;
+    if (this.units) this.units.renderOrder = this.order.units;
   }
 
   setHulls(hulls: HullSpec[], opacity: number) {
@@ -192,7 +342,7 @@ export class Gpu {
           side: THREE.DoubleSide,
         }),
       );
-      fill.renderOrder = 0;
+      fill.renderOrder = this.order.hulls;
       fill.userData.type = h.type;
       this.hullGroup.add(fill);
     }
@@ -247,18 +397,30 @@ export class Gpu {
     this.onDraw?.();
   }
 
-  /** The picture as it is on screen, at the device's pixel size, with or without the background. */
-  capture(background: boolean): HTMLCanvasElement {
+  /** The pixels drawn per CSS pixel. */
+  get pixelRatio(): number {
+    return this.renderer.getPixelRatio();
+  }
+
+  /** The picture as it is on screen, at a factor of its pixel size, with or without the background. */
+  capture(background: boolean, scale = 1): HTMLCanvasElement {
+    const ratio = this.renderer.getPixelRatio();
+    if (scale !== 1) {
+      this.renderer.setPixelRatio(ratio * scale);
+      this.renderer.setSize(this.width, this.height, false);
+    }
     if (!background) this.renderer.setClearColor(this.surface, 0);
     this.renderer.render(this.scene, this.camera);
     const out = document.createElement('canvas');
     out.width = this.renderer.domElement.width;
     out.height = this.renderer.domElement.height;
     out.getContext('2d')!.drawImage(this.renderer.domElement, 0, 0);
-    if (!background) {
-      this.renderer.setClearColor(this.surface, 1);
-      this.renderer.render(this.scene, this.camera);
+    if (scale !== 1) {
+      this.renderer.setPixelRatio(ratio);
+      this.renderer.setSize(this.width, this.height, false);
     }
+    this.renderer.setClearColor(this.surface, 1);
+    if (!background || scale !== 1) this.renderer.render(this.scene, this.camera);
     return out;
   }
 

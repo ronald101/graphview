@@ -2,7 +2,7 @@
      each end, in two columns, one for each perspective, with its pair type when the profile names
      one; then what any unit shows. -->
 <script lang="ts">
-  import { count } from '../words.ts';
+  import { count, say } from '../words.ts';
   import KeypairRecord from './KeypairRecord.svelte';
   import { keypairRecord } from './record.ts';
   import type { SectionProps, UnitShown } from './sections.ts';
@@ -29,8 +29,10 @@
 
 <h3 data-kind="interface">
   {view.ends.length === 2
-    ? `Interface between ${model.label(view.ends[0])} and ${model.label(view.ends[1])}`
-    : `Interface joining ${count(view.ends.length, 'unit', 'units')}`}
+    ? say(model, 'Interface between {a} and {b}', { a: model.label(view.ends[0]), b: model.label(view.ends[1]) })
+    : say(model, 'Interface joining {ends}', {
+        ends: count(view.ends.length, 'unit', 'units', model.settings.get('words.locale')),
+      })}
 </h3>
 <UnitSection {model} {inspected} {version} />
 <div class="gv-pair">
@@ -40,8 +42,8 @@
         <p class="gv-note" data-field="perspective">{view.perspectives[c].type}</p>
       {/if}
       {#each column as rec, r (r)}
-        <h4>{model.label(rec.from)} to {model.label(rec.to)}</h4>
-        <KeypairRecord {rec} />
+        <h4>{say(model, '{from} to {to}', { from: model.label(rec.from), to: model.label(rec.to) })}</h4>
+        <KeypairRecord {rec} {model} />
       {/each}
     </div>
   {/each}

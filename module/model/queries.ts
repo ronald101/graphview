@@ -1,7 +1,7 @@
 // Questions about a loaded graph and its paths that need nothing else of the view.
 import { keyId, keypairId, type Graph, type Key, type PathSetResult } from '../core/index.ts';
 import type { PathChoice, PathStep, Perspective, PlaneCounts } from './contracts.ts';
-import { plane } from './depth.ts';
+import { DEFAULT_DEPTH, plane, type DepthRules } from './depth.ts';
 import { weightOf } from './filters.ts';
 
 /** A unit's name: its label, or its key as JSON text (1 for the number, "1" for the text). */
@@ -38,7 +38,7 @@ export function activePath(paths: PathSetResult | null, choice: PathChoice | nul
 }
 
 /** Units per plane around the root (specification 7.2). */
-export function planeCounts(degrees: number[] | null): PlaneCounts {
+export function planeCounts(degrees: number[] | null, rules: DepthRules = DEFAULT_DEPTH): PlaneCounts {
   const c: PlaneCounts = { first: 0, second: 0, third: 0, farBack: 0, deepest: null };
   if (!degrees) return c;
   let deepest = 0;
@@ -46,7 +46,7 @@ export function planeCounts(degrees: number[] | null): PlaneCounts {
     if (d < 0) continue;
     deepest = Math.max(deepest, d);
     if (d === 0) continue;
-    const p = plane(d);
+    const p = plane(d, rules);
     if (p === 0) c.first++;
     else if (p === 1) c.second++;
     else if (p === 2) c.third++;

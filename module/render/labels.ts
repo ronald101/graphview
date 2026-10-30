@@ -1,4 +1,7 @@
-// Label placement (specification 6.12): labels show where they fit, never closer than 2 pixels.
+// Label placement (specification 6.12): labels show where they fit, never closer than the gap.
+import { LABEL_CELL, LABEL_GAP, LABEL_HEIGHT, LABEL_MOST, LABEL_SIDE, LABEL_VERTICAL } from '../settings/defaults.ts';
+
+export { LABEL_GAP, LABEL_HEIGHT };
 
 export interface LabelCandidate {
   index: number;
@@ -14,9 +17,27 @@ export interface PlacedLabel {
   box: { x: number; y: number; w: number; h: number };
 }
 
-export const LABEL_GAP = 2;
-export const LABEL_HEIGHT = 16;
-const CELL = 64;
+export type LabelPosition = 'right' | 'left' | 'below' | 'above';
+
+/** How labels are placed: the settings of the group "Labels", and the grid of the group "Speed". */
+export interface LabelPlacement {
+  gap: number;
+  height: number;
+  /** Space beside a unit, and above or below it. */
+  side: number;
+  vertical: number;
+  positions: readonly LabelPosition[];
+  cell: number;
+}
+
+export const LABEL_PLACEMENT: LabelPlacement = {
+  gap: LABEL_GAP,
+  height: LABEL_HEIGHT,
+  side: LABEL_SIDE,
+  vertical: LABEL_VERTICAL,
+  positions: ['right', 'left', 'below', 'above'],
+  cell: LABEL_CELL,
+};
 
 /** Greedy placement in candidate order: forced labels first, then the rest where they fit. */
 export function placeLabels(
@@ -24,15 +45,17 @@ export function placeLabels(
   measure: (text: string) => number,
   width: number,
   height: number,
-  limit = 400,
+  limit = LABEL_MOST,
   obstacles: { x: number; y: number; w: number; h: number; owner?: number }[] = [],
+  place: LabelPlacement = LABEL_PLACEMENT,
 ): PlacedLabel[] {
+  const { gap, height: tall, cell } = place;
   const grid = new Map<string, { x: number; y: number; w: number; h: number }[]>();
   const placed: PlacedLabel[] = [];
   const cells = (b: { x: number; y: number; w: number; h: number }) => {
     const out: string[] = [];
-    for (let i = Math.floor((b.x - LABEL_GAP) / CELL); i <= Math.floor((b.x + b.w + LABEL_GAP) / CELL); i++) {
-      for (let j = Math.floor((b.y - LABEL_GAP) / CELL); j <= Math.floor((b.y + b.h + LABEL_GAP) / CELL); j++)
+    for (let i = Math.floor((b.x - gap) / cell); i <= Math.floor((b.x + b.w + gap) / cell); i++) {
+      for (let j = Math.floor((b.y - gap) / cell); j <= Math.floor((b.y + b.h + gap) / cell); j++)
         out.push(`${i},${j}`);
     }
     return out;
@@ -41,12 +64,7 @@ export function placeLabels(
     for (const c of cells(b)) {
       for (const o of grid.get(c) ?? []) {
         if ((o as { owner?: number }).owner === self) continue;
-        if (
-          b.x < o.x + o.w + LABEL_GAP &&
-          o.x < b.x + b.w + LABEL_GAP &&
-          b.y < o.y + o.h + LABEL_GAP &&
-          o.y < b.y + b.h + LABEL_GAP
-        )
+        if (b.x < o.x + o.w + gap && o.x < b.x + b.w + gap && b.y < o.y + o.h + gap && o.y < b.y + b.h + gap)
           return true;
       }
     }
@@ -70,13 +88,14 @@ export function placeLabels(
   for (const c of ordered) {
     if (!c.forced && placed.length >= limit) break;
     const w = Math.ceil(measure(c.text));
-    // Right of the unit first, then left.
-    const options = [
-      { x: c.x + c.r + 4, y: c.y - LABEL_HEIGHT / 2, w, h: LABEL_HEIGHT },
-      { x: c.x - c.r - 4 - w, y: c.y - LABEL_HEIGHT / 2, w, h: LABEL_HEIGHT },
-      { x: c.x - w / 2, y: c.y + c.r + 3, w, h: LABEL_HEIGHT },
-      { x: c.x - w / 2, y: c.y - c.r - 3 - LABEL_HEIGHT, w, h: LABEL_HEIGHT },
-    ];
+    // In the order of the places: right of the unit first, then left, below and above.
+    const box: Record<LabelPosition, { x: number; y: number; w: number; h: number }> = {
+      right: { x: c.x + c.r + place.side, y: c.y - tall / 2, w, h: tall },
+      left: { x: c.x - c.r - place.side - w, y: c.y - tall / 2, w, h: tall },
+      below: { x: c.x - w / 2, y: c.y + c.r + place.vertical, w, h: tall },
+      above: { x: c.x - w / 2, y: c.y - c.r - place.vertical - tall, w, h: tall },
+    };
+    const options = place.positions.map((p) => box[p]);
     let done = false;
     for (const b of options) {
       if (!c.forced && (b.x < 0 || b.y < 0 || b.x + b.w > width || b.y + b.h > height)) continue;

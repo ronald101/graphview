@@ -4,6 +4,7 @@
   import type { GraphModel } from '../model/model.ts';
   import { sectionFor, type UnitSections } from './inspector/sections.ts';
   import { watch } from './watch.svelte.ts';
+  import { say } from './words.ts';
 
   /** sections: the host's sections for its own kinds of unit, by kind. */
   let { model, sections = {} }: { model: GraphModel; sections?: UnitSections } = $props();
@@ -17,7 +18,7 @@
 
 <div class="gv-panel-body" data-testid="inspector">
   {#if !shown}
-    <p class="gv-note">Click a unit, a chevron or a line.</p>
+    <p class="gv-note">{say(model, 'Click a unit, a chevron or a line.')}</p>
   {:else}
     {@const Shown = sectionFor(model, shown, sections)}
     <Shown {model} inspected={shown} version={w.v} />

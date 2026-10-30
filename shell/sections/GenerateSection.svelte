@@ -1,7 +1,9 @@
-<!-- Generate: an example or a family, its parameters and seed, broken rules, and added types,
-     weights and times; then Generate, and an explanation of what it makes. -->
+<!-- Generate (specification 8.4): an example or a family, its parameters and seed, relations through
+     interfaces, broken rules, and added types, weights and times; then Generate, and an explanation of
+     what it makes. -->
 <script lang="ts">
   import { RangeSlider, Section } from '../../module/index.ts';
+  import { MAX_RELATION_TYPES, MAX_UNIT_TYPES } from '../lib/decorate.ts';
   import { examples } from '../lib/examples.ts';
   import {
     explainBreaks,
@@ -104,6 +106,26 @@
     </details>
   {/if}
   <label class="check"><input type="checkbox" bind:checked={shell.addTypes} /> Add types, weights and times</label>
+  <label class="gv-field"
+    >Unit types to add <input
+      class="param"
+      type="number"
+      min="1"
+      max={MAX_UNIT_TYPES}
+      bind:value={shell.deco.unitTypes}
+      disabled={!shell.addTypes}
+    /></label
+  >
+  <label class="gv-field"
+    >Relation types to add <input
+      class="param"
+      type="number"
+      min="1"
+      max={MAX_RELATION_TYPES}
+      bind:value={shell.deco.relationTypes}
+      disabled={!shell.addTypes}
+    /></label
+  >
   <RangeSlider
     label="Weights"
     testid="weights"

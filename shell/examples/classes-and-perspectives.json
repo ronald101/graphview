@@ -1,0 +1,534 @@
+{
+  "format": "graphview-graph/1",
+  "meta": {
+    "name": "Classes and perspectives",
+    "description": "An invented family of courses and people: two class units that define themselves, their members, two teachings and a revision. Every relation runs through an interface with its member pair, and every keypair carries its pair type. The shell opens it with its profile, by perspectives."
+  },
+  "vertices": [
+    {
+      "key": "course",
+      "label": "Course",
+      "attrs": {
+        "class": "Class",
+        "classUnit": true
+      }
+    },
+    {
+      "key": "person",
+      "label": "Person",
+      "attrs": {
+        "class": "Class",
+        "classUnit": true
+      }
+    },
+    {
+      "key": "algebra",
+      "label": "Algebra",
+      "attrs": {
+        "class": "Course"
+      }
+    },
+    {
+      "key": "algebra-2",
+      "label": "Algebra II",
+      "attrs": {
+        "class": "Course"
+      }
+    },
+    {
+      "key": "geometry",
+      "label": "Geometry",
+      "attrs": {
+        "class": "Course"
+      }
+    },
+    {
+      "key": "ada",
+      "label": "Ada",
+      "attrs": {
+        "class": "Person"
+      }
+    },
+    {
+      "key": "ben",
+      "label": "Ben",
+      "attrs": {
+        "class": "Person"
+      }
+    },
+    {
+      "key": "course-def",
+      "label": "course-def",
+      "interface": true,
+      "attrs": {
+        "class": "Definition",
+        "pair": {
+          "type": "definition",
+          "perspectives": [
+            {
+              "type": "defines",
+              "from": "course",
+              "to": "course"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "person-def",
+      "label": "person-def",
+      "interface": true,
+      "attrs": {
+        "class": "Definition",
+        "pair": {
+          "type": "definition",
+          "perspectives": [
+            {
+              "type": "defines",
+              "from": "person",
+              "to": "person"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "m-algebra",
+      "label": "m-algebra",
+      "interface": true,
+      "attrs": {
+        "class": "Membership",
+        "pair": {
+          "type": "membership",
+          "perspectives": [
+            {
+              "type": "memberOf",
+              "from": "algebra",
+              "to": "course"
+            },
+            {
+              "type": "hasMember",
+              "from": "course",
+              "to": "algebra"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "m-algebra-2",
+      "label": "m-algebra-2",
+      "interface": true,
+      "attrs": {
+        "class": "Membership",
+        "pair": {
+          "type": "membership",
+          "perspectives": [
+            {
+              "type": "memberOf",
+              "from": "algebra-2",
+              "to": "course"
+            },
+            {
+              "type": "hasMember",
+              "from": "course",
+              "to": "algebra-2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "m-geometry",
+      "label": "m-geometry",
+      "interface": true,
+      "attrs": {
+        "class": "Membership",
+        "pair": {
+          "type": "membership",
+          "perspectives": [
+            {
+              "type": "memberOf",
+              "from": "geometry",
+              "to": "course"
+            },
+            {
+              "type": "hasMember",
+              "from": "course",
+              "to": "geometry"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "m-ada",
+      "label": "m-ada",
+      "interface": true,
+      "attrs": {
+        "class": "Membership",
+        "pair": {
+          "type": "membership",
+          "perspectives": [
+            {
+              "type": "memberOf",
+              "from": "ada",
+              "to": "person"
+            },
+            {
+              "type": "hasMember",
+              "from": "person",
+              "to": "ada"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "m-ben",
+      "label": "m-ben",
+      "interface": true,
+      "attrs": {
+        "class": "Membership",
+        "pair": {
+          "type": "membership",
+          "perspectives": [
+            {
+              "type": "memberOf",
+              "from": "ben",
+              "to": "person"
+            },
+            {
+              "type": "hasMember",
+              "from": "person",
+              "to": "ben"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "t-ada-algebra",
+      "label": "t-ada-algebra",
+      "interface": true,
+      "attrs": {
+        "class": "Teaching",
+        "pair": {
+          "type": "teaching",
+          "perspectives": [
+            {
+              "type": "teaches",
+              "from": "ada",
+              "to": "algebra"
+            },
+            {
+              "type": "taughtBy",
+              "from": "algebra",
+              "to": "ada"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "t-ben-geometry",
+      "label": "t-ben-geometry",
+      "interface": true,
+      "attrs": {
+        "class": "Teaching",
+        "pair": {
+          "type": "teaching",
+          "perspectives": [
+            {
+              "type": "teaches",
+              "from": "ben",
+              "to": "geometry"
+            },
+            {
+              "type": "taughtBy",
+              "from": "geometry",
+              "to": "ben"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "r-algebra",
+      "label": "r-algebra",
+      "interface": true,
+      "attrs": {
+        "class": "Revision",
+        "pair": {
+          "type": "revision",
+          "perspectives": [
+            {
+              "type": "replacedBy",
+              "from": "algebra",
+              "to": "algebra-2"
+            },
+            {
+              "type": "replaces",
+              "from": "algebra-2",
+              "to": "algebra"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "course",
+      "to": "course-def",
+      "attrs": {
+        "pairType": "defines"
+      }
+    },
+    {
+      "from": "course-def",
+      "to": "course",
+      "attrs": {
+        "pairType": "defines"
+      }
+    },
+    {
+      "from": "person",
+      "to": "person-def",
+      "attrs": {
+        "pairType": "defines"
+      }
+    },
+    {
+      "from": "person-def",
+      "to": "person",
+      "attrs": {
+        "pairType": "defines"
+      }
+    },
+    {
+      "from": "algebra",
+      "to": "m-algebra",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "m-algebra",
+      "to": "course",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "course",
+      "to": "m-algebra",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "m-algebra",
+      "to": "algebra",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "algebra-2",
+      "to": "m-algebra-2",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "m-algebra-2",
+      "to": "course",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "course",
+      "to": "m-algebra-2",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "m-algebra-2",
+      "to": "algebra-2",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "geometry",
+      "to": "m-geometry",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "m-geometry",
+      "to": "course",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "course",
+      "to": "m-geometry",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "m-geometry",
+      "to": "geometry",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "ada",
+      "to": "m-ada",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "m-ada",
+      "to": "person",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "person",
+      "to": "m-ada",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "m-ada",
+      "to": "ada",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "ben",
+      "to": "m-ben",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "m-ben",
+      "to": "person",
+      "attrs": {
+        "pairType": "memberOf"
+      }
+    },
+    {
+      "from": "person",
+      "to": "m-ben",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "m-ben",
+      "to": "ben",
+      "attrs": {
+        "pairType": "hasMember"
+      }
+    },
+    {
+      "from": "ada",
+      "to": "t-ada-algebra",
+      "attrs": {
+        "pairType": "teaches"
+      }
+    },
+    {
+      "from": "t-ada-algebra",
+      "to": "algebra",
+      "attrs": {
+        "pairType": "teaches"
+      }
+    },
+    {
+      "from": "algebra",
+      "to": "t-ada-algebra",
+      "attrs": {
+        "pairType": "taughtBy"
+      }
+    },
+    {
+      "from": "t-ada-algebra",
+      "to": "ada",
+      "attrs": {
+        "pairType": "taughtBy"
+      }
+    },
+    {
+      "from": "ben",
+      "to": "t-ben-geometry",
+      "attrs": {
+        "pairType": "teaches"
+      }
+    },
+    {
+      "from": "t-ben-geometry",
+      "to": "geometry",
+      "attrs": {
+        "pairType": "teaches"
+      }
+    },
+    {
+      "from": "geometry",
+      "to": "t-ben-geometry",
+      "attrs": {
+        "pairType": "taughtBy"
+      }
+    },
+    {
+      "from": "t-ben-geometry",
+      "to": "ben",
+      "attrs": {
+        "pairType": "taughtBy"
+      }
+    },
+    {
+      "from": "algebra",
+      "to": "r-algebra",
+      "attrs": {
+        "pairType": "replacedBy"
+      }
+    },
+    {
+      "from": "r-algebra",
+      "to": "algebra-2",
+      "attrs": {
+        "pairType": "replacedBy"
+      }
+    },
+    {
+      "from": "algebra-2",
+      "to": "r-algebra",
+      "attrs": {
+        "pairType": "replaces"
+      }
+    },
+    {
+      "from": "r-algebra",
+      "to": "algebra",
+      "attrs": {
+        "pairType": "replaces"
+      }
+    }
+  ]
+}
