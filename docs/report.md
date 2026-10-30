@@ -244,11 +244,11 @@ Version 4.0 adds:
   - With the perspective drawing (N4), the shapes the unit shader holds gained box and oval, so the test of a host's added shape expects it after all of them (`UNIT_SHAPES.length`) where it expected the third place; and the Settings dialog has 28 groups, with Drawing.
   - With data manipulation (N5), / opens the search field, as 6.14 now says, where it opened the Root field; the layout test lists the sections Search, Scope and Highlights in their places; and the Settings dialog has 31 groups.
 - **Two files are near the size target.** model.ts has 407 lines and the shell's store 372; the target was about 400.
+- **The branch goes up from a bundle.** This session's git proxy refused the push with 403, since the repository was not attached to the session. The branch therefore went to the owner as a git bundle, for the owner to push and to open the pull request (12.4).
 - **The public repository starts over.** Its history held private names, so Ronald deleted it and created it again, empty. Its first commit holds this tree without history, pushed to main with his approval; later work goes through branches and pull requests.
 
 ## 8. Open items
 
-- **The pull request.** The branch could not be pushed: the git proxy answered 403, because this session may not write to the repository. Once access is granted, the branch goes up and a pull request to main carries this report's summary (12.4).
 - **60 frames per second on graphics hardware.** Open #bench on a machine with a graphics card and read the frame times.
 - **GitHub Pages.** Publishing runs from main once the repository's Pages source is GitHub Actions.
 - **The private version.** Deeper classes, typed interfaces and their pair types come later, locally, through a profile, looks and sections (5.7); nothing private is in this repository.
