@@ -43,6 +43,11 @@ export class Scene {
     this.model = model;
     this.state = new FrameState(model, looks);
     this.camera = new CameraRig(model);
+    // The camera moves as the units do: over the transition, or at once with reduced motion (6.10).
+    this.camera.timing = () => ({
+      ms: this.reducedMotion ? 0 : this.state.rules.duration,
+      ease: this.state.rules.ease,
+    });
     this.allocate();
     this.stopListening = model.subscribe((a) => this.onChange(a));
   }
@@ -53,7 +58,16 @@ export class Scene {
     this.camera.gpu = gpu;
     this.labels = labels;
     // Every camera move, by mouse, keys, fit or code, sets the hulls' opacity for the new distance.
-    gpu.controls.addEventListener('change', () => gpu.setHullOpacity(this.hulls.opacity(this.state)));
+    gpu.controls.addEventListener('change', () => {
+      this.camera.moved();
+      gpu.setHullOpacity(this.hulls.opacity(this.state));
+    });
+    // A person who takes the camera ends the move in flight.
+    gpu.controls.addEventListener('start', () => {
+      if (!this.camera.moving) return;
+      this.camera.stop();
+      this.tell();
+    });
     gpu.onFrame = () => this.frame();
     gpu.onDraw = () => this.drawLabels();
     this.engine();
@@ -69,6 +83,7 @@ export class Scene {
       this.gpu.onFrame = null;
       this.gpu.onDraw = null;
     }
+    this.camera.stop();
     this.gpu = null;
     this.state.gpu = null;
     this.camera.gpu = null;
@@ -83,9 +98,12 @@ export class Scene {
 
   private onChange(a: ReadonlySet<Aspect>) {
     const m = this.model;
-    if (a.has('settings')) this.settings();
+    this.state.version++;
+    // The settings of the panels change the side bar, never the picture.
+    const settings = a.has('settings') && !m.changedSettings.every((k) => k.startsWith('panels.'));
+    if (settings) this.settings();
     // Another drawing draws other chevrons and shapes: the buffers start again, and nothing moves.
-    if (a.has('settings') && !a.has('graph') && m.changedSettings.some((k) => k.startsWith('drawing.'))) {
+    if (settings && !a.has('graph') && m.changedSettings.some((k) => k.startsWith('drawing.'))) {
       this.redraw();
       return;
     }
@@ -119,7 +137,7 @@ export class Scene {
     if (a.has('mode') || a.has('root') || a.has('paths') || a.has('filters') || a.has('scope')) this.apply(true);
     else if (a.has('inspect')) this.mark();
     if (a.has('selection') || a.has('highlight')) this.emphasize();
-    if (a.has('types') || a.has('display') || a.has('settings')) this.hulls.refresh(this.state);
+    if (a.has('types') || a.has('display') || settings) this.hulls.refresh(this.state);
   }
 
   /** A change of settings: the drawing rules, colours, statics, outlines and the camera follow at once. */
@@ -278,35 +296,49 @@ export class Scene {
     }
   }
 
-  /** Called before each frame: advances transitions, the camera and the hulls. */
+  /** Called before each frame: advances the units' transition, the hulls and the camera. */
   private frame() {
-    if (this.state.t >= 1) return;
-    this.setT((performance.now() - this.start) / this.state.rules.duration);
-    this.camera.move(this.state.ease());
-    if (++this.framesSinceHull >= this.model.settings.get('hulls.refreshEvery')) {
-      this.framesSinceHull = 0;
-      this.hulls.refresh(this.state);
+    const now = performance.now();
+    if (this.state.t < 1) {
+      this.setT((now - this.start) / this.state.rules.duration);
+      if (this.state.t >= 1) this.settle();
+      else if (++this.framesSinceHull >= this.model.settings.get('hulls.refreshEvery')) {
+        this.framesSinceHull = 0;
+        this.hulls.refresh(this.state);
+      }
     }
-    if (this.state.t >= 1) this.settle();
+    const g = this.gpu;
+    if (this.camera.moving) {
+      if (this.camera.step(now)) g?.request();
+      else this.tell();
+    } else if (g?.controls.enableDamping) {
+      // With Glide on, the controls move on after a drag: each frame asks them again until they rest.
+      g.controls.update();
+    }
   }
 
+  /** The units stand still: the hulls take their last places. */
   private settle() {
-    this.camera.move(1);
     this.hulls.refresh(this.state);
-    if (!this.ready) return;
+    this.tell();
+  }
+
+  /** Tells those who wait, once the graph is drawn and neither the units nor the camera move. */
+  private tell() {
+    if (!this.settled) return;
     const w = this.waiters;
     this.waiters = [];
     w.forEach((f) => f());
   }
 
-  /** Resolves once the graph is drawn and the current transition has finished. */
+  /** Resolves once the graph is drawn and the current transition and camera move have finished. */
   whenSettled(): Promise<void> {
     if (this.settled) return Promise.resolve();
     return new Promise((r) => this.waiters.push(r));
   }
 
   get settled() {
-    return this.state.t >= 1 && this.ready;
+    return this.state.t >= 1 && this.ready && !this.camera.moving;
   }
 
   /** What is under a canvas point: a unit, a chevron (one keypair), a line (its relation), or nothing. */
@@ -314,9 +346,9 @@ export class Scene {
     return pickAt(this.state, x, y);
   }
 
-  /** Shows the whole graph from straight above. */
+  /** Shows the whole graph from straight above, moving there over the transition. */
   fit() {
-    this.camera.fit();
+    this.camera.fit(true);
   }
 
   nudge(move: Nudge) {

@@ -5,8 +5,10 @@ import type { GraphWorker } from '../model/contracts.ts';
 import { forceLayout, type ForceInput, type ForceOutput } from './force.ts';
 
 let next = 0;
-let layoutWorker: Worker | null = null;
 const hasWorkers = typeof Worker !== 'undefined';
+/** The layout worker, and the layouts it still owes, each with who asked for it. */
+let layoutWorker: Worker | null = null;
+const owed = new Map<number, { owner: object | null; done: (out: ForceOutput | null) => void }>();
 
 function ask<T>(worker: Worker, message: Record<string, unknown>): Promise<T> {
   const id = ++next;
@@ -21,11 +23,44 @@ function ask<T>(worker: Worker, message: Record<string, unknown>): Promise<T> {
   });
 }
 
-/** The force layout in a worker, or on the page where there are no workers or `inline` asks for it. */
-export function runForce(input: ForceInput, inline = false): Promise<ForceOutput> {
+/**
+ * The force layout in a worker, or on the page where there are no workers or `inline` asks for it.
+ * Resolves to null when its owner gave it up meanwhile (cancelForce).
+ */
+export function runForce(input: ForceInput, inline = false, owner: object | null = null): Promise<ForceOutput | null> {
   if (!hasWorkers || inline) return Promise.resolve(forceLayout(input));
-  layoutWorker ??= new Worker(new URL('./layout.worker.ts', import.meta.url), { type: 'module' });
-  return ask(layoutWorker, { input });
+  if (!layoutWorker) {
+    layoutWorker = new Worker(new URL('./layout.worker.ts', import.meta.url), { type: 'module' });
+    layoutWorker.addEventListener('message', (e: MessageEvent<{ id: number; out: ForceOutput }>) => {
+      const job = owed.get(e.data.id);
+      owed.delete(e.data.id);
+      job?.done(e.data.out);
+    });
+  }
+  const id = ++next;
+  const worker = layoutWorker;
+  return new Promise((done) => {
+    owed.set(id, { owner, done });
+    worker.postMessage({ id, input });
+  });
+}
+
+/**
+ * Gives up the layouts an owner still waits for, as when a newer graph replaces the one being laid out.
+ * The worker may be deep in one of them: when nobody else waits, it ends, and the next layout starts on
+ * a new one at once instead of behind the old.
+ */
+export function cancelForce(owner: object) {
+  const mine = [...owed].filter(([, job]) => job.owner === owner);
+  if (!mine.length) return;
+  for (const [id, job] of mine) {
+    owed.delete(id);
+    job.done(null);
+  }
+  if (owed.size === 0) {
+    layoutWorker?.terminate();
+    layoutWorker = null;
+  }
 }
 
 export type { ForceInput, ForceOutput };

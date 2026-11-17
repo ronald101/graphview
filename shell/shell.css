@@ -28,6 +28,9 @@ body {
   flex-direction: column;
   height: 100%;
 }
+body {
+  accent-color: var(--gv-ink-2);
+}
 button,
 input,
 select {
@@ -38,11 +41,14 @@ select {
   border-radius: 4px;
 }
 button {
-  padding: 4px 10px;
+  padding: 3px 10px;
   cursor: pointer;
 }
 button:hover:not(:disabled) {
   border-color: var(--gv-ink-2);
+}
+button:active:not(:disabled) {
+  background: var(--gv-plane);
 }
 :focus-visible {
   outline: 2px solid var(--gv-ink-1);
@@ -65,10 +71,14 @@ button:hover:not(:disabled) {
   font-size: 16px;
   font-weight: 700;
 }
+/* Host is on while the host tools show: filled, as the viewer's switches are. */
 .toggle[aria-expanded='true'] {
-  border-color: var(--gv-ink-2);
+  color: var(--gv-panel);
+  background: var(--gv-ink-1);
+  border-color: var(--gv-ink-1);
 }
 .headline {
+  min-width: 0;
   margin: 0 0 0 auto;
   overflow: hidden;
   color: var(--gv-ink-2);
@@ -87,6 +97,8 @@ button:hover:not(:disabled) {
   flex: 0 0 auto;
   overflow-y: auto;
   background: var(--gv-panel);
+  scrollbar-width: thin;
+  scrollbar-color: var(--gv-ring) transparent;
 }
 .side[hidden] {
   display: none;
@@ -149,10 +161,26 @@ button:hover:not(:disabled) {
   width: 100%;
   font-size: 12px;
 }
+/* The one action a section is for, such as Generate: filled. */
+.gv-ui .primary,
 .primary {
   margin: 8px 0 4px;
+  padding: 4px 16px;
   font-weight: 600;
+  color: var(--gv-panel);
+  background: var(--gv-ink-1);
   border-color: var(--gv-ink-1);
+}
+.gv-ui .primary:hover:not(:disabled),
+.primary:hover:not(:disabled) {
+  background: var(--gv-ink-2);
+  border-color: var(--gv-ink-2);
+}
+.gv-ui .primary:disabled,
+.primary:disabled {
+  color: var(--gv-panel);
+  background: var(--gv-muted);
+  border-color: var(--gv-muted);
 }
 details {
   margin: 8px 0;

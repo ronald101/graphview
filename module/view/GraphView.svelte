@@ -10,7 +10,7 @@
   import type { GraphSource } from '../model/source.ts';
   import type { Looks } from '../render/looks.ts';
   import type { SettingsFile } from '../settings/file.ts';
-  import { SECTIONS, type SectionId } from '../settings/groups/panels.ts';
+  import type { SectionId } from '../settings/groups/panels.ts';
   import { SettingsSaver } from '../settings/saver.svelte.ts';
   import { BrowserSettingsStore, type SettingsStore } from '../settings/stores.ts';
   import { viewCss } from './css.ts';
@@ -31,7 +31,7 @@
   import SettingsDialog from './settings/SettingsDialog.svelte';
   import TypesPanel from './TypesPanel.svelte';
   import { watch } from './watch.svelte.ts';
-  import { say } from './words.ts';
+  import { count, say } from './words.ts';
 
   interface Props {
     /** A document to show (3.1); a new one loads. */
@@ -50,6 +50,8 @@
     onready?: (e: { units: number; issues: number; refused: boolean }) => void;
     onroot?: (e: { root: Key | null }) => void;
     oninspect?: (e: Inspected) => void;
+    /** The selected units after each change of the selection (6.20). */
+    onselect?: (e: { keys: Key[] }) => void;
     /** The person's settings file after each change. */
     onsettings?: (file: SettingsFile) => void;
     /** Save picture hands the picture to the host; without this, the browser downloads it. */
@@ -70,6 +72,7 @@
     onready,
     onroot,
     oninspect,
+    onselect,
     onsettings,
     onpicture,
     profile,
@@ -86,36 +89,91 @@
   let dialogOpen = $state(false);
   let boxSelect = $state(false);
   let searchText = $state('');
-  // The side bar starts closed on a narrow page, and opens as a drawer over the canvas (8.1).
-  let panelsOpen = $state(typeof innerWidth !== 'number' || innerWidth > 900);
   let background = $state(model.settings.get('picture.background'));
-  const w = watch(() => model, ['graph', 'mode', 'display', 'theme', 'settings', 'search']);
-  const t = (text: string) => say(model, text);
+  let panels: HTMLElement | undefined = $state();
+  const w = watch(
+    () => model,
+    ['graph', 'mode', 'display', 'theme', 'settings', 'search', 'filters', 'selection', 'scope'],
+  );
+  const t = (text: string, vars?: Record<string, string | number>) => say(model, text, vars);
 
   const bar = $derived.by(() => {
     void w.v;
+    const s = model.settings;
+    const f = model.filters;
+    const narrowed = model.rules.length + +(f.from !== null || f.to !== null) + +(f.threshold !== null);
+    const pins = s.list().filter((x) => x.pinned).length;
     return {
       mode: model.mode,
       hulls: model.hulls,
-      drawing: model.settings.get('drawing.relations'),
-      shows: new Set(model.settings.get('panels.bar')),
-      sections: model.settings.get('panels.sections'),
-      banner: model.issues.length > 0 && model.settings.get('issues.banner'),
+      drawing: s.get('drawing.relations'),
+      shows: new Set(s.get('panels.bar')),
+      sections: s.get('panels.sections'),
+      open: new Set<SectionId>(s.get('panels.open')),
+      shown: s.get('panels.shown'),
+      width: s.get('panels.width'),
+      issues: model.issues.length,
+      banner: model.issues.length > 0 && s.get('issues.banner'),
       css: viewCss(model),
+      // What a closed section still says in its heading: how much it holds now.
+      counts: {
+        search: model.search.text.trim() ? model.search.results.length : null,
+        scope: model.scope ? model.scope.units.length : null,
+        highlights: model.selection.length || null,
+        filters: narrowed || null,
+        issues: model.issues.length || null,
+        pinned: pins || null,
+      } as Partial<Record<SectionId, number | null>>,
     };
   });
-  // Which sections are open; the setting says which start open, read once.
-  const openAtStart = new Set<string>(model.settings.get('panels.open'));
-  const open: Record<SectionId, boolean> = $state(
-    Object.fromEntries(SECTIONS.map(([id]) => [id, openAtStart.has(id)])) as Record<SectionId, boolean>,
-  );
+
+  // On a narrow page the side bar is a drawer over the canvas, which starts closed and is not kept (8.1);
+  // on a wide one it shows as the setting "Side bar" says, which the Panels button changes.
+  let narrow = $state(typeof innerWidth === 'number' && innerWidth <= 900);
+  let drawer = $state(false);
+  const panelsOpen = $derived(narrow ? drawer : bar.shown);
+  function showPanels(on: boolean) {
+    if (narrow) drawer = on;
+    else if (bar.shown !== on) model.setSetting('panels.shown', on);
+  }
+
+  /** Opens or closes a section: the setting "Open sections" holds them, so that they start as they were left. */
+  function setOpen(id: SectionId, on: boolean) {
+    if (bar.open.has(id) === on) return;
+    const next = new Set(bar.open);
+    if (on) next.add(id);
+    else next.delete(id);
+    model.setSetting('panels.open', [...next]);
+  }
+
+  /** Opens a section in the side bar, when that shows, and brings it into view. */
+  async function reveal(id: SectionId) {
+    if (!panelsOpen || !bar.sections.includes(id)) return;
+    setOpen(id, true);
+    await tick();
+    const section = panels?.querySelector(`[data-section="${id}"]`);
+    if (!panels || !section) return;
+    const [room, box] = [panels.getBoundingClientRect(), section.getBoundingClientRect()];
+    // The top of a section that does not fit; else as little as shows it whole.
+    const by =
+      box.top < room.top || box.height > room.height
+        ? box.top - room.top
+        : box.bottom > room.bottom
+          ? box.bottom - room.bottom
+          : 0;
+    if (!by) return;
+    // The side bar moves as the picture does: smoothly, unless motion is off or the system asks for less.
+    const motion = model.settings.get('motion.enabled');
+    const still = motion === 'off' || (motion !== 'on' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    panels.scrollBy({ top: by, behavior: still ? 'instant' : 'smooth' });
+  }
 
   /** The canvas's key for finding a unit: the search field in the bar, or else the Root field in the side bar. */
   async function findUnit() {
     const field = document.getElementById('gv-search');
     if (field) return field.focus();
-    panelsOpen = true;
-    open.root = true;
+    showPanels(true);
+    setOpen('root', true);
     await tick();
     document.getElementById('gv-root')?.focus();
   }
@@ -124,7 +182,11 @@
   function search(text: string) {
     searchText = text;
     model.setSearch(text);
-    if (text.trim()) open.search = true;
+    // The results show in the side bar's Search section, which opens for them.
+    if (text.trim()) {
+      showPanels(true);
+      setOpen('search', true);
+    }
   }
   function showFirst() {
     const first = model.search.results[0];
@@ -153,6 +215,9 @@
     model.subscribe((a) => {
       if (a.has('root')) onroot?.({ root: model.root });
       if (a.has('inspect')) oninspect?.(model.inspected);
+      if (a.has('selection')) onselect?.({ keys: [...model.selection] });
+      // What was clicked shows in the inspector (6.11): the side bar opens it and brings it into view.
+      if (a.has('inspect') && model.inspected && model.settings.get('panels.reveal')) void reveal('inspector');
     }),
   );
 
@@ -169,10 +234,18 @@
     );
     const stop = saver.start();
     const told = model.settings.subscribe(() => onsettings?.(model.settings.file()));
+    // The page may grow or shrink across the width where the side bar becomes a drawer.
+    const small = matchMedia('(max-width: 900px)');
+    const resized = () => (narrow = small.matches);
+    small.addEventListener('change', resized);
+    resized();
     return () => {
       void saver.flush();
       stop();
       told();
+      small.removeEventListener('change', resized);
+      // The viewer made the model: it ends the model's worker and any layout it waits for.
+      model.dispose();
     };
   });
 
@@ -226,6 +299,49 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  // ---------------------------------------------------------------- the side bar's width
+
+  /** The side bar's width while its edge is dragged, in pixels; null otherwise. */
+  let dragged: number | null = $state(null);
+  const widthSetting = model.settings.all['panels.width'];
+  const within = (px: number) => Math.min(widthSetting.max, Math.max(widthSetting.min, px));
+  const setWidth = (px: number) => {
+    if (within(px) !== bar.width) model.setSetting('panels.width', within(px));
+  };
+
+  function resizeStart(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const edge = e.currentTarget as HTMLElement;
+    edge.setPointerCapture(e.pointerId);
+    const right = panels?.getBoundingClientRect().right ?? e.clientX + bar.width;
+    const move = (m: PointerEvent) => (dragged = within(right - m.clientX));
+    const done = () => {
+      edge.removeEventListener('pointermove', move);
+      edge.removeEventListener('pointerup', done);
+      edge.removeEventListener('pointercancel', done);
+      // The setting moves in its own steps.
+      if (dragged !== null) setWidth(Math.round(dragged / widthSetting.step) * widthSetting.step);
+      dragged = null;
+    };
+    edge.addEventListener('pointermove', move);
+    edge.addEventListener('pointerup', done);
+    edge.addEventListener('pointercancel', done);
+  }
+
+  /** The arrows move the edge by one step; Home and End take it to its widest and narrowest. */
+  function resizeKey(e: KeyboardEvent) {
+    const to: Record<string, number> = {
+      ArrowLeft: bar.width + widthSetting.step,
+      ArrowRight: bar.width - widthSetting.step,
+      Home: widthSetting.max,
+      End: widthSetting.min,
+    };
+    if (!(e.key in to)) return;
+    e.preventDefault();
+    setWidth(to[e.key]);
+  }
+
   const PANELS: Partial<Record<SectionId, { title: string; panel: Component<{ model: GraphModel }> }>> = {
     search: { title: 'Search', panel: SearchPanel },
     scope: { title: 'Scope', panel: ScopePanel },
@@ -239,16 +355,16 @@
   };
 </script>
 
-<div class="gv-view gv-ui" style={bar.css}>
+<div class="gv-view gv-ui" style="{bar.css}{dragged === null ? '' : ` --gv-panels-width: ${dragged}px;`}">
   <div class="gv-bar" role="toolbar" aria-label={t('View')}>
     {#if bar.shows.has('modes')}
-      <span class="gv-modes" role="group" aria-label={t('2D or 3D')}>
+      <span class="gv-modes gv-segmented" role="group" aria-label={t('2D or 3D')}>
         <button type="button" aria-pressed={bar.mode === '2d'} onclick={() => setMode('2d')}>2D</button>
         <button type="button" aria-pressed={bar.mode === '3d'} onclick={() => setMode('3d')}>3D</button>
       </span>
     {/if}
     {#if bar.shows.has('hulls')}
-      <label
+      <label class="gv-check"
         ><input
           type="checkbox"
           checked={bar.hulls}
@@ -277,52 +393,106 @@
         placeholder={t('Search…')}
         value={searchText}
         oninput={(e) => search(e.currentTarget.value)}
-        onkeydown={(e) => e.key === 'Enter' && showFirst()}
+        onkeydown={(e) => {
+          if (e.key === 'Enter') showFirst();
+          // Escape empties the field, then gives the keys back to the canvas.
+          else if (e.key === 'Escape') {
+            e.preventDefault();
+            if (searchText) search('');
+            else (e.currentTarget.closest('.gv-view')?.querySelector('.gv-input') as HTMLElement | null)?.focus();
+          }
+        }}
       />
     {/if}
     {#if bar.shows.has('select')}
-      <label><input type="checkbox" bind:checked={boxSelect} /> {t('Box selection')}</label>
+      <label class="gv-check"><input type="checkbox" bind:checked={boxSelect} /> {t('Box selection')}</label>
     {/if}
-    <span class="gv-grow"></span>
-    {#if bar.shows.has('panels')}
-      <button
-        type="button"
-        aria-expanded={panelsOpen}
-        aria-controls="gv-view-panels"
-        onclick={() => (panelsOpen = !panelsOpen)}>{t('Panels')}</button
-      >
-    {/if}
-    {#if bar.shows.has('settings')}
-      <button type="button" aria-haspopup="dialog" onclick={() => (dialogOpen = true)}>{t('Settings')}</button>
-    {/if}
+    <!-- Panels and Settings keep to the right edge, on whichever row they stand. -->
+    <span class="gv-bar-end">
+      {#if bar.shows.has('panels')}
+        <button
+          type="button"
+          aria-expanded={panelsOpen}
+          aria-controls="gv-view-panels"
+          onclick={() => showPanels(!panelsOpen)}>{t('Panels')}</button
+        >
+      {/if}
+      {#if bar.shows.has('settings')}
+        <button type="button" aria-haspopup="dialog" onclick={() => (dialogOpen = true)}>{t('Settings')}</button>
+      {/if}
+    </span>
   </div>
   {#if bar.banner}
-    <p class="gv-banner" role="status" data-testid="rules-banner">
-      {t('This graph breaks the graph rules; the data issues panel lists each breach.')}
-    </p>
+    <div class="gv-banner" role="status" data-testid="rules-banner">
+      <p>{t('This graph breaks the graph rules; the data issues panel lists each breach.')}</p>
+      <button
+        type="button"
+        onclick={() => {
+          showPanels(true);
+          void tick().then(() => reveal('issues'));
+        }}
+        >{t('Show {issues}', {
+          issues: count(bar.issues, 'issue', 'issues', model.settings.get('words.locale')),
+        })}</button
+      >
+    </div>
   {/if}
   <div class="gv-view-body">
     <div class="gv-view-canvas">
       <GraphCanvas bind:this={canvas} {model} {looks} {boxSelect} onfind={findUnit} />
     </div>
-    <aside id="gv-view-panels" class="gv-view-panels" aria-label={t('Panels')} hidden={!panelsOpen}>
+    {#if panelsOpen && !narrow}
+      <!-- The side bar's edge: dragging it, or the arrow keys, changes the setting "Side bar width". -->
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+      <div
+        class="gv-resizer"
+        class:gv-dragging={dragged !== null}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={t('Side bar width')}
+        aria-controls="gv-view-panels"
+        aria-valuenow={Math.round(dragged ?? bar.width)}
+        aria-valuemin={widthSetting.min}
+        aria-valuemax={widthSetting.max}
+        tabindex="0"
+        data-testid="panels-edge"
+        onpointerdown={resizeStart}
+        onkeydown={resizeKey}
+      ></div>
+    {/if}
+    <aside id="gv-view-panels" class="gv-view-panels" aria-label={t('Panels')} hidden={!panelsOpen} bind:this={panels}>
       {#each bar.sections as id (id)}
         {@const s = PANELS[id]}
         {#if id === 'inspector'}
-          <Section id="gv-inspect-s" title={t('Inspector')} testid="section-{id}" bind:open={open[id]}
-            ><InspectorPanel {model} {sections} /></Section
+          <Section
+            id="gv-inspect-s"
+            title={t('Inspector')}
+            testid="section-{id}"
+            section={id}
+            bind:open={() => bar.open.has(id), (on) => setOpen(id, on)}><InspectorPanel {model} {sections} /></Section
           >
         {:else if id === 'display'}
-          <Section id="gv-display-s" title={t('Display')} testid="section-{id}" bind:open={open[id]}>
+          <Section
+            id="gv-display-s"
+            title={t('Display')}
+            testid="section-{id}"
+            section={id}
+            bind:open={() => bar.open.has(id), (on) => setOpen(id, on)}
+          >
             <DisplayPanel {model} />
             <div class="gv-row gv-panel-body">
               <button type="button" onclick={savePicture}>{t('Save picture')}</button>
-              <label><input type="checkbox" bind:checked={background} /> {t('Background')}</label>
+              <label class="gv-check"><input type="checkbox" bind:checked={background} /> {t('Background')}</label>
             </div>
           </Section>
         {:else if s}
-          <Section id="gv-{id}-s" title={t(s.title)} testid="section-{id}" bind:open={open[id]}
-            ><s.panel {model} /></Section
+          <Section
+            id="gv-{id}-s"
+            title={t(s.title)}
+            testid="section-{id}"
+            section={id}
+            count={bar.counts[id] ?? null}
+            bind:open={() => bar.open.has(id), (on) => setOpen(id, on)}><s.panel {model} /></Section
           >
         {/if}
       {/each}
@@ -343,22 +513,35 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 10px;
-    padding: 6px 10px;
+    gap: 6px 12px;
+    padding: 6px 12px;
     border-bottom: 1px solid var(--gv-hairline);
   }
   .gv-search {
-    min-width: 0;
-    width: 14em;
+    flex: 1 1 8em;
+    min-width: 6em;
+    max-width: 18em;
+  }
+  .gv-bar-end {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
   }
   .gv-bar label {
     white-space: nowrap;
   }
   .gv-banner {
-    margin: 0;
-    padding: 6px 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    padding: 6px 12px;
     background: var(--gv-panel);
     border-bottom: 2px dashed var(--gv-issue);
+  }
+  .gv-banner p {
+    flex: 1 1 20em;
+    margin: 0;
   }
   .gv-view-body {
     position: relative;
@@ -375,9 +558,45 @@
     overflow-y: auto;
     border-left: 1px solid var(--gv-hairline);
     background: var(--gv-panel);
+    scrollbar-width: thin;
+    scrollbar-color: var(--gv-ring) transparent;
   }
   .gv-view-panels[hidden] {
     display: none;
+  }
+  /* The side bar's edge lies over its border and takes no room of its own. */
+  .gv-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: calc(var(--gv-panels-width) - 4px);
+    z-index: 2;
+    width: 7px;
+    cursor: col-resize;
+    touch-action: none;
+  }
+  .gv-resizer::after {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 3px;
+    width: 1px;
+    background: transparent;
+    content: '';
+  }
+  .gv-resizer:hover::after,
+  .gv-resizer.gv-dragging::after {
+    left: 2px;
+    width: 3px;
+    background: var(--gv-ring);
+  }
+  .gv-resizer:focus-visible {
+    outline: none;
+  }
+  .gv-resizer:focus-visible::after {
+    left: 2px;
+    width: 3px;
+    background: var(--gv-focus);
   }
   @media (max-width: 900px) {
     .gv-view-panels {

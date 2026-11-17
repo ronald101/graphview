@@ -285,6 +285,17 @@ describe('§5.9 Settings: the registry', () => {
       'typography.table': 13,
       'typography.note': 12,
       'types.slots': 64,
+      // Version 4.1: the zoom toward the pointer, Glide, the label under the pointer, the words of a slow
+      // layout, and the side bar as it starts.
+      'camera.zoomToCursor': true,
+      'camera.damping': false,
+      'pointer.hoverLabel': true,
+      'layout.busyAfter': 300,
+      'panels.shown': true,
+      'panels.reveal': true,
+      'panels.width': 360,
+      'renderer.antialias': true,
+      'renderer.antialiasUpTo': 3000,
     };
     for (const [k, v] of Object.entries(expected)) expect(r.setting(k)?.default, k).toBe(v);
     expect(r.get('types.palette').light).toEqual([

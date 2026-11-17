@@ -157,7 +157,7 @@ export const cameraSettings = () =>
       key: 'camera.damping',
       group: 'Camera',
       label: 'Glide',
-      description: 'The camera glides on after a drag.',
+      description: 'The camera glides on after a drag, and comes to rest by itself.',
       default: false,
     }),
     new CheckboxSetting({
@@ -201,8 +201,9 @@ export const cameraSettings = () =>
       key: 'camera.zoomToCursor',
       group: 'Camera',
       label: 'Zoom toward the pointer',
-      description: 'The wheel zooms toward the pointer instead of the centre.',
-      default: false,
+      description:
+        'The wheel and a pinch zoom toward the pointer instead of the centre: what lies under it stays there.',
+      default: true,
     }),
     new NumberSetting({
       key: 'camera.minDistance',
@@ -426,6 +427,13 @@ export const pointerSettings = () =>
       max: 2000,
       whole: true,
       unit: 'ms',
+    }),
+    new CheckboxSetting({
+      key: 'pointer.hoverLabel',
+      group: 'Pointer',
+      label: 'Name under the pointer',
+      description: 'A small label names what the pointer rests on, as a click would inspect it.',
+      default: true,
     }),
     new TextSetting({
       key: 'pointer.cursor.target',

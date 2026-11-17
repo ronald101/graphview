@@ -30,4 +30,7 @@ test('§7.9 GraphView: one component shows the bar, the canvas and the panels, a
   expect(await events(page)).toContain('inspect: unit');
   await bar.getByLabel('Hulls').uncheck();
   expect(await model(page, 'hulls')).toBe(false);
+  // The selection reaches the host, too.
+  await page.evaluate(() => (window as any).embed.model().select([1, 2], 'replace'));
+  await expect.poll(() => events(page)).toContain('select: 1 2');
 });

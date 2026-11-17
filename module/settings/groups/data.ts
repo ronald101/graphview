@@ -108,6 +108,17 @@ export const layoutSettings = () =>
       max: 100000,
       applies: 'load',
     }),
+    new NumberSetting({
+      key: 'layout.busyAfter',
+      group: 'Layout',
+      label: 'Say it is laying out after',
+      description: 'The canvas says that a graph is being laid out once its layout takes longer than this.',
+      default: 300,
+      min: 0,
+      max: 60000,
+      whole: true,
+      unit: 'ms',
+    }),
     new SelectSetting({
       key: 'layout.positions',
       group: 'Layout',

@@ -6,7 +6,7 @@ The viewer repairs nothing. It lists every breach of the graph rules as a data i
 
 ## Documents
 
-docs/specifications.md is the contract: everything needed to build graphview in one run. docs/specifications.html is the same text as a page with a table of contents; `node scripts/specifications-html.mjs` makes it from the Markdown. docs/3d holds the requests it grew from. docs/report.md says what was built, which tests pass and what is open. docs/decisions.md records the choices the specification left open.
+docs/specifications.md is the contract: everything needed to build graphview in one run. docs/specifications.html is the same text as a page with a table of contents; `node scripts/specifications-html.mjs` makes it from the Markdown. docs/3d holds the requests it grew from. docs/report.md says what was built, which tests pass and what is open. docs/decisions.md records the choices the specification left open. docs/assessment.md judges the source and proposes what to do next. instructions.html, in the root, says how to run graphview and what to check by hand, line by line.
 
 ## Run the shell
 
@@ -19,7 +19,9 @@ npm run build      # dist/module (library), dist/shell (static), dist/server (wi
 npm test           # types, format, unit and gate tests, then the browser tests against dist/server
 ```
 
-The browser tests need Playwright's Chromium: `npx playwright install --with-deps chromium`.
+The browser tests need Playwright's Chromium: `npx playwright install --with-deps chromium`. A Chrome the machine already has serves as well: `GRAPHVIEW_CHROMIUM=/usr/bin/google-chrome npm run e2e`.
+
+`npm run check` looks at what git holds or would take. Folders kept beside the work, such as copies of earlier versions, belong in .git/info/exclude: the format check and the scan for private names then leave them out, as git does.
 
 After a merge to main, GitHub Pages publishes the static shell at https://ronald101.github.io/graphview/; there the viewer keeps its settings in the browser. Add `#bench` to measure speed on your machine, or `#embed` to see `GraphView` alone on a page.
 
@@ -27,9 +29,9 @@ After a merge to main, GitHub Pages publishes the static shell at https://ronald
 
 - **Top bar.** Host opens and closes the host tools; the headline names the graph and counts its units, relations and issues.
 - **Host tools.** Data: Browse opens a JSON file, Save writes the graph with its view settings and asks before it overwrites the open file, Fetch loads an address, Share link makes a link to the graph and its view. Generate: choose an example or a family, change its settings, then press Generate. "Relations through interfaces (share)" puts that share of the relations through an interface; "Add types, weights and times" adds unit types, relation types in complementary pairs, weights and dates. The Explanation describes the choice and each setting.
-- **The viewer's bar.** 2D and 3D; Hulls; Fit; the drawing, Keypairs or Perspectives; the search field; Box selection; Panels opens and closes the side bar; Settings opens the dialog with every setting, where any setting can be pinned to the side bar.
-- **The side bar.** Search lists the results by rank, each with Show (its neighbourhood), Root, Paths to, Highlight and Inspect. Scope shows all units or a neighbourhood, grown and shrunk with Expand selected and Hide selected, and laid out alone. Root and depth, Paths, and the Inspector follow clicks. Highlights turns groups on: the selection, highlighted search results, neighbours, units with issues, and saved groups. Filters holds the time window, the weight threshold and the rules for kinds, superseded parts and relations per unit; Types shows, fades or hides each type and renames and recolours it. Display holds the sizes and Save picture. Data issues lists every breach.
-- **Pointer and keys.** A click on a unit makes it the root, Shift and a click the path's end, Ctrl (Cmd) and a click adds it to the selection. On the canvas: the arrows pan, + and − zoom, [ and ] turn in 3D, 0 fits, Tab steps through the inspected unit's keypairs, Enter follows a keypair or makes a unit the root, F makes it the root, Shift+Enter the path's end, S shows its neighbourhood, A shows all units, / opens the search, Escape clears the path, the root, then the selection.
+- **The viewer's bar.** 2D and 3D, the one in use filled; Hulls; Fit; the drawing, Keypairs or Perspectives; the search field, which opens the side bar for its results; Box selection; Panels opens and closes the side bar; Settings opens the dialog with every setting, where any setting can be pinned to the side bar.
+- **The side bar.** Search lists the results by rank, each with Show (its neighbourhood), Root, Paths to, Highlight and Inspect. Scope shows all units or a neighbourhood, grown and shrunk with Expand selected and Hide selected, and laid out alone. Root and depth, Paths, and the Inspector follow clicks. Highlights turns groups on: the selection, highlighted search results, neighbours, units with issues, and saved groups. Filters holds the time window, the weight threshold and the rules for kinds, superseded parts and relations per unit; Types shows, fades or hides each type and renames and recolours it. Display holds the sizes and Save picture. Data issues lists every breach. A heading counts what its section holds, such as the filters in use or the issues. The side bar starts as it was left: its open sections, its width, which its edge changes, and whether it shows. Whatever is clicked opens the Inspector and brings it into view.
+- **Pointer and keys.** The wheel zooms toward the pointer, and a label names what the pointer rests on. A click on a unit makes it the root, Shift and a click the path's end, Ctrl (Cmd) and a click adds it to the selection. Fit and the keys move the camera smoothly, and keys pressed in a row add up. On the canvas: the arrows pan, + and − zoom, [ and ] turn in 3D, 0 fits, Tab steps through the inspected unit's keypairs, Enter follows a keypair or makes a unit the root, F makes it the root, Shift+Enter the path's end, S shows its neighbourhood, A shows all units, / opens the search, Escape clears the path, the root, then the selection.
 
 The shell also reads JSON files whose rows use `id`, `source` and `target`. The example "Classes and perspectives" opens as a host with interface graphs would show it: with a profile as JSON, by perspectives.
 
@@ -56,6 +58,7 @@ The shell also reads JSON files whose rows use `id`, `source` and `target`. The 
     settings={{ 'drawing.relations': 'perspectives', 'extensions.profile': { directRelations: 'issue' } }}
     onroot={(e) => console.log('root', e.root)}
     oninspect={(e) => console.log('inspected', e)}
+    onselect={(e) => console.log('selected', e.keys)}
   />
 </div>
 ```

@@ -34,6 +34,7 @@
       onready={(e) => events.push(`ready: ${e.units} units, ${e.issues} issues`)}
       onroot={(e) => events.push(`root: ${e.root}`)}
       oninspect={(e) => events.push(`inspect: ${e?.kind ?? 'nothing'}`)}
+      onselect={(e) => events.push(`select: ${e.keys.join(' ')}`)}
     />
   {/if}
 </div>

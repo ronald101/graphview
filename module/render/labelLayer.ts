@@ -10,9 +10,46 @@ export class LabelLayer {
   placed: { key: Key; text: string }[] = [];
   private widths = new Map<string, number>();
   private font = '';
+  /** What follows the model and not the camera: the forced labels, and every unit in the order labels claim room. */
+  private order: { state: FrameState; version: number; forced: Uint8Array; ranked: Uint32Array } | null = null;
+
+  /** The forced labels and the units' order, worked out once per change of the model. */
+  private ordered(s: FrameState) {
+    if (this.order?.state === s && this.order.version === s.version) return this.order;
+    const m = s.model;
+    const set = m.settings;
+    const marks = set.get('labels.forced');
+    const keys: (Key | null)[] = [
+      marks.includes('root') ? m.root : null,
+      marks.includes('target') ? m.target : null,
+      marks.includes('inspected') && m.inspected?.kind === 'unit' ? m.inspected.key : null,
+      ...(marks.includes('path') ? (m.activePath() ?? []) : []),
+    ];
+    // Highlighted units show their labels as forced labels do (6.20).
+    for (let i = 0; i < m.ids.length; i++) if (s.highlighted(i)) keys.push(m.graph!.units[i]);
+    const named = new Set(keys.filter((k): k is Key => k !== null).map(keyId));
+    const forced = Uint8Array.from(m.ids, (id) => +named.has(id));
+    const planes = m.degrees ? Uint8Array.from(m.degrees, (d) => plane(d, s.rules.depth)) : null;
+    const rules = {
+      forced: (p: number, q: number) => forced[q] - forced[p],
+      plane: (p: number, q: number) => (planes ? planes[p] - planes[q] : 0),
+      relations: (p: number, q: number) => s.relationsPer[q] - s.relationsPer[p],
+    };
+    const by = set.get('labels.order').map((k) => rules[k]);
+    const ranked = Uint32Array.from(m.ids, (_, i) => i).sort((p, q) => {
+      for (const f of by) {
+        const d = f(p, q);
+        if (d) return d;
+      }
+      // Ties keep the order of the file.
+      return p - q;
+    });
+    return (this.order = { state: s, version: s.version, forced, ranked });
+  }
 
   clear() {
     this.placed = [];
+    this.order = null;
   }
 
   /** Draws the labels at the device's pixel ratio, or at another for a picture. */
@@ -34,59 +71,36 @@ export class LabelLayer {
     if (font !== this.font) [this.font, this.widths] = [font, new Map()];
     ctx.font = font;
     const snap = s.snapshot();
-    const marks = set.get('labels.forced');
-    const forced = new Set(
-      [
-        marks.includes('root') ? m.root : null,
-        marks.includes('target') ? m.target : null,
-        marks.includes('inspected') && m.inspected?.kind === 'unit' ? m.inspected.key : null,
-        ...(marks.includes('path') ? (m.activePath() ?? []) : []),
-        // Highlighted units show their labels as forced labels do (6.20).
-        ...m.ids.flatMap((_, i) => (s.highlighted(i) ? [m.graph!.units[i]] : [])),
-      ]
-        .filter((k): k is Key => k !== null)
-        .map(keyId),
-    );
+    const { forced, ranked } = this.ordered(s);
     const least = set.get('labels.minOpacity');
     const minFilter = set.get('labels.minFilter');
     const margin = { x: set.get('labels.screenMargin.x'), y: set.get('labels.screenMargin.y') };
     const opacity = m.overrides.opacity;
+    const most = set.get('labels.maxCandidates');
+    // The units in their order, as far as the candidates go: only the camera decides here, on every frame.
     const order: number[] = [];
-    for (let i = 0; i < m.ids.length; i++) {
+    for (let r = 0; r < ranked.length && order.length < most; r++) {
+      const i = ranked[r];
       const v = snap.st[i];
       const sc = snap.screen[i];
       // Units the filters hide have no label; faded ones keep theirs while they are opaque enough.
       // The tolerance keeps a superseded unit, at 0.35 in single precision, a candidate.
       if (sc.behind || s.now(s.u.filterState, i, 2, 0) < minFilter) continue;
-      if (!forced.has(m.ids[i]) && v.s.opacity * v.filter * opacity < least - 1e-6) continue;
+      if (!forced[i] && v.s.opacity * v.filter * opacity < least - 1e-6) continue;
       if (sc.x < -margin.x || sc.y < -margin.y || sc.x > g.width + margin.x || sc.y > g.height + margin.y) continue;
       order.push(i);
     }
-    const planeOf = (i: number) => (m.degrees ? plane(m.degrees[i], s.rules.depth) : 0);
-    const rules = {
-      forced: (p: number, q: number) => +forced.has(m.ids[q]) - +forced.has(m.ids[p]),
-      plane: (p: number, q: number) => planeOf(p) - planeOf(q),
-      relations: (p: number, q: number) => s.relationsPer[q] - s.relationsPer[p],
-    };
-    const by = set.get('labels.order').map((k) => rules[k]);
-    order.sort((p, q) => {
-      for (const f of by) {
-        const d = f(p, q);
-        if (d) return d;
-      }
-      return 0;
-    });
     const showKey = set.get('labels.text') === 'key';
     const clear = set.get('labels.minReach');
     const extra = s.rules.pointer.drawnExtra;
-    const candidates = order.slice(0, set.get('labels.maxCandidates')).map((i) => ({
+    const candidates = order.map((i) => ({
       index: i,
       x: snap.screen[i].x,
       y: snap.screen[i].y,
       r: Math.max(clear, s.unitReach(i, snap) - extra),
       // A unit with relations that leave the scope says how many (6.21).
       text: s.labelText(i, showKey) + (s.outside?.[i] ? ` +${s.outside[i]}` : ''),
-      forced: forced.has(m.ids[i]),
+      forced: forced[i] === 1,
     }));
     const measure = (t: string) => {
       let v = this.widths.get(t);

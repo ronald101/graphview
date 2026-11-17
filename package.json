@@ -22,7 +22,7 @@
   "scripts": {
     "prepare": "svelte-kit sync --config shell/vite.config.ts || echo ''",
     "dev": "vite dev --config shell/vite.config.ts",
-    "check": "svelte-kit sync --config shell/vite.config.ts && svelte-check --tsconfig ./tsconfig.json && prettier --check . && vitest run tests/gates tests/unit",
+    "check": "svelte-kit sync --config shell/vite.config.ts && svelte-check --tsconfig ./tsconfig.json && prettier --check . --ignore-path .gitignore --ignore-path .prettierignore --ignore-path .git/info/exclude && vitest run tests/gates tests/unit",
     "build:module": "vite build --config module/vite.config.ts && node scripts/build-types.mjs",
     "build:shell": "vite build --config shell/vite.config.ts --mode static",
     "build:server": "vite build --config shell/vite.config.ts",

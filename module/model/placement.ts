@@ -36,13 +36,17 @@ export const DEFAULT_LAYOUT: LayoutRules = {
   inline: false,
 };
 
-/** x and y of each unit, in world units; null when the graph stopped being current meanwhile. */
+/**
+ * x and y of each unit, in world units; null when the graph stopped being current meanwhile. The owner
+ * is who may give the layout up (workers/index.ts).
+ */
 export async function placeUnits(
   g: Graph,
   ids: string[],
   relations: Relation[],
   current: () => boolean,
   rules: LayoutRules = DEFAULT_LAYOUT,
+  owner: object | null = null,
 ): Promise<Float32Array<ArrayBuffer> | null> {
   let pts: Map<string, { x: number; y: number }>;
   const given = g.units.length > 0 && g.units.every((k) => g.unitInfo.get(keyId(k))?.pos);
@@ -59,8 +63,9 @@ export async function placeUnits(
         settings: rules.force,
       },
       rules.inline,
+      owner,
     );
-    if (!current()) return null;
+    if (!out || !current()) return null;
     pts = new Map(ids.map((id, i) => [id, out.positions[i]]));
   }
   let [minX, maxX, minY, maxY] = [Infinity, -Infinity, Infinity, -Infinity];
@@ -85,7 +90,8 @@ export async function placeUnits(
 
 /**
  * The force layout on some units alone, from their places (6.21): the others stay, and the part keeps
- * the centre and the larger side of its box. Returns every unit's place.
+ * the centre and the larger side of its box. Returns every unit's place, or null when the layout was
+ * given up.
  */
 export async function placePart(
   ids: string[],
@@ -93,7 +99,8 @@ export async function placePart(
   part: readonly number[],
   relations: readonly Relation[],
   rules: LayoutRules = DEFAULT_LAYOUT,
-): Promise<Float32Array<ArrayBuffer>> {
+  owner: object | null = null,
+): Promise<Float32Array<ArrayBuffer> | null> {
   const at = new Map(part.map((i, n) => [i, n]));
   const box = (pts: { x: number; y: number }[]) => {
     const xs = pts.map((p) => p.x);
@@ -113,7 +120,9 @@ export async function placePart(
       settings: rules.force,
     },
     rules.inline,
+    owner,
   );
+  if (!out) return null;
   const [was, now] = [box(start), box(out.positions)];
   const s = was.side > 0 && now.side > 0 ? was.side / now.side : 1;
   const next = Float32Array.from(positions);

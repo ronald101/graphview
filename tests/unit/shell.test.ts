@@ -1,6 +1,7 @@
 // The shell's libraries (specification section 8): types, weights and times for generated graphs,
 // the explanations of the Generate section, the examples, share links and the importer.
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
@@ -202,18 +203,35 @@ describe('§8.10 Examples', () => {
 describe('§11.1 The repository', () => {
   // Every text file, as committed: the build has its own check in the browser tests.
   const root = fileURLToPath(new URL('../../', import.meta.url));
-  // Folders git leaves out: build output, test output, and the settings files the shell's server writes.
-  const skip = new Set(['node_modules', '.git', 'dist', 'test-results', 'playwright-report', '.svelte-kit', 'data']);
   const binary = /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|pdf|zip)$/i;
-  const files = (dir: string): string[] =>
+  // What git holds or would take: its own list, so that .gitignore says once what is left out.
+  const listed = (): string[] | null => {
+    const r = spawnSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+      cwd: root,
+      encoding: 'utf8',
+      maxBuffer: 1 << 26,
+    });
+    if (r.status !== 0 || !r.stdout) return null;
+    // A file deleted but not yet committed is listed still; a folder with a repository of its own is one entry.
+    return r.stdout
+      .split('\0')
+      .filter((name) => name && !binary.test(name))
+      .map((name) => join(root, name))
+      .filter((path) => existsSync(path) && statSync(path).isFile());
+  };
+  // Without git, as in an unpacked archive: every file but the folders .gitignore names.
+  const skip = new Set(['node_modules', '.git', 'dist', 'test-results', 'playwright-report', '.svelte-kit', 'data']);
+  const walked = (dir: string): string[] =>
     readdirSync(dir).flatMap((name) => {
       if (skip.has(name)) return [];
       const path = join(dir, name);
-      return statSync(path).isDirectory() ? files(path) : binary.test(name) ? [] : [path];
+      return statSync(path).isDirectory() ? walked(path) : binary.test(name) ? [] : [path];
     });
+  const files = () => listed() ?? walked(root);
 
   test('no text file carries a private name', () => {
-    const found = files(root)
+    expect(files().length).toBeGreaterThan(200);
+    const found = files()
       .map((f) => [f.slice(root.length), leaks(readFileSync(f, 'utf8')).length] as const)
       .filter(([, n]) => n > 0);
     expect(found).toEqual([]);
