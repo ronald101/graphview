@@ -19,7 +19,7 @@
   import type { SettingKey } from '../settings/registry.ts';
   import { viewCss } from './css.ts';
   import { watch } from './watch.svelte.ts';
-  import { announce, count, fill, oneMessage, type Message } from './words.ts';
+  import { announce, count, fill, oneMessage, say, type Message } from './words.ts';
 
   interface Props {
     /** The model to draw. The canvas keeps the model it starts with. */
@@ -49,7 +49,21 @@
   let live = $state('');
   // svelte-ignore state_referenced_locally
   const w = watch(() => model, ['mode', 'theme']);
+  // svelte-ignore state_referenced_locally
+  const placing = watch(() => model, ['layout']);
   const set = <K extends SettingKey>(key: K) => model.settings.get(key);
+
+  // A layout that takes long says so, over the picture of the graph before (6.1).
+  let layingOut = $state(false);
+  $effect(() => {
+    void placing.v;
+    if (!model.graph || model.laidOut) {
+      layingOut = false;
+      return;
+    }
+    const timer = setTimeout(() => (layingOut = true), model.settings.get('layout.busyAfter'));
+    return () => clearTimeout(timer);
+  });
 
   $effect(() => {
     if (theme !== undefined) model.setBaseSettings({ 'theme.scheme': theme });
@@ -85,6 +99,7 @@
         relations: count(model.relationCount(), 'relation', 'relations', locale),
       }),
       hint: set('accessibility.hint') ? `${set('words.hint')[mode]} ${set('words.hint').more}`.trim() : '',
+      layingOut: say(model, 'Laying out {units}…', { units: count(g?.units.length ?? 0, 'unit', 'units', locale) }),
       role: set('accessibility.canvasRole'),
       politeness: set('accessibility.liveRegion'),
       css: viewCss(model),
@@ -95,8 +110,10 @@
 
   /** The renderer's settings, which a new renderer takes. */
   function options(): GpuOptions {
+    // The renderer's own smoothing serves the hulls; above a size it costs more speed than it gives (6.16).
+    const upTo = set('renderer.antialiasUpTo');
     return {
-      antialias: set('renderer.antialias'),
+      antialias: set('renderer.antialias') && (upTo === null || (model.graph?.units.length ?? 0) <= upTo),
       alpha: set('renderer.alpha'),
       preserveDrawingBuffer: set('renderer.preserveDrawingBuffer'),
       pixelRatio: set('renderer.pixelRatio'),
@@ -106,7 +123,13 @@
       start: set('camera.start'),
     };
   }
-  const REBUILD = ['renderer.antialias', 'renderer.alpha', 'renderer.preserveDrawingBuffer', 'renderer.pixelRatio'];
+  const REBUILD = [
+    'renderer.antialias',
+    'renderer.antialiasUpTo',
+    'renderer.alpha',
+    'renderer.preserveDrawingBuffer',
+    'renderer.pixelRatio',
+  ];
 
   /** A renderer with the settings' options; the camera stays where it was. */
   function build() {
@@ -133,7 +156,11 @@
     // The changes of one action arrive together; the region says them as one message.
     let pending: Message[] = [];
     const quiet = model.subscribe((a) => {
+      // What the pointer rested on may have changed or gone.
+      tip = null;
       if (a.has('settings') && model.changedSettings.some((k) => REBUILD.includes(k))) build();
+      // A graph on the other side of "Smooth edges up to" needs another renderer.
+      else if (a.has('graph') && gpu && options().antialias !== gpu.options.antialias) build();
       if (set('accessibility.liveRegion') === 'off') return;
       const words = announce(model, a);
       if (!words) return;
@@ -171,6 +198,7 @@
 
   function onDown(e: PointerEvent) {
     down = local(e);
+    tip = null;
     if (boxSelect && e.button === BUTTON.left && gpu) {
       // The camera holds still while the box is drawn.
       gpu.controls.enabled = false;
@@ -213,8 +241,10 @@
     model.select(keys, add ? 'add' : 'remove');
   }
 
-  // The pointer's shape follows what is under it, checked once the pointer rests.
+  // The pointer's shape follows what is under it, checked once the pointer rests; a small label then
+  // names it, in the inspector's words (6.11).
   let hover = 0;
+  let tip: { x: number; y: number; left: boolean; up: boolean; name: string; type: string } | null = $state(null);
   function onMove(e: PointerEvent) {
     clearTimeout(hover);
     if (box) {
@@ -224,10 +254,37 @@
     }
     if (down) return;
     const p = local(e);
-    hover = window.setTimeout(
-      () => (input.style.cursor = scene.pick(p.x, p.y) ? set('pointer.cursor.target') : set('pointer.cursor.idle')),
-      set('pointer.hoverDelay'),
-    );
+    hover = window.setTimeout(() => {
+      const hit = scene.pick(p.x, p.y);
+      input.style.cursor = hit ? set('pointer.cursor.target') : set('pointer.cursor.idle');
+      tip =
+        hit && set('pointer.hoverLabel')
+          ? { ...p, left: p.x > stage.clientWidth * 0.6, up: p.y > stage.clientHeight * 0.75, ...named(hit) }
+          : null;
+    }, set('pointer.hoverDelay'));
+  }
+  function onLeave() {
+    clearTimeout(hover);
+    tip = null;
+  }
+
+  /** What the pointer rests on, as the inspector heads it, and its type when it has one. */
+  function named(hit: NonNullable<Inspected>): { name: string; type: string } {
+    const l = (k: Key) => model.label(k);
+    if (hit.kind === 'unit') return { name: l(hit.key), type: model.unitType(hit.key)?.label ?? '' };
+    if (hit.kind === 'keypair')
+      return {
+        name: say(model, 'Keypair from {from} to {to}', { from: l(hit.from), to: l(hit.to) }),
+        type: model.keypairType(hit.from, hit.to)?.label ?? '',
+      };
+    if (hit.kind === 'perspective') {
+      const id = model.perspectiveType(hit.iface, hit.from, hit.to);
+      return {
+        name: say(model, 'Perspective from {from} to {to}', { from: l(hit.from), to: l(hit.to) }),
+        type: model.types.keypair.find((t) => t.id === id)?.label ?? id ?? '',
+      };
+    }
+    return { name: say(model, 'Relation between {a} and {b}', { a: l(hit.a), b: l(hit.b) }), type: '' };
   }
 
   const MOVES: Partial<Record<KeyAction, Parameters<Scene['nudge']>[0]>> = {
@@ -252,6 +309,7 @@
   let stepping: Key | null = null;
 
   function onKey(e: KeyboardEvent) {
+    tip = null;
     if (set('keyboard.ignoreWith').some((m) => e[MODIFIERS[m]])) return;
     const action = set('keyboard.bindings')[e.key];
     if (!action) return;
@@ -358,11 +416,13 @@
     onpointerdown={onDown}
     onpointerup={onUp}
     onpointermove={onMove}
+    onpointerleave={onLeave}
+    onwheel={onLeave}
     onkeydown={onKey}
   ></div>
   {#if info.refused}
     <div class="gv-refused" role="alert" data-testid="refused" data-code={info.refused.code}>
-      <p><strong>This file was refused.</strong></p>
+      <p><strong>{say(model, 'This file was refused.')}</strong></p>
       <p>{info.refusal}</p>
     </div>
   {/if}
@@ -374,6 +434,22 @@
         box.x1 - box.x0,
       )}px; height: {Math.abs(box.y1 - box.y0)}px"
     ></div>
+  {/if}
+  {#if layingOut}
+    <div class="gv-busy" role="status" data-testid="laying-out"><p>{info.layingOut}</p></div>
+  {/if}
+  {#if tip}
+    <!-- For the pointer only: the inspector and the live region say the same to everyone. -->
+    <div
+      class="gv-tip"
+      class:gv-tip-left={tip.left}
+      class:gv-tip-up={tip.up}
+      aria-hidden="true"
+      data-testid="hover-label"
+      style="left: {tip.x}px; top: {tip.y}px"
+    >
+      <strong>{tip.name}</strong>{#if tip.type}<span>{tip.type}</span>{/if}
+    </div>
   {/if}
   {#if info.hint}<p class="gv-hint">{info.hint}</p>{/if}
   <p class="gv-live" aria-live={info.politeness} data-testid="live">{live}</p>

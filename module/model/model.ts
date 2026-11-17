@@ -16,7 +16,7 @@ import { DEFAULT_OVERRIDES, EXTRA_STEPS } from '../settings/defaults.ts';
 import type { SettingsFile } from '../settings/file.ts';
 import { SettingsRegistry, type Refusal } from '../settings/registry.ts';
 import { isToken, TOKEN_NAMES } from '../settings/setting.svelte.ts';
-import { graphWorker } from '../workers/index.ts';
+import { cancelForce, graphWorker } from '../workers/index.ts';
 import type {
   Aspect,
   FilterRule,
@@ -150,6 +150,7 @@ export class GraphModel {
   }
 
   dispose() {
+    cancelForce(this);
     this.worker?.terminate();
     this.worker = null;
     this.listeners.clear();
@@ -168,6 +169,7 @@ export class GraphModel {
   /** Reads a source and loads its document as `load` does; a source that fails gives the refusal "source" (5.8). */
   async loadFrom(source: GraphSource, settings: Partial<ViewSettings> = {}): Promise<boolean> {
     const run = ++this.run;
+    cancelForce(this);
     let doc: unknown;
     try {
       doc = await source.load();
@@ -192,6 +194,8 @@ export class GraphModel {
     failed: { code: 'source'; message: string; reason: string } | null,
     source: GraphSource | null = null,
   ): Promise<boolean> {
+    // A layout still running for the graph before is given up: the new graph does not wait behind it.
+    cancelForce(this);
     this.worker?.terminate();
     this.worker = null;
     this.source = source;
@@ -258,7 +262,7 @@ export class GraphModel {
     this.emit('graph');
     const layout = this.layoutRules();
     this.extent = layout.extent;
-    const placed = await placeUnits(g, this.ids, this.relations, () => run === this.run, layout);
+    const placed = await placeUnits(g, this.ids, this.relations, () => run === this.run, layout, this);
     if (!placed || run !== this.run) return false;
     this.positions = placed;
     this.laidOut = true;
@@ -503,8 +507,8 @@ export class GraphModel {
     if (!inside || !this.laidOut) return false;
     const run = this.run;
     const part = [...inside].flatMap((v, i) => (v ? [i] : []));
-    const next = await placePart(this.ids, this.positions, part, this.relations, this.layoutRules());
-    if (run !== this.run) return false;
+    const next = await placePart(this.ids, this.positions, part, this.relations, this.layoutRules(), this);
+    if (!next || run !== this.run) return false;
     this.positions = next;
     this.emit('scope');
     return true;

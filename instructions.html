@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>graphview: run it and check it</title>
+    <style>
+      /* The colours are the tokens of specification 4.6, light and dark. */
+      :root {
+        --surface: #f6f8f9;
+        --plane: #edf1f3;
+        --panel: #ffffff;
+        --ink-1: #13222e;
+        --ink-2: #46596a;
+        --muted: #5a6b7e;
+        --hairline: #d5dde2;
+        --accent: #2a78d6;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --surface: #0f151a;
+          --plane: #0a0f13;
+          --panel: #141b21;
+          --ink-1: #e8eef2;
+          --ink-2: #a9b8c4;
+          --muted: #8c9dab;
+          --hairline: #24303a;
+          --accent: #3987e5;
+          color-scheme: dark;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-padding-top: 72px;
+      }
+      body {
+        margin: 0;
+        background: var(--surface);
+        color: var(--ink-1);
+        font:
+          16px/1.6 'Atkinson Hyperlegible Next',
+          system-ui,
+          sans-serif;
+      }
+      a {
+        color: var(--accent);
+      }
+      .bar {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 56px;
+        padding: 8px 20px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--hairline);
+      }
+      .bar .name {
+        font-weight: 700;
+      }
+      .bar .what,
+      .bar .progress {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .bar .progress {
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+      }
+      .bar button {
+        padding: 5px 12px;
+        font: inherit;
+        font-size: 14px;
+        color: var(--ink-1);
+        background: var(--panel);
+        border: 1px solid var(--hairline);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .bar button:hover:not(:disabled) {
+        border-color: var(--ink-2);
+      }
+      .bar button:disabled {
+        color: var(--muted);
+        cursor: default;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 32px 20px 96px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        line-height: 1.2;
+      }
+      h2 {
+        margin: 48px 0 12px;
+        padding-top: 16px;
+        font-size: 24px;
+        line-height: 1.3;
+        border-top: 1px solid var(--hairline);
+      }
+      h3 {
+        margin: 28px 0 8px;
+        font-size: 18px;
+      }
+      p {
+        margin: 12px 0;
+      }
+      b,
+      strong {
+        font-weight: 600;
+      }
+      code,
+      kbd {
+        font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+        font-size: 0.86em;
+        padding: 1px 5px;
+        background: var(--plane);
+        border-radius: 4px;
+      }
+      kbd {
+        border: 1px solid var(--hairline);
+      }
+      pre {
+        overflow: auto;
+        margin: 12px 0;
+        padding: 12px 16px;
+        background: var(--plane);
+        border: 1px solid var(--hairline);
+        border-radius: 8px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      pre code {
+        padding: 0;
+        background: none;
+        font-size: inherit;
+      }
+      .note {
+        color: var(--ink-2);
+        font-size: 14px;
+      }
+      .checks {
+        list-style: none;
+        margin: 12px 0 24px;
+        padding: 0;
+        background: var(--panel);
+        border: 1px solid var(--hairline);
+        border-radius: 8px;
+      }
+      .checks li {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        column-gap: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--hairline);
+      }
+      .checks li:last-child {
+        border-bottom: 0;
+      }
+      /* The box to tick stands in the first column; what to do and what to expect fill the second. */
+      .checks li > * {
+        grid-column: 2;
+        min-width: 0;
+      }
+      .checks input {
+        grid-column: 1;
+        grid-row: 1;
+        width: 18px;
+        height: 18px;
+        margin: 4px 0 0;
+        accent-color: var(--ink-2);
+        cursor: pointer;
+      }
+      .checks label {
+        cursor: pointer;
+      }
+      .checks p {
+        margin: 2px 0 0;
+        color: var(--ink-2);
+      }
+      .checks li:has(input:checked) label,
+      .checks li:has(input:checked) p {
+        color: var(--muted);
+      }
+      .checks pre {
+        margin: 6px 0 2px;
+      }
+      @media (max-width: 520px) {
+        .bar {
+          flex-wrap: wrap;
+          gap: 4px 12px;
+          padding: 8px 16px;
+        }
+        .bar .what {
+          display: none;
+        }
+        main {
+          padding: 24px 16px 64px;
+        }
+        h1 {
+          font-size: 26px;
+        }
+        h2 {
+          font-size: 21px;
+        }
+      }
+      @media print {
+        .bar {
+          display: none;
+        }
+        main {
+          max-width: none;
+          padding: 0;
+        }
+        .checks li,
+        pre {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <span class="name">graphview</span>
+      <span class="what">Run it and check it, version 4.1</span>
+      <span class="progress" id="progress" role="status" hidden></span>
+      <button type="button" id="clear" hidden>Clear ticks</button>
+    </header>
+    <main>
+      <h1>Run it and check it</h1>
+      <p>
+        <strong>This page says how to run graphview, and what to check in version 4.1.</strong> Each line to check says
+        what to do, and under it what to expect. Tick a line when it holds; this browser keeps your ticks. The README
+        says what every control and key does.
+      </p>
+
+      <h2 id="install">1. Install</h2>
+      <p><strong>You need Node.js 22.17 or later, and a terminal in the repository's folder.</strong></p>
+      <pre><code>npm ci</code></pre>
+      <p>Run it once, and again whenever package-lock.json changes.</p>
+
+      <h2 id="run">2. Run it</h2>
+      <p><strong>One command starts the shell, which plays a host around the viewer.</strong></p>
+      <pre><code>npm run dev</code></pre>
+      <p>
+        Open the address it prints. That is <a href="http://localhost:5173/graphview/">localhost:5173/graphview/</a>,
+        unless the port is taken. <kbd>Ctrl</kbd> and <kbd>C</kbd> in the terminal stop it.
+      </p>
+      <ul class="checks">
+        <li>
+          <input type="checkbox" id="start" />
+          <label for="start">Look at the page once it has loaded.</label>
+          <p>
+            The headline reads "Sample graph, 81 units, 84 relations, no issues". The host tools stand on the left. The
+            viewer fills the rest with its bar, its canvas and its side bar.
+          </p>
+        </li>
+      </ul>
+      <p class="note">
+        The checks below start from the default settings, with motion on. In <b>Settings</b>, <b>Reset all</b> brings
+        the defaults back; <b>Export</b> first keeps your own values. The server keeps each browser's settings under
+        data/, which git leaves out.
+      </p>
+      <p class="note">
+        To see the built shell instead, run <code>npm run build:server</code>, then
+        <code>npx vite preview --config shell/vite.config.ts</code>, and open
+        <a href="http://localhost:4173/graphview/">localhost:4173/graphview/</a>.
+      </p>
+
+      <h2 id="hand">3. Check by hand</h2>
+      <p>
+        <strong>Twenty-four lines cover what version 4.1 changed for the person at the screen.</strong> Start from the
+        sample graph. If the camera jumps where it should glide, look at <b>Motion</b> in <b>Settings</b>: it follows
+        the system's request for reduced motion.
+      </p>
+
+      <h3>The camera</h3>
+      <ul class="checks">
+        <li>
+          <input type="checkbox" id="wheel" />
+          <label for="wheel">Put the pointer on a unit near the canvas's edge, and turn the wheel.</label>
+          <p>The unit stays under the pointer while the picture grows and shrinks.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="fit" />
+          <label for="fit">Zoom in, then press <b>Fit</b> in the viewer's bar.</label>
+          <p>The camera glides back to the whole graph in about half a second. It does not jump.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="keys" />
+          <label for="keys">Click an empty part of the canvas, then press the right arrow three times, quickly.</label>
+          <p>The picture pans in one smooth move, three steps long. Each press adds to the move under way.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="zoom-keys" />
+          <label for="zoom-keys">Press <kbd>+</kbd> twice, then <kbd>0</kbd>.</label>
+          <p>The picture zooms in by two steps, then glides back to the whole graph.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="turn" />
+          <label for="turn"
+            >Press <b>3D</b> and drag the canvas. Press <kbd>[</kbd> and <kbd>]</kbd>, then <b>2D</b>.</label
+          >
+          <p>The drag turns the view, and the keys turn it by even steps. 2D glides back to straight above.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="glide" />
+          <label for="glide"
+            >Open <b>Settings</b>, type Glide in its filter, and tick <b>Glide</b>. Close, drag the canvas, and let go
+            while the pointer moves.</label
+          >
+          <p>
+            The picture follows the pointer softly, glides on after you let go, and comes to rest by itself. Without
+            Glide it stops where you let go.
+          </p>
+        </li>
+      </ul>
+
+      <h3>Words on the canvas</h3>
+      <ul class="checks">
+        <li>
+          <input type="checkbox" id="hover-unit" />
+          <label for="hover-unit">Rest the pointer on a unit.</label>
+          <p>A small label names the unit, and its type where it has one. It goes when the pointer moves on.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="hover-line" />
+          <label for="hover-line">Rest the pointer on a line, then on a chevron.</label>
+          <p>The label reads "Relation between … and …" on the line, and "Keypair from … to …" on the chevron.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="layout-note" />
+          <label for="layout-note"
+            >In the host tools, open <b>Generate</b>. Under <b>Graph</b> choose Small world, set <b>n</b> to 2000, and
+            press <b>Generate</b>.</label
+          >
+          <p>
+            The canvas soon says "Laying out 2,000 units…", and goes on saying so until the picture comes. That took
+            about ten seconds on the machine the report names.
+          </p>
+        </li>
+        <li>
+          <input type="checkbox" id="layout-newer" />
+          <label for="layout-newer"
+            >Press <b>Generate</b> again. While the canvas says so, choose Sample graph and press
+            <b>Generate</b>.</label
+          >
+          <p>The sample graph shows at once. It does not wait for the layout to end.</p>
+        </li>
+      </ul>
+
+      <h3>The side bar</h3>
+      <ul class="checks">
+        <li>
+          <input type="checkbox" id="reveal" />
+          <label for="reveal">Close the <b>Inspector</b> by its heading, then click a unit.</label>
+          <p>The unit becomes the root. The Inspector opens again and comes into view, with the unit's name.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="counts" />
+          <label for="counts">Type 7 in the search field of the viewer's bar.</label>
+          <p>The side bar lists the results, and the heading <b>Search</b> counts them.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="banner" />
+          <label for="banner">Under <b>Graph</b> choose Mixed issues, and press <b>Generate</b>.</label>
+          <p>
+            A banner says that the graph breaks the graph rules. Its button, <b>Show 7 issues</b>, brings
+            <b>Data issues</b> into view, and that heading counts 7.
+          </p>
+        </li>
+        <li>
+          <input type="checkbox" id="remember" />
+          <label for="remember"
+            >Close <b>Paths</b>, drag the side bar's left edge, wait a second, and reload the page.</label
+          >
+          <p>The side bar comes back as you left it: the same sections open, at the same width.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="panels" />
+          <label for="panels">Press <b>Panels</b>, wait a second, and reload the page.</label>
+          <p>The side bar hides, and it is still hidden after the reload. <b>Panels</b> brings it back.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="search-opens" />
+          <label for="search-opens"
+            >Hide the side bar, click the canvas, and press <kbd>/</kbd>. Type 7, then press
+            <kbd>Escape</kbd> twice.</label
+          >
+          <p>
+            The key moves to the search field, and typing opens the side bar with the results. The first Escape empties
+            the field; the second gives the keys back to the canvas.
+          </p>
+        </li>
+      </ul>
+
+      <h3>The look</h3>
+      <ul class="checks">
+        <li>
+          <input type="checkbox" id="filled" />
+          <label for="filled">Look at the top bar and the viewer's bar.</label>
+          <p>
+            The mode in use, 2D or 3D, is filled. <b>Panels</b> is filled while the side bar shows, and <b>Host</b>
+            while the host tools show.
+          </p>
+        </li>
+        <li>
+          <input type="checkbox" id="pin" />
+          <label for="pin">In <b>Settings</b>, press <b>Pin</b> beside any setting, and close.</label>
+          <p>The button fills and reads Unpin, and the setting shows under <b>Pinned settings</b> in the side bar.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="fields" />
+          <label for="fields">Look at the search field, the Seed field and the boxes to tick.</label>
+          <p>Text stands clear of the borders. Ticks and sliders are slate grey, not the browser's blue.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="types" />
+          <label for="types"
+            >Under <b>Generate</b>, tick Add types, weights and times, and press <b>Generate</b>. Open <b>Types</b> in
+            the side bar.</label
+          >
+          <p>Under "Keypairs by type", the table shows each name in full. A long name wraps; none is cut.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="dark" />
+          <label for="dark">In <b>Settings</b>, set <b>Colours</b> to Dark.</label>
+          <p>The page turns dark, and every line above still holds.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="narrow" />
+          <label for="narrow">Make the window narrower than 900 pixels.</label>
+          <p>
+            The side bar becomes a drawer that starts closed. <b>Panels</b> and <b>Settings</b> keep to the right edge
+            of the viewer's bar.
+          </p>
+        </li>
+      </ul>
+
+      <h3>Speed</h3>
+      <ul class="checks">
+        <li>
+          <input type="checkbox" id="large" />
+          <label for="large">Under <b>Graph</b> choose Random graph of 10,000 units, and press <b>Generate</b>.</label>
+          <p>The picture comes without hulls and without a wait for a layout. Dragging and the wheel stay smooth.</p>
+        </li>
+        <li>
+          <input type="checkbox" id="bench" />
+          <label for="bench">Add <code>#bench</code> to the address, and press <b>Run</b>.</label>
+          <p>
+            The table gives your machine's first picture and frame times. Section 4 of docs/report.md has the numbers to
+            compare them with.
+          </p>
+        </li>
+      </ul>
+
+      <h2 id="machine">4. Check by machine</h2>
+      <p><strong>Three commands check the types, the format, the tests and the builds.</strong></p>
+      <ul class="checks">
+        <li>
+          <input type="checkbox" id="check" />
+          <label for="check">Run the checks.</label>
+          <pre><code>npm run check</code></pre>
+          <p>
+            svelte-check finds no errors, Prettier accepts every file, and all 360 unit and gate tests pass. Folders
+            kept beside the work belong in .git/info/exclude first, or two of the checks fail on them; section 7 of
+            docs/assessment.md has the lines.
+          </p>
+        </li>
+        <li>
+          <input type="checkbox" id="e2e" />
+          <label for="e2e">Run the browser tests. Port 4173 must be free.</label>
+          <pre><code>npm run e2e</code></pre>
+          <p>
+            It builds the shell with its server, serves it, and runs 118 tests; all pass. That took about four minutes
+            on the machine the report names.
+          </p>
+        </li>
+        <li>
+          <input type="checkbox" id="build" />
+          <label for="build">Build everything.</label>
+          <pre><code>npm run build</code></pre>
+          <p>It writes dist/module, dist/shell, dist/server and dist/package, and ends without an error.</p>
+        </li>
+      </ul>
+      <p class="note">
+        The browser tests need a Chromium. <code>npx playwright install --with-deps chromium</code> downloads
+        Playwright's own. A Chrome the machine already has serves as well:
+        <code>GRAPHVIEW_CHROMIUM=/usr/bin/google-chrome npm run e2e</code>.
+      </p>
+      <p class="note">
+        <code>npm test</code> runs the checks and the browser tests in a row. After a push, the workflow checks.yml runs
+        it too.
+      </p>
+
+      <h2 id="read">5. Read on</h2>
+      <p><strong>Five documents say the rest.</strong></p>
+      <ul>
+        <li><a href="README.md">README.md</a>: every control and key, and how a host embeds the viewer.</li>
+        <li>
+          <a href="docs/assessment.md">docs/assessment.md</a>: what was found in the source, what version 4.1 changed,
+          and seven proposals for what to do next.
+        </li>
+        <li>
+          <a href="docs/report.md">docs/report.md</a>: the test of each requirement, the speed with its machine, the
+          visual review, and what is open.
+        </li>
+        <li><a href="docs/decisions.md">docs/decisions.md</a>: the choices of version 4.1, D118 to D132.</li>
+        <li>
+          <a href="docs/specifications.html">docs/specifications.html</a>: the contract; appendix F lists the changes of
+          version 4.1 by section.
+        </li>
+      </ul>
+    </main>
+    <script>
+      // The ticks live in this browser's storage; without it they last while the page is open.
+      (() => {
+        const KEY = 'graphview-instructions';
+        const boxes = [...document.querySelectorAll('.checks input')];
+        const progress = document.getElementById('progress');
+        const clear = document.getElementById('clear');
+        let ticked = [];
+        try {
+          ticked = JSON.parse(localStorage.getItem(KEY) ?? '[]');
+        } catch {
+          ticked = [];
+        }
+        if (!Array.isArray(ticked)) ticked = [];
+        const show = () => {
+          const n = boxes.filter((b) => b.checked).length;
+          progress.textContent = `${n} of ${boxes.length} checked`;
+          clear.disabled = n === 0;
+        };
+        const save = () => {
+          try {
+            const ids = boxes.filter((b) => b.checked).map((b) => b.id);
+            localStorage.setItem(KEY, JSON.stringify(ids));
+          } catch {
+            // No storage: nothing to keep.
+          }
+        };
+        for (const b of boxes) {
+          b.checked = ticked.includes(b.id);
+          b.addEventListener('change', () => {
+            save();
+            show();
+          });
+        }
+        clear.addEventListener('click', () => {
+          for (const b of boxes) b.checked = false;
+          save();
+          show();
+        });
+        progress.hidden = clear.hidden = false;
+        show();
+      })();
+    </script>
+  </body>
+</html>

@@ -44,7 +44,7 @@
           <p class="gv-result-head">
             <strong>{r.label}</strong>
             <span class="gv-note"
-              >{[r.type, t('matched in {where}', { where: t(r.where) })].filter(Boolean).join(' · ')}</span
+              >{[r.type, t('matched in {where}', { where: t(r.where) })].filter(Boolean).join(', ')}</span
             >
           </p>
           <div class="gv-row gv-actions">

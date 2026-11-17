@@ -2,8 +2,11 @@ import { existsSync } from 'node:fs';
 import { defineConfig, devices } from '@playwright/test';
 
 // Cloud sessions cannot download Playwright's browser; they use the preinstalled one (specification 10.4).
+// GRAPHVIEW_CHROMIUM names another Chromium or Chrome to test with, such as one the machine already has.
 const local = '/opt/pw-browsers/chromium';
-const executablePath = process.env.CI ? undefined : existsSync(local) ? local : undefined;
+const executablePath = process.env.CI
+  ? undefined
+  : (process.env.GRAPHVIEW_CHROMIUM ?? (existsSync(local) ? local : undefined));
 
 export default defineConfig({
   testDir: 'tests/e2e',

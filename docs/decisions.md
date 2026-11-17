@@ -1,6 +1,6 @@
 # graphview: decisions
 
-**Each entry records a choice the specification leaves open: the choice, the reason, and the alternative.** Decisions D1 to D54, made while building release 1 and the 3D viewer, are folded into docs/specifications.md. The entries below were made in the order the work met them: D55 to D64 while settling the discrepancies of docs/spec_discrepancies.md, D65 to D78 while adding interface graphs and the extension points of version 3.0, and D79 on for version 4.0.
+**Each entry records a choice the specification leaves open: the choice, the reason, and the alternative.** Decisions D1 to D54, made while building release 1 and the 3D viewer, are folded into docs/specifications.md. The entries below were made in the order the work met them: D55 to D64 while settling the discrepancies of docs/spec_discrepancies.md, D65 to D78 while adding interface graphs and the extension points of version 3.0, D79 to D117 for version 4.0, and D118 on for version 4.1, which makes the viewer more fluid to work with.
 
 ## D55. A file's saved settings reach every part of the picture
 
@@ -379,3 +379,93 @@
 - **Choice.** `npm run package` runs svelte-package on module/ with tsconfig.package.json, which turns on `rewriteRelativeImportExtensions`, so that every import names the built .js file. scripts/package.mjs then points the workers' `new URL(…)` addresses at their .js files, removes the module's build configuration, and fails if any import still names a .ts file. package.json names dist/package in `exports`, `svelte` and `types`; the package stays private, for hosts that depend on it by git or path.
 - **Reason.** A SvelteKit host compiles the components itself, with its own Svelte; svelte, three and graphology stay its dependencies. TypeScript rewrites imports but not the workers' addresses, which are strings.
 - **Alternative.** Publish the bundled library of dist/module. A host would then get compiled components and a second copy of the CSS, and could not tree-shake the panels it leaves out.
+
+## D118. The wheel zooms toward the pointer, and the target stays on its plane
+
+- **Choice.** `camera.zoomToCursor` is on by default: the camera moves along the pointer's ray, so what lies under the pointer stays there. After each such move the rig puts the camera's target back on the plane it was on, across the line of sight; in 2D that is the plane of the graph.
+- **Reason.** A person points at what they want to see closer; a zoom toward the centre makes them pan after every zoom. The orbit controls leave the target in front of the camera at the new distance, off its plane: zoom after zoom the distance to the target then stops being the distance to the graph, and the zoom stalls before the graph is reached.
+- **Alternative.** Keep the zoom toward the centre, as 6.3 was first built. Or a wheel handler of the viewer's own, which would repeat what the controls already do for the wheel and the pinch.
+
+## D119. The camera eases on its own clock
+
+- **Choice.** A camera move has its own start and end, the transition's time and its easing. Fit by a person, the keys, a new root and the turn to 2D all use it; a new graph still shows fitted at once. A move keeps direction and distance where its ends share them, else it turns along the shortest arc and changes the distance by equal factors. A step by a key starts from where the move in flight ends. A drag or the wheel ends the move in flight. The scene is settled once the units and the camera both stand still.
+- **Reason.** 6.10 says every change eases; Fit and the keys jumped, because the camera could only move while the units' transition ran. Steps that start at the end of the last one make a held key pan evenly instead of losing steps. A straight line between two camera places cuts through the graph on a turn; the arc does not.
+- **Alternative.** Leave the camera tied to the units' transition. Fit and the keys would keep jumping, or would have to start an empty transition of the units.
+
+## D120. Glide asks the controls again on every frame until they rest
+
+- **Choice.** While `camera.damping` is on, each frame asks the orbit controls for their next step, until they report no move. The default stays off.
+- **Reason.** The controls spread a drag over the frames that follow it, and only when asked each frame. Unasked, the setting lost about three fifths of every drag and never moved on: a 200-pixel drag moved the view 115 world units instead of 295. Off stays the default because 9.4 lets nothing move by itself.
+- **Alternative.** Take the setting out. A host that wants the glide would lose it.
+
+## D121. The pointer names what it rests on
+
+- **Choice.** Once the pointer rests on a target, a small label beside it says what a click would inspect, in the inspector's words, with the type on a second line. It hides at a press, the wheel, a key and any change of the model. It is hidden from assistive technology, which has the inspector and the live region. `pointer.hoverLabel` turns it off.
+- **Reason.** A click on a unit makes it the root, which moves the whole picture; a person wants to know what a mark is before that. Labels show only where they fit, at most 300 of them, and chevrons and lines never carry one. The rest check already ran for the pointer's shape, so the label costs nothing more.
+- **Alternative.** Highlight what the pointer is over, as release 1 did. That moves the picture without an action, which 9.4 rules out, and was dropped with release 1.
+
+## D122. A slow layout says so, and a newer graph gives it up
+
+- **Choice.** When a layout takes longer than `layout.busyAfter`, 300 milliseconds, "Laying out … units…" covers the canvas until it is done. A model that loads another graph gives up the layout it waits for; the layout worker ends when nobody else waits for one, and the next layout starts on a new worker.
+- **Reason.** The force layout takes 3 seconds for 1,000 units and 24 for 20,000 on the machine of this round. Until it ended the canvas showed the graph before, under the new headline, and said nothing. One worker ran every layout in turn, so a second Generate waited for the first layout to finish, though its result was thrown away.
+- **Alternative.** Clear the canvas as soon as a graph loads. Small graphs, which lay out within a frame or two, would flash. For the wait: a worker per layout, which costs every small graph the start of a worker.
+
+## D123. The side bar's state is settings
+
+- **Choice.** `panels.open` holds the open sections and follows each section's button; `panels.shown` says whether the side bar shows and follows Panels; `panels.width` follows the side bar's edge, a separator that a drag or the arrow keys move. On a narrow page the drawer starts closed and its state is not kept. A click that would write the value a setting already has writes nothing.
+- **Reason.** Every value that changes the viewer is a setting (5.9), and the settings file is what a person keeps. A person who opens Types and closes Paths finds them so after a reload, on every device of a host that stores the file. The table of keypair types and the path table want more than 360 pixels.
+- **Alternative.** Keep the state in the component, as before: lost on every reload. Or in browser storage beside the settings file: a second place for what a person set.
+
+## D124. What is inspected comes into view
+
+- **Choice.** An inspection opens the Inspector section and scrolls the side bar so that the section shows, no further than needed, while the side bar is open; a cleared inspector moves nothing. The side bar scrolls smoothly unless motion is off. `panels.reveal` turns it off.
+- **Reason.** 6.11 says any hit opens in the inspector. With the section closed, or scrolled away below long search results, a click showed nothing of what was clicked.
+- **Alternative.** Open the side bar too when it is closed. On a narrow page the drawer would then cover the canvas at every click.
+
+## D125. A section's heading counts what it holds
+
+- **Choice.** Search, Scope, Highlights, Filters, Data issues and Pinned settings show a count beside their titles when they hold something. The count is part of the heading, outside the button, so that the button keeps its plain name. The rule banner gains a button that opens the Data issues section.
+- **Reason.** A closed section hid that a filter was on, that units were selected or that the data had issues. The banner told a person to look in a panel that sits at the foot of the side bar.
+- **Alternative.** Put the count in the button. Its accessible name would change with the count, and tests and hosts that look the button up by its title would lose it.
+
+## D126. A button that is on is filled
+
+- **Choice.** Buttons with `aria-pressed` true, and Panels and Host while they are open, draw in the panel colour on ink. 2D and 3D stand side by side as one. Boxes to tick and sliders take the slate of ink-2 as their accent.
+- **Reason.** 2D and 3D looked the same whichever was in use, and so did a pin. The browser's blue for ticks and sliders is the first type hue (4.6), and 9.1 keeps colour for types, the path and issues.
+- **Alternative.** A border in ink for the state that is on. It reads as a focus outline.
+
+## D127. The order of labels is worked out once per change of the model
+
+- **Choice.** The scene counts the model's changes. The forced labels, and every unit in the order labels claim room, are worked out once per count; each frame then walks that order and stops at the most candidates. The units' states of the last snapshot are kept while only the camera moves, and their places on the canvas are written over the last ones.
+- **Reason.** On 10,000 units each frame sorted every unit on screen and built 10,000 states again, though only the camera had moved: 33 milliseconds a frame while panning, about 20 frames a second on graphics hardware. The order depends on the root, the path, the highlights and the number of relations, none of which a camera move changes.
+- **Alternative.** Draw labels on every second frame while the camera moves. They would lag behind their units.
+
+## D128. The settings of the panels leave the picture alone
+
+- **Choice.** When every changed setting belongs to the group Panels, the scene skips its own work: the drawing rules, the fades, the outlines and the hulls stay as they are.
+- **Reason.** With D123 a section's button changes a setting. Each change used to rebuild the hulls and write three attributes of every unit again, which a large graph feels.
+- **Alternative.** A list, per setting, of what it touches. More to keep true than one prefix.
+
+## D129. The format check and the scan for private names follow git's own list
+
+- **Choice.** The unit test that scans every text file of the repository asks git for the files it holds or would take; without git it walks the folders as before. `npm run check` hands Prettier the clone's own excludes besides .gitignore and .prettierignore.
+- **Reason.** The scan kept its own list of folders that git leaves out, a second place for one fact. A working folder that holds copies of earlier versions beside the work failed both checks, though git would never take those copies once they are excluded.
+- **Alternative.** Name each such folder in the test and in .prettierignore. The repository would then describe one person's working folder.
+
+## D130. GRAPHVIEW_CHROMIUM names the test browser
+
+- **Choice.** When set, and not on CI, the browser tests and the screenshots start the Chromium or Chrome at that path.
+- **Reason.** A machine that cannot download Playwright's browser often has a Chrome already. The round of version 4.1 ran every browser test this way, and drew on the machine's graphics hardware for the speed numbers.
+- **Alternative.** A second Playwright configuration. Two files would then hold the projects, the flags and the server.
+
+## D131. Above 3,000 units the renderer does not smooth edges itself
+
+- **Choice.** `renderer.antialiasUpTo`, 3,000 units by default, is the largest graph that draws with the renderer's own smoothing of edges; the canvas makes a new renderer when a graph crosses it. "any size" keeps the smoothing always, and `renderer.antialias` still turns it off for every graph.
+- **Reason.** Units, lines and chevrons smooth their own edges in their shaders; the renderer's smoothing only adds to the hulls' edges, and hulls start off above the same 3,000 units (D56). On the integrated graphics of this round's machine it cost three frames in four: zooming into 10,000 units took 67 milliseconds a frame with it and 17 without, while the main thread stood idle.
+- **Alternative.** Turn it off for every graph. Small graphs would lose the hulls' smooth edges for speed they do not lack.
+
+## D132. instructions.html says how to run it and what to check
+
+- **Choice.** The owner asked for a page in the root that says how to run graphview and what to check. instructions.html is written by hand, as one file with its own style. Each line to check says what to do and what to expect, and has a box; the browser keeps the ticks. Everything else stays in the README, the report and the assessment.
+- **Reason.** The page must open from the folder, without a build or a server, so it leans on no other file. Every line was tried on the built shell before it was written down.
+- **Alternative.** Make it from Markdown with the script of the specification's page. The boxes would need a script of their own, and the text would stand in two files.

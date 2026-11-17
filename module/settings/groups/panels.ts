@@ -60,16 +60,32 @@ export const panelSettings = () =>
     new SetSetting({
       key: 'panels.open',
       group: 'Panels',
-      label: 'Open at the start',
-      description: 'The sections that start open.',
+      label: 'Open sections',
+      description:
+        'The sections that are open; opening or closing a section changes it, so that they start as they were left.',
       default: ['search', 'root', 'paths', 'inspector', 'issues', 'pinned'],
       items: SECTIONS,
+    }),
+    new CheckboxSetting({
+      key: 'panels.shown',
+      group: 'Panels',
+      label: 'Side bar',
+      description:
+        'The side bar shows beside the canvas; the Panels button changes it. A narrow page starts without it.',
+      default: true,
+    }),
+    new CheckboxSetting({
+      key: 'panels.reveal',
+      group: 'Panels',
+      label: 'Show what is inspected',
+      description: 'The side bar opens its Inspector and brings it into view when something is inspected.',
+      default: true,
     }),
     new SliderSetting({
       key: 'panels.width',
       group: 'Panels',
       label: 'Side bar width',
-      description: 'Width of the side bar.',
+      description: 'Width of the side bar; dragging its edge changes it.',
       default: 360,
       min: 200,
       max: 800,
@@ -311,8 +327,22 @@ export const rendererSettings = () =>
       key: 'renderer.antialias',
       group: 'Renderer',
       label: 'Smooth edges',
-      description: 'The renderer smooths the edges of what it draws.',
+      description:
+        'The renderer smooths the edges of what it draws: the hulls, as units, lines and chevrons smooth their own.',
       default: true,
+    }),
+    new NumberSetting<'renderer.antialiasUpTo', number | null>({
+      key: 'renderer.antialiasUpTo',
+      group: 'Renderer',
+      label: 'Smooth edges up to',
+      description:
+        'A graph with more units draws without the renderer’s smoothing, which costs a large graph most of its speed.',
+      default: 3000,
+      min: 0,
+      max: 10000000,
+      whole: true,
+      unit: 'units',
+      none: 'any size',
     }),
     new CheckboxSetting({
       key: 'renderer.alpha',

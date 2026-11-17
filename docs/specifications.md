@@ -1,8 +1,8 @@
 # graphview: specifications
 
-Version 4.0, 29 October 2026. One document for building graphview in one run.
+Version 4.1, 16 November 2026. One document for building graphview in one run.
 
-**This document consolidates every specification of the project into one contract.** It joins the release 1 specification (version 1.0 of 14 October 2026), the two 3D specifications (docs/3d/01 and 02), the adjustments of 19 October 2026 (docs/3d/03-adjustments.md), and the choices made while building release 1 and the 3D viewer (decisions D1 to D54). Version 2.1 settles the differences between version 2.0 and the code that docs/spec_discrepancies.md lists; appendix C names the changes. Version 3.0 adds interface graphs and the extension points for other families of graphs; appendix D names the changes. Version 4.0 makes the viewer one self-contained component for a host that supplies only graphs as JSON: sources, settings with their controls and stores, the viewer's own bar and side bar, a drawing by perspectives, search, filter rules, highlights and scope. The shell becomes a SvelteKit app that simulates such a host; appendix E names the changes. Where those documents disagree, this one decides. It names no private data and no owner of private data.
+**This document consolidates every specification of the project into one contract.** It joins the release 1 specification (version 1.0 of 14 October 2026), the two 3D specifications (docs/3d/01 and 02), the adjustments of 19 October 2026 (docs/3d/03-adjustments.md), and the choices made while building release 1 and the 3D viewer (decisions D1 to D54). Version 2.1 settles the differences between version 2.0 and the code that docs/spec_discrepancies.md lists; appendix C names the changes. Version 3.0 adds interface graphs and the extension points for other families of graphs; appendix D names the changes. Version 4.0 makes the viewer one self-contained component for a host that supplies only graphs as JSON: sources, settings with their controls and stores, the viewer's own bar and side bar, a drawing by perspectives, search, filter rules, highlights and scope. The shell becomes a SvelteKit app that simulates such a host; appendix E names the changes. Version 4.1 makes the viewer more fluid to work with: a camera that eases, a zoom toward the pointer, a label under the pointer, words for a slow layout, and a side bar that starts as it was left; appendix F names the changes. Where those documents disagree, this one decides. It names no private data and no owner of private data.
 
 **How to use it.** A builder who has this document, the fixtures and the gate tests can build graphview from an empty module and shell, without asking anything. Section 12 gives the order of work and the rules; section 11 says when the work is done.
 
@@ -534,7 +534,7 @@ The model takes an optional worker factory `(units, keypairs) => GraphWorker` in
 
 ### 5.4 Workers
 
-**Distances, path sets and the force layout run off the main thread.** The graph worker keeps one graph and answers `distances` with `ringIndex` and `paths` with `pathSet`. The layout worker runs the force layout (6.1). Where no Worker exists, the same functions run inline.
+**Distances, path sets and the force layout run off the main thread.** The graph worker keeps one graph and answers `distances` with `ringIndex` and `paths` with `pathSet`. The layout worker runs the force layout (6.1). Where no Worker exists, the same functions run inline. A model that loads another graph gives up the layout it still waits for: that layout resolves to nothing, and its worker ends unless another viewer waits for a layout too, so that the newer layout starts at once (D122).
 
 ### 5.5 The scene snapshot
 
@@ -760,6 +760,7 @@ abstract class Setting<T> {
 - _Force layout:_ ForceAtlas2 from graphology, in the layout worker, from seeded starting positions (mulberry32, seed 1). It runs in batches of 25 iterations and stops when the mean step per iteration falls below 0.02 percent of the layout's size, or after 1,500 iterations. Above 500 units it uses the Barnes–Hut approximation; above 2,000 units it stops after 300 iterations, with a Barnes–Hut θ of 1. No clock decides, so the result is deterministic (G9).
 - _Scaling:_ the larger side of the bounding box becomes 1,000 world units, centred on 0. The data's y points down; the scene's y points up.
 - The layout happens once per load. A new graph starts afresh: no root, no path, no inspection, filters from its own fields.
+- A layout that takes longer than `layout.busyAfter` (default 300 milliseconds) says so: "Laying out 2,000 units…" stands over the canvas, in place of the graph before, until the layout is done. A newer graph does not wait behind it (5.4).
 
 ### 6.2 Drawing
 
@@ -786,7 +787,10 @@ Lines stay neutral and chevrons carry the type: a line in a type's colour would 
 | Right drag                                      | pan                                | pan                            |
 | Wheel, pinch                                    | zoom                               | zoom                           |
 
-Switching to 2D eases the camera back to straight above its target. The perspective camera keeps its field of view; `fit()` shows the whole extent from straight above with a margin of 15 percent, across the canvas's width as well as its height.
+Switching to 2D eases the camera back to straight above its target. The perspective camera keeps its field of view; `fit()` shows the whole extent from straight above with a margin of 15 percent, across the canvas's width as well as its height. A new graph shows fitted at once; a person's Fit moves the camera there over the transition (6.10).
+
+- _Zoom toward the pointer._ The wheel and a pinch zoom toward the pointer: what lies under the pointer stays under it. The camera moves along the pointer's ray, and its target stays on the plane it was on, across the line of sight: in 2D the plane of the graph. `camera.zoomToCursor` is on by default; off, they zoom toward the centre of the view (D118).
+- _Glide._ With `camera.damping` on, the view moves on after a drag and comes to rest by itself; it is off by default, as nothing moves by itself (9.4).
 
 ### 6.4 Root and depth
 
@@ -868,6 +872,13 @@ A faded mark draws at `filters.fadeOpacity` of its opacity (default 0.15) and an
 
 **Every change eases over 450 milliseconds with a cubic ease-out.** Moves, depth changes, path changes, filter changes and fades share one mechanism: the previous and next values of each attribute, and one uniform t. With reduced motion, changes are instant. Inspection marks change at once; nothing moves for them.
 
+**The camera eases the same way, on its own clock.** It moves to a new root, to Fit, by the keys of 6.14, and to straight above when 2D takes over, each over the transition's time and with its easing; with reduced motion it jumps.
+
+- A move keeps the camera's direction and its distance to the target where both ends share them. Otherwise the direction turns along the shortest arc around the target, and the distance changes by equal factors, so that a turn does not cut through the graph and a zoom runs evenly.
+- Keys pressed in a row add up: each step starts where the last one ends, so that three presses of an arrow pan three steps.
+- A person who drags or turns the wheel ends the move in flight where it is.
+- The scene is settled, and `whenSettled()` resolves, once neither the units nor the camera move (D119).
+
 ### 6.11 Picking
 
 **Each line has three click targets: its two chevrons and the line; each unit has a sphere.** Picking casts the pointer's ray; it uses no extra meshes.
@@ -879,6 +890,8 @@ A faded mark draws at `filters.fadeOpacity` of its opacity (default 0.15) and an
 - Hidden or faint marks (opacity below 0.1, the opacity factor of 6.8 included) are not targets. Relations whose box on screen lies far from the pointer are skipped.
 
 A click on a unit makes it the root; Shift and a click on another unit makes it the target; any hit opens in the inspector. A drag of more than 4 pixels is no click. The pointer shows a hand over a target, checked once the pointer rests for 50 ms.
+
+**The pointer names what it rests on.** With the hand, a small label beside the pointer says what a click would inspect, in the inspector's words: a unit's label; "Keypair from A to B" for a chevron; "Relation between A and B" for a line; "Perspective from A to B" for a chevron of the perspective drawing. A second line gives the type of a unit, a keypair or a perspective that has one. The label is for the pointer only: it hides at a press, a turn of the wheel, a key, and any change of the model, and it moves and highlights nothing. `pointer.hoverLabel` is on by default (D121).
 
 ### 6.12 Labels
 
@@ -907,7 +920,7 @@ A click on a unit makes it the root; Shift and a click on another unit makes it 
 | S              | show the neighbourhood of the inspected unit (6.21)                                                                                   |
 | A              | show all units, ending the scope                                                                                                      |
 
-A click with Ctrl (Cmd on macOS) adds a unit to the selection or takes it out (6.20). The keys are a setting, `keyboard.bindings` (5.9). The live region also says "3 results for "unit_7"" or "No result for "x"" (6.19), "2 units selected" or "Selection cleared", and "Showing 7 units around unit_7" or "Showing all units" (6.21).
+A click with Ctrl (Cmd on macOS) adds a unit to the selection or takes it out (6.20). The keys are a setting, `keyboard.bindings` (5.9). The keys that move the camera ease, and add up when pressed in a row (6.10). The live region also says "3 results for "unit_7"" or "No result for "x"" (6.19), "2 units selected" or "Selection cleared", and "Showing 7 units around unit_7" or "Showing all units" (6.21).
 
 A polite live region says what changed, one message per action: "Graph loaded: 81 units", "3D view" or "2D view", "Root unit_79", "Root cleared", "Shortest path from unit_79 to unit_77: 3 steps" ("1 step"), "No path from … to …", "Path cleared", "Inspecting unit …", "Inspecting keypair from … to …", "Inspecting relation between … and …", "Inspector cleared". When one action makes several changes, the inspector's words give way to the others: a click that makes a unit the root says "Root unit_79", and Escape says "Root cleared".
 
@@ -917,7 +930,7 @@ A polite live region says what changed, one message per action: "Graph loaded: 8
 
 ### 6.16 Speed
 
-**The viewer stays usable on 10,000 units.** Hidden instances move past the far plane, so they cost no fragments. Picking reuses one snapshot of positions per state and camera. Labels are capped (6.12); hulls start off above 3,000 units (6.9).
+**The viewer stays usable on 10,000 units.** Hidden instances move past the far plane, so they cost no fragments. Picking reuses one snapshot of positions per state and camera. Labels are capped (6.12); hulls start off above 3,000 units (6.9). A move of the camera alone works out again only where each unit lies on the canvas: the units' states, the forced labels and the order in which labels claim room stay as they are until the model changes (D127). A change of the settings of the group Panels leaves the picture alone. A graph over 3,000 units (`renderer.antialiasUpTo`) draws without the renderer's own smoothing of edges: units, lines and chevrons smooth their own edges in their shaders, so only the hulls lose it, and on integrated graphics the large graph draws four times as fast (D131).
 
 ### 6.17 Interfaces in the picture
 
@@ -946,7 +959,7 @@ A polite live region says what changed, one message per action: "Graph loaded: 8
 
 ### 6.19 Search
 
-**One field searches the loaded graph by label, key, class and attribute values, and lists what it finds by rank.** The field sits in the viewer's bar and searches as a person types. Enter shows the first result: its neighbourhood (6.21), and the inspector on it. The Search section lists up to `search.limit` results (default 50).
+**One field searches the loaded graph by label, key, class and attribute values, and lists what it finds by rank.** The field sits in the viewer's bar and searches as a person types. Typing opens the side bar and its Search section for the results. Enter shows the first result: its neighbourhood (6.21), and the inspector on it. Escape empties the field; in an empty field it gives the keys back to the canvas. The Search section lists up to `search.limit` results (default 50).
 
 - Each unit is indexed by its label, its key as JSON text, its class and type, and the texts and numbers of its attributes, in lower case.
 - Rank: an exact label or key first (a text key also without its quotes); then labels that start with the text; then labels with a word that starts with it; then labels that contain it; then keys, classes, types and attribute values that contain it. Ties go to the unit with more relations, then to file order.
@@ -981,7 +994,7 @@ A polite live region says what changed, one message per action: "Graph loaded: 8
 
 **Panels are plain HTML with headings, buttons and visible focus outlines.**
 
-- _Section:_ a heading with a disclosure button (aria-expanded) and a body that opens and closes.
+- _Section:_ a heading with a disclosure button (aria-expanded) and a body that opens and closes. Beside its title a section may count what it holds; the count is part of the heading and not of the button's name.
 - _RangeSlider:_ two native range inputs on one track, named "<label>, lowest" and "<label>, highest", with the range written as "low to high".
 - _UnitField:_ one row: a label, a text field with the placeholder "label or key" that offers unit names, Set and Reset. Enter sets.
 
@@ -1031,11 +1044,14 @@ Four rows always show: First plane (degree 1), Second plane (degree 2), Third pl
 
 **GraphView is the whole viewer in one component: its bar, the canvas, its side bar and the Settings dialog.** It makes its own model and needs nothing from its host but a graph.
 
-- The bar: 2D and 3D, Hulls, Fit, the drawing (Keypairs or Perspectives, 6.18), the search field (6.19), Box selection (6.20), Panels (opens and closes the side bar), and Settings (opens the dialog, 7.10).
-- Above the canvas, the rule banner of 8.1 shows while the graph has issues.
+- The bar: 2D and 3D, Hulls, Fit, the drawing (Keypairs or Perspectives, 6.18), the search field (6.19), Box selection (6.20), Panels (opens and closes the side bar), and Settings (opens the dialog, 7.10). 2D and 3D stand side by side as one, the one in use filled; Panels is filled while the side bar shows (9.3). Panels and Settings keep to the bar's right edge, on whichever row they stand.
+- Above the canvas, the rule banner of 8.1 shows while the graph has issues. Its button, such as "Show 7 issues", opens the side bar and the Data issues section and brings the list into view.
 - The side bar holds these sections, in this order: Search, Scope, Root and depth, Paths, Inspector, Highlights, Filters, Types, Display, Data issues and Pinned settings. Each opens and closes; Display ends with Save picture and its Background switch (6.15).
+- A section's heading counts what it holds, while it is open and while it is closed: Search its results, Scope its units, Highlights the selected units, Filters the time window, the threshold and the rules in use, Data issues the issues, and Pinned settings the pins. Nothing shows for none (D125).
+- The side bar starts as it was left (D123). `panels.open` holds the open sections, and opening or closing one changes it. `panels.shown` says whether the side bar shows, and Panels changes it. `panels.width` is its width, 360 pixels at first: its edge is a separator that a drag moves, or the arrow keys by the setting's step, with Home and End for the widest and the narrowest.
+- Whatever is inspected opens the Inspector section and brings it into view, while the side bar shows; the side bar moves no further than it must, and as the picture does: smoothly, or at once with reduced motion. `panels.reveal` is on by default (D124).
 - Props: `graph` (a document) or `source` (5.8); `settings` (the host's base values, 5.9); `settingsStore` (a `BrowserSettingsStore` unless given); `view` (view settings to apply, 5.3, its camera included); the extension points `profile`, `looks` and `sections` (5.7); and the callbacks `onready`, `onroot`, `oninspect`, `onselect`, `onsettings` and `onpicture`. A new `graph` or `source` loads; `onready` follows only the newest one, once the canvas has settled.
-- It exports `model`, `getScene()` and `getCanvas()`, the canvas's commands (8.15). On a page 900 pixels wide or less, its side bar starts closed and opens as a drawer over the canvas (8.1).
+- It exports `model`, `getScene()` and `getCanvas()`, the canvas's commands (8.15). On a page 900 pixels wide or less, its side bar starts closed, whatever was left, and opens as a drawer over the canvas (8.1); the drawer's state is not kept.
 - The props `theme` and `motion` remain as base values of the settings `theme.scheme` and `motion.enabled`.
 
 ### 7.10 The Settings dialog and pins
@@ -1083,7 +1099,7 @@ Four rows always show: First plane (degree 1), Second plane (degree 2), Third pl
 └────────────────┴───────────────────────────────────────────┴─────────────────────┘
 ```
 
-The top bar is 48 pixels high and the host tools 300 pixels wide; the viewer's side bar is 360 pixels wide. Host opens and closes the host tools, and the viewer's Panels its side bar; each section opens and closes, and starts open as drawn (▾) or closed (▸). At a width of 900 pixels or less, both start closed and open as drawers over the canvas. The viewer shows the rule banner "This graph breaks the graph rules; the data issues panel lists each breach." above its canvas while a graph has issues (7.9). A file dropped anywhere on the page opens.
+The top bar is 48 pixels high and the host tools 300 pixels wide; the viewer's side bar is 360 pixels wide until a person changes it (7.9). Host is filled while the host tools show, as the viewer's Panels is. Host opens and closes the host tools, and the viewer's Panels its side bar; each section opens and closes, and starts open as drawn (▾) or closed (▸). At a width of 900 pixels or less, both start closed and open as drawers over the canvas. The viewer shows the rule banner "This graph breaks the graph rules; the data issues panel lists each breach." above its canvas while a graph has issues (7.9). A file dropped anywhere on the page opens.
 
 ### 8.2 Top bar
 
@@ -1243,7 +1259,7 @@ The explanation (8.8) gains "Relations through interfaces": off, or the share wi
 
 ### 9.3 Accessibility
 
-**Colour never carries meaning alone.** Types are named next to their swatches; issues carry icons and dashes; the root, target and inspected unit carry outlines. Every control has a name; sections are headings with disclosure buttons; focus outlines are visible. axe finds no serious or critical violation, in both themes, with every section open (G14). The module follows the system's request for reduced motion.
+**Colour never carries meaning alone.** Types are named next to their swatches; issues carry icons and dashes; the root, target and inspected unit carry outlines. A button that is on is filled in ink: 2D or 3D, Panels, Host, a pin, a highlighted result. Boxes to tick and sliders stay slate, so that no control borrows a hue that means a type (9.1). Every control has a name; sections are headings with disclosure buttons; focus outlines are visible. axe finds no serious or critical violation, in both themes, with every section open (G14). The module follows the system's request for reduced motion.
 
 ### 9.4 Motion
 
@@ -1258,7 +1274,8 @@ The explanation (8.8) gains "Relations through interfaces": off, or the share wi
 ```
 CLAUDE.md                 standing rules for the builder
 README.md                 what graphview is, how to run and embed it
-docs/                     the specification and its page, the requests (docs/3d), decisions, report, discrepancies, screenshots
+instructions.html         how to run it and what to check by hand, as a page with boxes to tick
+docs/                     the specification and its page, the requests (docs/3d), decisions, report, assessment, discrepancies, screenshots
 fixtures/                 test graphs, expected answers, the reference; read-only
 module/index.ts           the module's only entry point
 module/core/              pure TypeScript: format, issues, fingerprint, aids, tokens
@@ -1292,7 +1309,7 @@ TypeScript 6, not 7: svelte-check 4.7.6 accepts only TypeScript 5 or 6. Add no o
 | Script                 | Does                                                                                                       |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `npm run dev`          | the shell for development, with its server, at /graphview/                                                 |
-| `npm run check`        | svelte-check, `prettier --check .`, and Vitest on tests/gates and tests/unit                               |
+| `npm run check`        | svelte-check, `prettier --check .` without what git leaves out, and Vitest on tests/gates and tests/unit   |
 | `npm run build:module` | the module as a library into dist/module, with CSS, then type declarations with svelte2tsx                 |
 | `npm run build:shell`  | the shell as static files into dist/shell, for the base path /graphview/ (8.17)                            |
 | `npm run build:server` | the shell with its server into dist/server (8.17)                                                          |
@@ -1305,7 +1322,7 @@ The module build and the package keep svelte, three and graphology external.
 
 ### 10.4 Browser tests
 
-**Playwright runs Chromium with WebGL 2 on SwiftShader.** The window is 1280 by 800; the launch flags are `--use-angle=swiftshader --enable-unsafe-swiftshader`. Two projects: "chromium" runs the browser tests on 4 workers; "speed" runs the speed tests and the 10,000-unit test afterwards, on 1 worker, so that measurements do not share processors. Tests that load a heavy scene wait for quick frames and leave the page before they end. In a cloud session without Playwright's download, use the preinstalled Chromium (/opt/pw-browsers/chromium) when not on CI.
+**Playwright runs Chromium with WebGL 2 on SwiftShader.** The window is 1280 by 800; the launch flags are `--use-angle=swiftshader --enable-unsafe-swiftshader`. Two projects: "chromium" runs the browser tests on 4 workers; "speed" runs the speed tests and the 10,000-unit test afterwards, on 1 worker, so that measurements do not share processors. Tests that load a heavy scene wait for quick frames and leave the page before they end. In a cloud session without Playwright's download, use the preinstalled Chromium (/opt/pw-browsers/chromium) when not on CI. `GRAPHVIEW_CHROMIUM` names another Chromium or Chrome to test with, such as one the machine already has; the screenshots of 11.5 follow it too (D130).
 
 ### 10.5 Continuous checks and publishing
 
@@ -1360,6 +1377,8 @@ fixtures/expected/<name>.json holds each fixture's load result, issues, fingerpr
 
 Version 4.0 adds: every setting's check (allowed and refused values for each class); the registry's defaults equal the values sections 4 to 9 give; the settings file round trip, with unknown keys and refused values kept and reported; the layers of values, a graph's `meta.view` included; the stores (memory, browser with a stand-in storage, fallback); the handler's revision rule and its 409; the sources; a profile from JSON (kinds by a field, perspectives from `pair`, superseding by pair type, self-relations allowed, direct relations reported); the perspective drawing's chevrons (which keypairs, where they point, their types); the search ranking; filter rules on units, keypairs and lines; highlight groups and the selection; the scope (hops, limit, ranking, counts outside, the root added); and `GraphView` rendered on a server without error.
 
+Version 4.1 adds: the pose between two camera poses (a pan, a zoom by equal factors, a turn along the arc, opposite sides); a layout given up for a newer graph, with a stand-in for the worker; and the scan of the repository's text files, which follows git's own list of files, so that .gitignore says once what is left out (D129).
+
 ### 11.4 Browser tests
 
 **Browser tests run against the production build, through `window.graphview` and the scene snapshot.** At least:
@@ -1372,6 +1391,7 @@ Version 4.0 adds: every setting's check (allowed and refused values for each cla
 - _Large graph:_ the random graph loads at its given positions, compared with the fixture's; a root counts every unit on its plane as the expected rings say; a pick answers; hulls start off and the switch turns them on.
 
 - _Version 4.0:_ the viewer's bar and side bar; the Settings dialog (open, filter, a slider that changes the picture, Reset, Reset all, an import and an export); a pin that shows a setting in the side bar; settings that survive a reload through /graphview/api/settings; a refused value; the drawing switch, with two chevrons per relation through an interface pointing at their units and named by pair type; the search field with Show, Root and Highlight; filter rules that fade and hide, from the Types panel too; a click with Ctrl and a box selection; a highlight group dimming the rest; the scope with Expand, Hide, "+n" labels and Show all; the keys S, A, / and Escape.
+- _Version 4.1:_ Fit and the keys easing, adding up, and jumping with motion off; the wheel's zoom toward the pointer and toward the centre; Glide moving as far as a plain drag and coming to rest; the label under the pointer for a unit, a chevron and a line, and its setting; the words of a slow layout, and a newer graph that does not wait behind it; the side bar as it was left after a reload, its edge by the keys and by a drag; the Inspector opening and coming into view, and its setting; the counts in the headings; the banner's button; the search opening the side bar, and Escape; `onselect` on the embed page; the renderer without its smoothing above 3,000 units.
 
 ### 11.5 Visual review
 
@@ -1442,6 +1462,8 @@ Version 4.0 adds: every setting's check (allowed and refused values for each cla
 | N4 Profile and drawing | 3.8, 3.9, 5.7, 6.18: the profile from JSON and the perspective drawing.                                      | the drawing's tests                       |
 | N5 Data manipulation   | 6.7, 6.19 to 6.21, 7.7, 7.11.                                                                                | their tests                               |
 | N6 Package and report  | `npm run package`; the README for hosts; the report.                                                         | `npm test` passes from a clean install    |
+
+**Version 4.1 was built in one round**, in this order, each step with its checks: the camera's moves and the zoom toward the pointer; the label under the pointer and the words of a slow layout; the side bar's state, edge, counts and the Inspector coming into view; the look of the controls; the tests, the twenty-one views and the report.
 
 ### 12.3 Report
 
@@ -1550,3 +1572,19 @@ Version 4.0 makes the viewer one self-contained component for a host that suppli
 | 7.7, 7.9 to 7.11                  | The Types panel's switches; GraphView as the whole viewer; the Settings dialog and pins; the Search, Scope and Highlights sections.                                                |
 | 8.1 to 8.3, 8.9, 8.10, 8.15, 8.17 | The shell as host: its page, top bar and Data section; types and look in the viewer; examples served as JSON; the hook's look; routes and builds.                                  |
 | 10.1 to 10.3, 11, 12.2            | The new folders, packages and scripts; the new tests and views 19 to 21; G18 over every build; the milestones N0 to N6.                                                            |
+
+## Appendix F. Changes in version 4.1
+
+Version 4.1 makes the viewer more fluid to work with and its controls clearer. No format, gate or fixture changed.
+
+| Section              | Change                                                                                                                                                                              |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5.4, 6.1             | A newer graph gives up the layout before it; a layout that takes long says "Laying out … units…" over the canvas.                                                                   |
+| 6.3                  | The wheel and a pinch zoom toward the pointer, with the target kept on its plane; a person's Fit eases; Glide comes to rest by itself.                                              |
+| 6.10, 6.14           | The camera eases on its own clock, keeps direction and distance where it can, turns along the arc and zooms by equal factors; keys add up; settled waits for the camera.            |
+| 6.11                 | The pointer names what it rests on.                                                                                                                                                 |
+| 6.16                 | A move of the camera alone leaves the units' states and the labels' order as they are; the settings of the panels leave the picture alone; no renderer smoothing above 3,000 units. |
+| 6.19                 | Typing a search opens the side bar; Escape empties the field, then gives the keys back to the canvas.                                                                               |
+| 7.1, 7.9             | Counts in the sections' headings; the banner's button; the side bar starts as it was left, with an edge that changes its width; what is inspected comes into view; `onselect`.      |
+| 8.1, 9.3             | Buttons that are on are filled; boxes to tick and sliders are slate; Host is filled while the host tools show.                                                                      |
+| 10.1, 10.3, 10.4, 11 | instructions.html in the root; the format check and the scan for private names follow git's own list; `GRAPHVIEW_CHROMIUM`; the new unit and browser tests.                         |

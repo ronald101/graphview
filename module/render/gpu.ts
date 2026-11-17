@@ -92,6 +92,7 @@ export class Gpu {
   height = 1;
 
   private container: HTMLElement;
+  private scratch = new THREE.Vector3();
 
   constructor(container: HTMLElement, input: HTMLElement, options: GpuOptions = GPU_DEFAULTS) {
     this.container = container;
@@ -424,10 +425,16 @@ export class Gpu {
     return out;
   }
 
-  /** World coordinates to CSS pixels in the canvas. */
-  project(p: V3): { x: number; y: number; behind: boolean } {
-    const v = new THREE.Vector3(...p).project(this.camera);
-    return { x: ((v.x + 1) / 2) * this.width, y: ((1 - v.y) / 2) * this.height, behind: v.z > 1 };
+  /** World coordinates to CSS pixels in the canvas; written into `out` when given. */
+  project(
+    p: V3,
+    out: { x: number; y: number; behind: boolean } = { x: 0, y: 0, behind: false },
+  ): { x: number; y: number; behind: boolean } {
+    const v = this.scratch.set(p[0], p[1], p[2]).project(this.camera);
+    out.x = ((v.x + 1) / 2) * this.width;
+    out.y = ((1 - v.y) / 2) * this.height;
+    out.behind = v.z > 1;
+    return out;
   }
 
   /** The ray through a canvas point. */

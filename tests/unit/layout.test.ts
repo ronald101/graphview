@@ -1,6 +1,6 @@
 // Gate G9, layouts: the same graph, settings and seed give the same positions.
 import { readFileSync } from 'node:fs';
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { keyId, loadGraph } from '../../module/core/index.ts';
 import { givenLayout, startPositions } from '../../module/model/layout.ts';
 import { GraphModel } from '../../module/model/model.ts';
@@ -81,5 +81,79 @@ describe('§6.1 Layout (G9): layouts are deterministic', () => {
     expect(x1 < x2 && x2 < x3).toBe(true);
     // Some units placed: their positions are not used, as if none were.
     expect(await load([1, 2])).toEqual(await load([]));
+  });
+});
+
+describe('§6.1 Layout: a newer graph gives up the layout before it', () => {
+  /** A stand-in for a Web Worker: it keeps what it was sent, and answers when the test says so. */
+  class Stand {
+    static made: Stand[] = [];
+    posted: { id: number }[] = [];
+    ended = false;
+    private listeners: ((e: { data: unknown }) => void)[] = [];
+    constructor() {
+      Stand.made.push(this);
+    }
+    addEventListener(_: string, fn: (e: { data: unknown }) => void) {
+      this.listeners.push(fn);
+    }
+    postMessage(m: { id: number }) {
+      this.posted.push(m);
+    }
+    terminate() {
+      this.ended = true;
+    }
+    answer(n: number, out: unknown) {
+      for (const fn of this.listeners) fn({ data: { id: this.posted[n].id, out } });
+    }
+  }
+  afterEach(() => vi.unstubAllGlobals());
+
+  test('its layout resolves to nothing and its worker ends, so that the next layout starts at once', async () => {
+    vi.stubGlobal('Worker', Stand);
+    vi.resetModules();
+    const { runForce, cancelForce } = await import('../../module/workers/index.ts');
+    const input = { units: ['1'], links: [], start: [{ x: 0, y: 0 }], pinned: [], settings: {} };
+    const [mine, theirs] = [{}, {}];
+    const first = runForce(input, false, mine);
+    expect(Stand.made).toHaveLength(1);
+    cancelForce(mine);
+    expect(await first).toBeNull();
+    expect(Stand.made[0].ended).toBe(true);
+    // The next layout runs on a new worker, and resolves with its answer.
+    const second = runForce(input, false, mine);
+    expect(Stand.made).toHaveLength(2);
+    const worker = Stand.made[1];
+    const out = { positions: [{ x: 1, y: 2 }], iterations: 25 };
+    worker.answer(0, out);
+    expect(await second).toEqual(out);
+    // While someone else waits for a layout, the worker goes on, and only the layout given up ends.
+    const third = runForce(input, false, mine);
+    const other = runForce(input, false, theirs);
+    cancelForce(mine);
+    expect(await third).toBeNull();
+    expect(worker.ended).toBe(false);
+    worker.answer(1, out);
+    worker.answer(2, out);
+    expect(await other).toEqual(out);
+    // Giving up with nothing owed changes nothing.
+    cancelForce(mine);
+    expect(worker.ended).toBe(false);
+  });
+
+  test('a model that loads another graph gives the first one up: only the newer load reports true', async () => {
+    const doc = (n: number) => ({
+      format: 'graphview-graph/1',
+      vertices: Array.from({ length: n }, (_, i) => ({ key: i + 1 })),
+      edges: Array.from({ length: n - 1 }, (_, i) => [
+        { from: i + 1, to: i + 2 },
+        { from: i + 2, to: i + 1 },
+      ]).flat(),
+    });
+    const m = new GraphModel();
+    const [first, second] = await Promise.all([m.load(doc(40)), m.load(doc(5))]);
+    expect([first, second]).toEqual([false, true]);
+    expect(m.graph?.units).toHaveLength(5);
+    expect(m.laidOut).toBe(true);
   });
 });

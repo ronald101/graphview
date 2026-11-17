@@ -51,13 +51,23 @@ test('§6.16 Speed: the random graph of 10,000 units loads at its given position
   await release(page);
 });
 
-test("§6.9 Hulls: with types on 10,000 units, hulls start off; the switch in the viewer's bar turns them on", async ({
+test("§6.9 Hulls and §6.16 Speed: with types on 10,000 units, hulls start off and the renderer goes without its smoothing; the switch in the viewer's bar turns the hulls on", async ({
   page,
 }) => {
   test.setTimeout(240000);
   await open(page);
+  // Whether the renderer smooths edges itself, as the browser reports it.
+  const smoothed = () =>
+    page.evaluate(
+      () =>
+        (document.querySelector('.gv-gl canvas') as HTMLCanvasElement).getContext('webgl2')!.getContextAttributes()!
+          .antialias,
+    );
+  expect(await smoothed()).toBe(true);
   await page.evaluate(() => (window as any).graphview.loadExample('random-10k', true));
   await settled(page);
+  // Above 3,000 units the renderer's smoothing costs more speed than it gives.
+  expect(await smoothed()).toBe(false);
   const toggle = page.getByRole('toolbar', { name: 'View' }).getByLabel('Hulls');
   await expect(toggle).not.toBeChecked();
   expect((await snap(page)).hulls).toEqual([]);

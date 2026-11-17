@@ -9,7 +9,7 @@ const OUT = new URL('../docs/screenshots/', import.meta.url).pathname;
 mkdirSync(OUT, { recursive: true });
 const local = '/opt/pw-browsers/chromium';
 const browser = await chromium.launch({
-  executablePath: existsSync(local) ? local : undefined,
+  executablePath: process.env.GRAPHVIEW_CHROMIUM ?? (existsSync(local) ? local : undefined),
   args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
 });
 

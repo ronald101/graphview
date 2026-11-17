@@ -36,6 +36,8 @@ export class FrameState {
   t = 1;
   /** Counts the states applied, so that a cached snapshot knows it is out of date. */
   applied = 0;
+  /** Counts the model's changes, so that what follows the model but not the camera is worked out once per change. */
+  version = 0;
   /** Relations per unit, for the order in which labels claim room. */
   relationsPer = new Uint32Array(0);
   /** The relation drawing, the chevrons it draws (model/drawing.ts), and each unit's shape in it. */
@@ -52,6 +54,8 @@ export class FrameState {
   /** The numbers the shaders draw with, from the settings; the scene refreshes them. */
   rules: DrawRules;
   private snap: { key: string; value: Snapshot } | null = null;
+  /** The units' states of the last snapshot, which a move of the camera alone leaves as they are. */
+  private states: { t: number; applied: number; st: Now[] } | null = null;
 
   constructor(model: GraphModel, looks: Looks = PUBLIC_LOOKS) {
     this.model = model;
@@ -61,6 +65,7 @@ export class FrameState {
 
   forget() {
     this.snap = null;
+    this.states = null;
   }
 
   /** The transition's point, eased as the shaders get it. */
@@ -117,8 +122,17 @@ export class FrameState {
         ].join()
       : `${this.t},${this.applied}`;
     if (this.snap?.key === key) return this.snap.value;
-    const st = this.model.ids.map((_, i) => this.unitNow(i));
-    const value = { st, screen: st.map((v) => (g ? g.project(v.p) : { x: 0, y: 0, behind: false })) };
+    const n = this.model.ids.length;
+    let states = this.states;
+    if (!states || states.t !== this.t || states.applied !== this.applied || states.st.length !== n)
+      states = this.states = { t: this.t, applied: this.applied, st: this.model.ids.map((_, i) => this.unitNow(i)) };
+    const st = states.st;
+    // A move of the camera changes only the places on the canvas: they are written over the last ones,
+    // so that a large graph stays quick to pan and zoom (6.16).
+    const last = this.snap?.value.screen;
+    const screen = last?.length === n ? last : st.map(() => ({ x: 0, y: 0, behind: false }));
+    if (g) for (let i = 0; i < n; i++) g.project(st[i].p, screen[i]);
+    const value = { st, screen };
     this.snap = { key, value };
     return value;
   }
