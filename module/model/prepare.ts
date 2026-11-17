@@ -24,7 +24,7 @@ function shape(g: Graph, p: Profile) {
   const ids = g.units.map(keyId);
   const index = new Map(ids.map((id, i) => [id, i]));
   const topology = consolidate(g, index);
-  return { ids, index, topology, kinds: findKinds(g, topology.relations, p.kinds) };
+  return { ids, index, topology, kinds: findKinds(g, topology.relations, p.kinds, p) };
 }
 
 export function prepare(stored: Graph, p: Profile): Prepared {

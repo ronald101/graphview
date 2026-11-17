@@ -4,18 +4,25 @@ import {
   keyId,
   keypairId,
   loadGraph,
-  PATH_DEFAULTS,
   type Graph,
   type Key,
+  type PathLimits,
   type PathSetResult,
   type RefusalCode,
   type Theme,
+  type TokenName,
 } from '../core/index.ts';
+import { DEFAULT_OVERRIDES, EXTRA_STEPS } from '../settings/defaults.ts';
+import type { SettingsFile } from '../settings/file.ts';
+import { SettingsRegistry, type Refusal } from '../settings/registry.ts';
+import { isToken, TOKEN_NAMES } from '../settings/setting.svelte.ts';
 import { graphWorker } from '../workers/index.ts';
 import type {
   Aspect,
+  FilterRule,
   Filters,
   GraphWorker,
+  HighlightGroup,
   Inspected,
   Listener,
   Mode,
@@ -25,27 +32,33 @@ import type {
   PathStep,
   Perspective,
   PlaneCounts,
+  Scope,
+  SearchResult,
+  SelectHow,
   TypeInfo,
   ViewSettings,
 } from './contracts.ts';
+import { DEFAULT_DEPTH, type DepthRules } from './depth.ts';
 import { fieldRange, NO_FILTERS } from './filters.ts';
-import { HULL_LIMIT } from './hulls.ts';
+import { isRule, type RuleFacts } from './filterRules.ts';
 import { NO_KINDS, type Kind, type Kinds } from './kinds.ts';
-import { placeUnits } from './placement.ts';
+import { Narrowing } from './narrowing.ts';
+import { profileFromJson } from './profileJson.ts';
+import type { GraphSource } from './source.ts';
+import { EXTENT, placePart, placeUnits, type LayoutRules } from './placement.ts';
 import { prepare, type Prepared } from './prepare.ts';
 import { PUBLIC_PROFILE, type Profile } from './profile.ts';
 import { activePath, findUnit, keypairsOf, labelOf, pathSteps, perspectivesOf, planeCounts } from './queries.ts';
-import { EMPTY_SCHEMA, reflectSchema, typeText, type Schema } from './schema.ts';
+import { EMPTY_SCHEMA, reflectSchema, typeText, type Schema, type SchemaRules } from './schema.ts';
 import { noTopology, type Chevron, type Relation } from './topology.ts';
-import { buildTypes, EMPTY_TYPES, type Custom, type TypeRegistry } from './typeRegistry.ts';
+import { buildTypes, EMPTY_TYPES, type Custom, type TypeLook, type TypeRegistry } from './typeRegistry.ts';
 
 export { EXTENT } from './placement.ts';
 export type { Chevron, Relation } from './topology.ts';
+export { DEFAULT_OVERRIDES, EXTRA_STEPS };
 
-/** Path sets: the shortest paths and those one and two steps longer (specification 6.5). */
-export const EXTRA_STEPS = 2;
-
-export const DEFAULT_OVERRIDES: Overrides = { size: 1, width: 1, opacity: 1 };
+/** The keys whose change the model reports as a display change too. */
+const DISPLAY_KEYS = ['display.size', 'display.width', 'display.opacity', 'hulls.enabled'];
 
 export class GraphModel {
   // ---------------------------------------------------------------- the graph
@@ -56,7 +69,8 @@ export class GraphModel {
   graph: Graph | null = null;
   /** The core's issues, then the model's own (kinds.ts). */
   issues: ModelIssue[] = [];
-  refused: { code: RefusalCode; message: string } | null = null;
+  /** The core's refusal of the document, or "source" when its source could not be read (5.8), with the source's reason. */
+  refused: { code: RefusalCode | 'source'; message: string; reason?: string } | null = null;
   schema: Schema = EMPTY_SCHEMA;
   ids: string[] = [];
   index = new Map<string, number>();
@@ -71,8 +85,14 @@ export class GraphModel {
   /** x and y of each unit, in world units, y pointing up; z comes from the depth rules. */
   positions = new Float32Array(0);
   laidOut = false;
+  /** The extent the graph was laid out to, in world units. */
+  extent: number = EXTENT;
 
   // ---------------------------------------------------------------- the view
+  /** The settings (5.9); the model is the registry's only writer. */
+  readonly settings = new SettingsRegistry();
+  /** The keys of the last change of settings, which comes with the aspect "settings". */
+  changedSettings: string[] = [];
   mode: Mode = '2d';
   root: Key | null = null;
   degrees: number[] | null = null;
@@ -80,30 +100,43 @@ export class GraphModel {
   paths: PathSetResult | null = null;
   choice: PathChoice | null = null;
   filters: Filters = { ...NO_FILTERS };
+  /** The display factors in use (6.8): the settings of the group "Display", a graph's own view included. */
   overrides: Overrides = { ...DEFAULT_OVERRIDES };
-  hulls = true;
-  /** What the person chose last; graphs over HULL_LIMIT units still start without hulls. */
-  private hullsWanted = true;
+  /** The depth rules in use, from the settings of the group "Root and depth". */
+  depth: DepthRules = DEFAULT_DEPTH;
   inspected: Inspected = null;
   theme: Theme = 'light';
+  /** The filter rules, the search, the selection, the highlight groups and the scope (6.7, 6.19 to 6.21). */
+  private narrowing = new Narrowing();
 
   private custom: { unit: Custom; keypair: Custom } = { unit: new Map(), keypair: new Map() };
+  /** Hulls a person turned on or off while this graph is open; null until then. */
+  private hullsChosen: boolean | null = null;
+  private loads = 0;
   private listeners = new Set<Listener>();
   private worker: GraphWorker | null = null;
   private run = 0;
   private ranges = new Map<string, { min: number; max: number } | null>();
 
   private makeWorker: (units: Key[], keypairs: [Key, Key][]) => GraphWorker;
-  /** What fits the model to a family of graphs: kinds, classes, pairs, checks, superseding, projection. */
-  readonly profile: Profile;
+  /**
+   * What fits the model to a family of graphs: kinds, classes, pairs, checks, superseding, projection.
+   * The host's own, or, while the setting "Profile" holds one, the profile from that JSON (5.7); a graph
+   * keeps the profile of its load.
+   */
+  profile: Profile;
+  private ownProfile: Profile;
+  /** The source of the graph held (5.8). */
+  source: GraphSource | null = null;
 
-  /** The worker factory is the contract for distances and paths; tests and hosts may hand in their own. */
-  constructor(
-    makeWorker: (units: Key[], keypairs: [Key, Key][]) => GraphWorker = graphWorker,
-    profile: Profile = PUBLIC_PROFILE,
-  ) {
-    this.makeWorker = makeWorker;
-    this.profile = profile;
+  /**
+   * The worker factory is the contract for distances and paths; tests and hosts may hand in their own.
+   * The default one runs in a Web Worker, or on the page when the setting "Workers" says so.
+   */
+  constructor(makeWorker?: (units: Key[], keypairs: [Key, Key][]) => GraphWorker, profile: Profile = PUBLIC_PROFILE) {
+    this.makeWorker = makeWorker ?? ((u, k) => graphWorker(u, k, this.settings.get('performance.workers') === 'off'));
+    this.profile = this.ownProfile = profile;
+    this.mode = this.settings.get('view.mode');
   }
 
   subscribe(fn: Listener): () => void {
@@ -129,10 +162,46 @@ export class GraphModel {
    * newer graph replaced this one first.
    */
   async load(doc: unknown, settings: Partial<ViewSettings> = {}): Promise<boolean> {
+    return this.hand(++this.run, doc, settings, null);
+  }
+
+  /** Reads a source and loads its document as `load` does; a source that fails gives the refusal "source" (5.8). */
+  async loadFrom(source: GraphSource, settings: Partial<ViewSettings> = {}): Promise<boolean> {
     const run = ++this.run;
+    let doc: unknown;
+    try {
+      doc = await source.load();
+    } catch (e) {
+      if (run !== this.run) return false;
+      const reason = String((e as Error)?.message ?? e);
+      return this.hand(
+        run,
+        null,
+        settings,
+        { code: 'source', message: `The graph could not be read: ${reason}.`, reason },
+        source,
+      );
+    }
+    return run === this.run && this.hand(run, doc, settings, null, source);
+  }
+
+  private async hand(
+    run: number,
+    doc: unknown,
+    settings: Partial<ViewSettings>,
+    failed: { code: 'source'; message: string; reason: string } | null,
+    source: GraphSource | null = null,
+  ): Promise<boolean> {
     this.worker?.terminate();
     this.worker = null;
-    const loaded = loadGraph(doc);
+    this.source = source;
+    const json = this.settings.get('extensions.profile');
+    this.profile = json ? profileFromJson(json) : this.ownProfile;
+    const loaded: ReturnType<typeof loadGraph> | ({ ok: false } & typeof failed & object) = failed
+      ? { ok: false, ...failed }
+      : loadGraph(doc);
+    const keep = new Set<string>(this.loads++ > 0 ? this.settings.get('view.keep') : []);
+    const before = { filters: this.filters, schema: this.schema };
     this.doc = doc;
     this.root = null;
     this.degrees = null;
@@ -142,13 +211,27 @@ export class GraphModel {
     this.inspected = null;
     this.laidOut = false;
     this.ranges.clear();
-    this.custom = { unit: customOf(settings.types?.unit), keypair: customOf(settings.types?.keypair) };
+    if (!keep.has('types') || settings.types)
+      this.custom = { unit: customOf(settings.types?.unit), keypair: customOf(settings.types?.keypair) };
     if (settings.mode) this.mode = settings.mode;
-    if (settings.overrides) this.overrides = { ...DEFAULT_OVERRIDES, ...settings.overrides };
-    if (settings.hulls !== undefined) this.hulls = settings.hulls;
+    else if (!keep.has('mode') && this.loads > 1) this.mode = this.settings.get('view.mode');
+    // A graph's own display factors and hulls lie over the settings while it is open (D81).
+    const o = settings.overrides;
+    this.settings.setGraph({
+      ...(o?.size !== undefined && { 'display.size': o.size }),
+      ...(o?.width !== undefined && { 'display.width': o.width }),
+      ...(o?.opacity !== undefined && { 'display.opacity': o.opacity }),
+      ...(settings.hulls !== undefined && { 'hulls.enabled': settings.hulls }),
+    });
+    this.hullsChosen = null;
+    this.cache();
     if (!loaded.ok) {
-      this.refused = { code: loaded.code, message: loaded.message };
-      this.hold(null, []);
+      this.refused = {
+        code: loaded.code,
+        message: loaded.message,
+        ...('reason' in loaded && { reason: loaded.reason }),
+      };
+      this.hold(null, [], false);
       this.filters = { ...NO_FILTERS };
       this.laidOut = true;
       this.emit('graph');
@@ -156,18 +239,26 @@ export class GraphModel {
     }
     const p = prepare(loaded.graph, this.profile);
     const g = p.graph;
-    if (settings.hulls === undefined) this.hulls = g.units.length > HULL_LIMIT ? false : this.hullsWanted;
     this.refused = null;
-    this.hold(p, [...loaded.issues, ...p.issues]);
+    this.hold(p, [...loaded.issues, ...p.issues], keep.has('filters'));
+    // Kept filters stay when the new graph has their fields.
+    const kept =
+      keep.has('filters') &&
+      (before.filters.timeField === null || this.schema.timeFields.includes(before.filters.timeField)) &&
+      (before.filters.weightField === null || this.schema.weightFields.includes(before.filters.weightField)) &&
+      before.schema !== EMPTY_SCHEMA;
     this.filters = {
       ...NO_FILTERS,
       timeField: this.schema.timeFields[0] ?? null,
       weightField: this.schema.weightFields[0] ?? null,
+      ...(kept ? before.filters : {}),
       ...settings.filters,
     };
     this.worker = this.makeWorker(g.units, g.keypairs);
     this.emit('graph');
-    const placed = await placeUnits(g, this.ids, this.relations, () => run === this.run);
+    const layout = this.layoutRules();
+    this.extent = layout.extent;
+    const placed = await placeUnits(g, this.ids, this.relations, () => run === this.run, layout);
     if (!placed || run !== this.run) return false;
     this.positions = placed;
     this.laidOut = true;
@@ -183,19 +274,33 @@ export class GraphModel {
   }
 
   /** Holds a prepared graph, or nothing for a refused file. */
-  private hold(p: Prepared | null, issues: ModelIssue[]) {
+  private hold(p: Prepared | null, issues: ModelIssue[], keepRules: boolean) {
     const t = p?.topology ?? noTopology();
     this.stored = p?.stored ?? null;
     this.graph = p?.graph ?? null;
     this.issues = issues;
-    this.schema = p ? reflectSchema(p.graph) : EMPTY_SCHEMA;
+    this.schema = p ? this.reflect(p.graph) : EMPTY_SCHEMA;
     this.ids = p?.ids ?? [];
     this.index = p?.index ?? new Map();
     [this.relations, this.relationOf, this.chevrons] = [t.relations, t.relationOf, t.chevrons];
     this.kinds = p?.kinds ?? NO_KINDS;
     this.superseded = p?.superseded ?? new Uint8Array(0);
-    this.types = p ? buildTypes(p.graph, this.schema, this.theme, this.custom, this.profile) : EMPTY_TYPES;
+    this.types = p ? this.buildTypes(p.graph, this.settings.get('types.slots')) : EMPTY_TYPES;
     this.positions = new Float32Array(2 * this.ids.length);
+    this.narrowing.hold({ graph: this.graph, index: this.index, relations: this.relations, issues }, keepRules);
+  }
+
+  /** The schema of a graph; the profile's keypair type field comes first when keypairs carry it. */
+  private reflect(g: Graph): Schema {
+    const schema = reflectSchema(g, this.schemaRules());
+    const f = this.profile.keypairTypeField;
+    const carried = f && g.keypairs.some(([a, b]) => g.keypairInfo.get(keypairId(a, b))?.attrs?.[f] !== undefined);
+    return carried ? { ...schema, keypairTypeField: f } : schema;
+  }
+
+  /** The types with the colours of the settings; the slots stay those of the graph's load. */
+  private buildTypes(g: Graph, slots = this.types.look.slots): TypeRegistry {
+    return buildTypes(g, this.schema, this.theme, this.custom, this.profile, this.typeLook(slots));
   }
 
   // ---------------------------------------------------------------- commands
@@ -209,6 +314,7 @@ export class GraphModel {
   /** Makes a unit the root, or clears the root. A new root drops the path, which ran from the old one. */
   async setRoot(key: Key | null): Promise<void> {
     if (key !== null && !this.index.has(keyId(key))) return;
+    if (key !== null && this.narrowing.include(key)) this.emit('scope');
     const run = this.run;
     this.root = key;
     this.target = null;
@@ -235,15 +341,17 @@ export class GraphModel {
       return null;
     }
     if (this.root === null || !this.worker || !this.index.has(keyId(key))) return null;
+    if (this.narrowing.include(key)) this.emit('scope');
     const run = this.run;
     const from = this.root;
     this.target = key;
-    const result = await this.worker.paths(from, key, EXTRA_STEPS, PATH_DEFAULTS);
+    const result = await this.worker.paths(from, key, this.settings.get('paths.extraSteps'), this.pathLimits());
     if (run !== this.run || this.root !== from || this.target === null || keyId(this.target) !== keyId(key))
       return null;
     this.paths = result;
     const first = result.lengths.find((l) => l.paths.length > 0);
-    this.choice = first ? { length: first.length, index: 0 } : null;
+    this.choice =
+      first && this.settings.get('paths.autoChoose') === 'first' ? { length: first.length, index: 0 } : null;
     this.emit('paths');
     return result;
   }
@@ -278,31 +386,323 @@ export class GraphModel {
   private setCustom(kind: 'unit' | 'keypair', id: string, part: { label?: string; colour?: string }) {
     const c = this.custom[kind];
     c.set(id, { ...c.get(id), ...part });
-    if (this.graph) this.types = buildTypes(this.graph, this.schema, this.theme, this.custom, this.profile);
+    if (this.graph) this.types = this.buildTypes(this.graph);
     this.emit('types');
   }
 
+  /** The display factors (6.8): a person's change writes their settings. */
   setOverrides(part: Partial<Overrides>) {
-    this.overrides = { ...this.overrides, ...part };
+    for (const k of ['size', 'width', 'opacity'] as const)
+      if (part[k] !== undefined) this.settings.set(`display.${k}`, part[k]);
+    this.cache();
     this.emit('display');
   }
 
+  /** Hulls on or off (6.9): the setting, and this graph's choice, which beats the size rule. */
   setHulls(on: boolean) {
-    this.hulls = on;
-    this.hullsWanted = on;
+    this.hullsChosen = on;
+    this.settings.set('hulls.enabled', on);
     this.emit('display');
+  }
+
+  /** Whether hulls show: a person's choice for this graph, else the graph's own view, else the setting; large graphs start without. */
+  get hulls(): boolean {
+    if (this.hullsChosen !== null) return this.hullsChosen;
+    const large = (this.graph?.units.length ?? 0) > this.settings.get('hulls.autoOffAbove');
+    return large && !this.settings.inGraphLayer('hulls.enabled') ? false : this.settings.get('hulls.enabled');
   }
 
   inspect(what: Inspected) {
     this.inspected = what;
-    this.emit('inspect');
+    const joins = what?.kind === 'unit' && this.narrowing.include(what.key);
+    this.emit('inspect', ...(joins ? (['scope'] as const) : []));
+  }
+
+  // ---------------------------------------------------------------- narrowing (6.7, 6.19 to 6.21)
+
+  /** The selected units (6.20). */
+  get selection(): Key[] {
+    return this.narrowing.selection;
+  }
+  /** The highlight groups with their units now (6.20). */
+  get highlights(): HighlightGroup[] {
+    return this.narrowing.groups(this.settings.get('highlight.hops'));
+  }
+  /** The scope, or null while every unit shows (6.21). */
+  get scope(): Scope | null {
+    return this.narrowing.scope;
+  }
+  /** The filter rules (6.7). */
+  get rules(): FilterRule[] {
+    return this.narrowing.rules;
+  }
+  /** The search text and what it found (6.19). */
+  get search(): { text: string; results: SearchResult[] } {
+    return { text: this.narrowing.searchText, results: this.narrowing.results };
+  }
+
+  select(keys: Key[], how: SelectHow) {
+    if (this.narrowing.select(keys, how)) this.emit('selection', 'highlight');
+  }
+  setHighlight(name: string, on: boolean) {
+    if (this.narrowing.setHighlight(name, on)) this.emit('highlight');
+  }
+  /** Saves the selection as a group under a name; false when the name or the selection does not allow it. */
+  saveHighlight(name: string): boolean {
+    const done = this.narrowing.saveHighlight(name);
+    if (done) this.emit('highlight');
+    return done;
+  }
+  removeHighlight(name: string) {
+    if (this.narrowing.removeHighlight(name)) this.emit('highlight');
+  }
+  /** Sets a filter rule; a rule that is not one changes nothing and says why. */
+  setRule(rule: FilterRule): string | null {
+    if (!isRule(rule)) return 'Not a filter rule';
+    if (this.narrowing.setRule(rule)) this.emit('filters');
+    return null;
+  }
+  clearRules() {
+    if (this.narrowing.clearRules()) this.emit('filters');
+  }
+  /** Searches the loaded graph (6.19); the group Search results follows. */
+  setSearch(text: string) {
+    const g = this.graph;
+    this.narrowing.setSearch(
+      text,
+      {
+        label: (i) => this.label(g!.units[i]),
+        classOf: (i) => this.classOf(i),
+        typeOf: (i) => this.types.unitOf[i] ?? null,
+        relations: (i) => this.narrowing.relations(i),
+      },
+      this.settings.get('search.limit'),
+    );
+    this.emit('search');
+  }
+  /** Adds a unit to the group Search results, which turns on (6.19). */
+  highlightResult(key: Key) {
+    if (this.narrowing.highlightResult(key)) this.emit('highlight');
+  }
+  showNeighbourhood(keys: Key[]) {
+    const s = this.settings;
+    if (this.narrowing.showNeighbourhood(keys, s.get('scope.hops'), s.get('scope.limit'))) this.emit('scope');
+  }
+  expand(keys: Key[]) {
+    if (this.narrowing.expand(keys, this.settings.get('scope.limit'))) this.emit('scope');
+  }
+  hide(keys: Key[]) {
+    if (this.narrowing.hide(keys)) this.emit('scope');
+  }
+  showAll() {
+    if (this.narrowing.showAll()) this.emit('scope');
+  }
+  /** Runs the force layout on the scope alone, from the current places; the other units stay (6.21). */
+  async layOutScope(): Promise<boolean> {
+    const inside = this.narrowing.inScope();
+    if (!inside || !this.laidOut) return false;
+    const run = this.run;
+    const part = [...inside].flatMap((v, i) => (v ? [i] : []));
+    const next = await placePart(this.ids, this.positions, part, this.relations, this.layoutRules());
+    if (run !== this.run) return false;
+    this.positions = next;
+    this.emit('scope');
+    return true;
+  }
+
+  /** Which units the highlight groups that are on hold (1), or null when they hold none (6.20). */
+  emphasis(): Uint8Array | null {
+    return this.narrowing.emphasis(this.settings.get('highlight.hops'));
+  }
+  /** Whether each unit is in the scope, or null without one; and each unit's relations that leave it (6.21). */
+  inScope(): Uint8Array | null {
+    return this.narrowing.inScope();
+  }
+  outside(): Uint32Array | null {
+    return this.narrowing.outside();
+  }
+  /** A unit's number of relations, by index. */
+  relationsOf(i: number): number {
+    return this.narrowing.relations(i);
+  }
+
+  /** What the filter rules read of units and keypairs (6.7). */
+  ruleFacts(): RuleFacts {
+    const g = this.graph;
+    return {
+      classOf: (i) => this.classOf(i),
+      typeOf: (i) => this.types.unitOf[i] ?? null,
+      kindOf: (i) => this.kinds.of[i],
+      superseded: (i) => this.superseded[i] === 1,
+      relations: (i) => this.narrowing.relations(i),
+      keypairType: (a, b) => this.keypairType(a, b)?.id ?? null,
+      keypairSuperseded: (a, b) => g?.keypairInfo.get(keypairId(a, b))?.superseded === true,
+    };
+  }
+
+  /** A unit's class (3.9), by index: the profile's, or none. */
+  private classOf(i: number): string | null {
+    const g = this.graph;
+    return g ? (this.profile.classOf?.(g.unitInfo.get(this.ids[i]), g.units[i]) ?? null) : null;
   }
 
   setTheme(theme: Theme) {
     if (theme === this.theme) return;
     this.theme = theme;
-    if (this.graph) this.types = buildTypes(this.graph, this.schema, this.theme, this.custom, this.profile);
+    if (this.graph) this.types = this.buildTypes(this.graph);
     this.emit('theme', 'types');
+  }
+
+  // ---------------------------------------------------------------- settings (5.9)
+
+  /** A person's value for a setting. A refused value changes nothing; the reason comes back. */
+  setSetting(key: string, value: unknown): string | null {
+    const r = this.settings.set(key, value);
+    if ('refused' in r) return r.refused;
+    this.settingsChanged(r.changed);
+    return null;
+  }
+
+  /** Returns the keys, or every key, to the values below the person's own. */
+  resetSettings(keys?: string[]) {
+    this.settingsChanged(this.settings.reset(keys));
+  }
+
+  /** Takes a stored settings file: its values, its pins and its revision. */
+  applySettingsFile(file: SettingsFile) {
+    this.settingsChanged(this.settings.applyFile(file));
+  }
+
+  /** A person's import of a settings file: its values and pins replace the person's own. */
+  importSettings(file: SettingsFile) {
+    this.settingsChanged(this.settings.importFile(file));
+  }
+
+  /** The host's base values (GraphView's `settings`); returns those refused. */
+  setBaseSettings(values: Record<string, unknown>): Refusal[] {
+    const r = this.settings.setBase(values);
+    this.settingsChanged(r.changed);
+    return r.refused;
+  }
+
+  /** Shows a setting in the side bar as well, or no longer. */
+  pinSetting(key: string, on: boolean) {
+    this.settingsChanged(this.settings.pin(key, on));
+  }
+
+  private settingsChanged(keys: string[]) {
+    if (!keys.length) return;
+    this.changedSettings = keys;
+    this.cache();
+    const aspects: Aspect[] = ['settings'];
+    const has = (prefix: string) => keys.some((k) => k.startsWith(prefix));
+    if (keys.some((k) => DISPLAY_KEYS.includes(k))) aspects.push('display');
+    if (has('theme.colours.') || has('types.')) {
+      if (this.graph) this.types = this.buildTypes(this.graph);
+      aspects.push('types');
+    }
+    if (keys.includes('view.mode') && this.loads === 0) {
+      this.mode = this.settings.get('view.mode');
+      aspects.push('mode');
+    }
+    this.emit(...aspects);
+    // A path set follows its settings: the extra steps and the limits.
+    if (has('paths.extraSteps') || has('paths.limits.') || has('performance.pathClockEvery'))
+      if (this.root !== null && this.target !== null) void this.setTarget(this.target);
+  }
+
+  /** Recomputes what the model keeps from its settings. */
+  private cache() {
+    const s = this.settings;
+    this.overrides = { size: s.get('display.size'), width: s.get('display.width'), opacity: s.get('display.opacity') };
+    this.depth = {
+      spacing: s.get('depth.spacing'),
+      foreground: s.get('depth.foreground'),
+      second: { scale: s.get('depth.second.scale'), opacity: s.get('depth.second.opacity') },
+      far: { scale: s.get('depth.far.scale'), opacity: s.get('depth.far.opacity') },
+      path: { scale: s.get('depth.path.scale'), opacity: s.get('depth.path.opacity'), glow: s.get('depth.path.glow') },
+      dimmed: s.get('depth.dimmed'),
+      maxPlanes: s.get('depth.maxPlanes'),
+      frontDegrees: s.get('depth.frontDegrees'),
+    };
+  }
+
+  /** The colour tokens of a theme, from the settings of the group "Theme". */
+  colours(theme: Theme = this.theme): Record<TokenName, string> {
+    return Object.fromEntries(TOKEN_NAMES.map((t) => [t, this.settings.get(`theme.colours.${t}`)[theme]])) as Record<
+      TokenName,
+      string
+    >;
+  }
+
+  /** A colour setting's value as a colour: a token name gives the token's colour in the theme. */
+  colour(value: string, theme: Theme = this.theme): string {
+    return isToken(value) ? this.colours(theme)[value] : value;
+  }
+
+  private typeLook(slots: number): TypeLook {
+    const s = this.settings;
+    return {
+      palette: s.get('types.palette')[this.theme],
+      other: this.colour(s.get('types.otherColour')),
+      surface: this.colour('surface'),
+      tint: s.get('types.backwardTint'),
+      slots,
+    };
+  }
+
+  private schemaRules(): SchemaRules {
+    const s = this.settings;
+    return {
+      typeFields: s.get('schema.typeFields'),
+      timeNames: new RegExp(s.get('schema.timeFieldNames'), 'i'),
+      datePattern: new RegExp(s.get('schema.datePattern')),
+      weightMinDistinct: s.get('schema.weightMinDistinct'),
+      weightFirst: s.get('schema.weightFirst'),
+    };
+  }
+
+  private layoutRules(): LayoutRules {
+    const s = this.settings;
+    return {
+      extent: s.get('layout.extent'),
+      positions: s.get('layout.positions'),
+      flipY: s.get('layout.flipY'),
+      pinned: s.get('layout.pinned'),
+      seed: s.get('layout.force.seed'),
+      startSpacing: s.get('layout.force.startSpacing'),
+      inline: s.get('performance.workers') === 'off',
+      force: {
+        batch: s.get('layout.force.batch'),
+        tolerance: s.get('layout.force.tolerance'),
+        maxIterations: s.get('layout.force.maxIterations'),
+        barnesHutFrom: s.get('layout.force.barnesHutFrom'),
+        barnesHutTheta: s.get('layout.force.barnesHutTheta'),
+        large: {
+          from: s.get('layout.force.large.from'),
+          maxIterations: s.get('layout.force.large.maxIterations'),
+          barnesHutTheta: s.get('layout.force.large.barnesHutTheta'),
+        },
+        gravity: s.get('layout.force.gravity'),
+        strongGravityMode: s.get('layout.force.strongGravityMode'),
+        scalingRatio: s.get('layout.force.scalingRatio'),
+        slowDown: s.get('layout.force.slowDown'),
+        linLogMode: s.get('layout.force.linLogMode'),
+        outboundAttractionDistribution: s.get('layout.force.outboundAttractionDistribution'),
+        adjustSizes: s.get('layout.force.adjustSizes'),
+        edgeWeightInfluence: s.get('layout.force.edgeWeightInfluence'),
+      },
+    };
+  }
+
+  private pathLimits(): PathLimits {
+    const s = this.settings;
+    return {
+      count: s.get('paths.limits.count'),
+      list: s.get('paths.limits.list'),
+      timeMs: s.get('paths.limits.timeMs'),
+      clockEvery: s.get('performance.pathClockEvery'),
+    };
   }
 
   // ---------------------------------------------------------------- queries
@@ -362,15 +762,23 @@ export class GraphModel {
     return e && this.graph ? e.map((j) => this.graph!.units[j]) : null;
   }
 
-  /** An interface's perspectives, from each end toward the other, with the profile's pair types (3.8). */
+  /** An interface's perspectives, from each end toward the other, with their pair types (3.8, 3.9). */
   perspectivesOf(k: Key): Perspective[] | null {
     const ends = this.endsOf(k);
-    return ends && this.graph ? perspectivesOf(this.graph, k, ends, this.profile.perspective) : null;
+    return ends && this.graph
+      ? perspectivesOf(this.graph, k, ends, (_, i, a, b) => this.perspectiveType(i, a, b))
+      : null;
+  }
+
+  /** A perspective's pair type: the profile's, else the type of its keypair into the interface (3.9). */
+  perspectiveType(iface: Key, from: Key, to: Key): string | null {
+    const g = this.graph;
+    return (g && this.profile.perspective?.(g, iface, from, to)) ?? this.keypairType(from, iface)?.id ?? null;
   }
 
   /** Units per plane around the root (specification 7.2). */
   planeCounts(): PlaneCounts {
-    return planeCounts(this.degrees);
+    return planeCounts(this.degrees, this.depth);
   }
 
   /** The range of a time field over all rows, or of a weight field over the keypairs. */
@@ -378,12 +786,12 @@ export class GraphModel {
     const g = this.graph;
     if (!g || !field) return null;
     const key = `${kind}\t${field}`;
-    if (!this.ranges.has(key)) this.ranges.set(key, fieldRange(g, field, kind));
+    if (!this.ranges.has(key)) this.ranges.set(key, fieldRange(g, field, kind, this.schema.rules));
     return this.ranges.get(key)!;
   }
 
   /** The view settings to save with the graph; the scene adds its camera. */
-  settings(): Omit<ViewSettings, 'camera'> {
+  viewSettings(): Omit<ViewSettings, 'camera'> {
     const out = (c: Custom) => Object.fromEntries(c);
     return {
       mode: this.mode,

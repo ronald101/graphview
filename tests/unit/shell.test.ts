@@ -202,7 +202,8 @@ describe('§8.10 Examples', () => {
 describe('§11.1 The repository', () => {
   // Every text file, as committed: the build has its own check in the browser tests.
   const root = fileURLToPath(new URL('../../', import.meta.url));
-  const skip = new Set(['node_modules', '.git', 'dist', 'test-results', 'playwright-report']);
+  // Folders git leaves out: build output, test output, and the settings files the shell's server writes.
+  const skip = new Set(['node_modules', '.git', 'dist', 'test-results', 'playwright-report', '.svelte-kit', 'data']);
   const binary = /\.(png|jpe?g|gif|webp|ico|woff2?|ttf|pdf|zip)$/i;
   const files = (dir: string): string[] =>
     readdirSync(dir).flatMap((name) => {

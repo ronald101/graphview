@@ -1,14 +1,19 @@
 // The chevrons: one per keypair, along its relation's line, in its keypair type's colour.
-import { DEPTH_RULES } from '../../model/depth.ts';
-import { CHEVRON_ROOM } from '../rules.ts';
-import { ENDS_GLSL, f } from './common.ts';
+import { endsGlsl } from './common.ts';
 
-export const CHEVRON_VS = /* glsl */ `
-${ENDS_GLSL}
+export const chevronVs = (slots: number) => /* glsl */ `
+${endsGlsl(slots)}
 attribute vec4 aChev;
 attribute vec4 aChevState;
 attribute vec2 aAbove;
+attribute vec2 aEmph;
+uniform vec2 uHighlight;
+uniform vec3 uOutgoing;
+uniform vec3 uIncoming;
 uniform float uChevronPx;
+uniform vec2 uChevronPath; // growth along the travel direction, opacity against it
+uniform vec2 uChevronRoom; // room and fade-in, in chevron sizes
+uniform float uBelowChevrons;
 varying vec2 vLocal;
 varying vec3 vColor;
 varying float vOpacity;
@@ -34,25 +39,30 @@ void main() {
   float flow = mix(aChevState.x, aChevState.y, uT);
   float aligned = clamp(flow, 0.0, 1.0);
   float opposing = clamp(-flow, 0.0, 1.0);
-  float size = uChevronPx * uSizeScale * mix(sa.y, sb.y, t) * (1.0 + 0.2 * aligned * hasPath);
+  float size = uChevronPx * uSizeScale * mix(sa.y, sb.y, t) * (1.0 + uChevronPath.x * aligned * hasPath);
   c.xy += (d * position.x + n * position.y) * size / halfRes * c.w;
   gl_Position = c;
   vLocal = position.xy;
   float op = mix(sa.z, sb.z, t);
   // On a path, the chevron along the travel direction stays lit; the opposing one dims.
-  float pathOp = aligned + opposing * 0.15 + (1.0 - aligned - opposing) * ${f(DEPTH_RULES.dimmed)};
+  float pathOp = aligned + opposing * uChevronPath.y + (1.0 - aligned - opposing) * uDepthC.w;
   op = mix(op, pathOp, hasPath);
-  op *= mix(aChevState.z, aChevState.w, uT) * mix(aAbove.x, aAbove.y, uT) * aChev.w * uOpacityScale;
-  // A chevron needs room: it fades out where the line is shorter than two chevrons.
-  op *= clamp((len - ${CHEVRON_ROOM.toFixed(2)} * size) / (0.5 * size), 0.0, 1.0);
-  vColor = uKeypairPalette[int(aChev.z + 0.5)];
+  float above = mix(mix(aAbove.x, aAbove.y, uT), 1.0, uBelowChevrons);
+  op *= mix(aChevState.z, aChevState.w, uT) * above * aChev.w * uOpacityScale * mix(uHighlight.y, 1.0, aEmph.x);
+  // A chevron needs room: it fades out where the line is too short for it.
+  op *= clamp((len - uChevronRoom.x * size) / (uChevronRoom.y * size), 0.0, 1.0);
+  // One selected unit colours its chevrons by direction (6.20).
+  vColor = aEmph.y > 1.5 ? uIncoming : aEmph.y > 0.5 ? uOutgoing : uKeypairPalette[int(aChev.z + 0.5)];
   vOpacity = op;
   vGlow = hasPath * aligned;
-  if (op < 0.002) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+  if (op < uCull) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
 }
 `;
 
 export const CHEVRON_FS = /* glsl */ `
+uniform vec3 uGlyph; // half length, half spread, half stroke
+uniform vec4 uChevronGlow; // extra stroke, whitening, opacity, reach
+uniform float uDiscard;
 varying vec2 vLocal;
 varying vec3 vColor;
 varying float vOpacity;
@@ -65,14 +75,15 @@ float seg(vec2 p, vec2 a, vec2 b) {
 }
 void main() {
   vec2 p = vLocal;
-  float d = min(seg(p, vec2(-0.2, 0.32), vec2(0.2, 0.0)), seg(p, vec2(-0.2, -0.32), vec2(0.2, 0.0)));
+  vec2 tip = vec2(uGlyph.x, 0.0);
+  float d = min(seg(p, vec2(-uGlyph.x, uGlyph.y), tip), seg(p, vec2(-uGlyph.x, -uGlyph.y), tip));
   float aa = max(fwidth(d), 1e-4);
-  float w = 0.085 + 0.03 * vGlow;
+  float w = uGlyph.z + uChevronGlow.x * vGlow;
   float alpha = 1.0 - smoothstep(w - aa, w + aa, d);
-  vec3 col = mix(vColor, vec3(1.0), 0.25 * vGlow * (1.0 - alpha));
-  alpha = max(alpha, vGlow * 0.35 * (1.0 - smoothstep(w, w + 0.18, d)));
+  vec3 col = mix(vColor, vec3(1.0), uChevronGlow.y * vGlow * (1.0 - alpha));
+  alpha = max(alpha, vGlow * uChevronGlow.z * (1.0 - smoothstep(w, w + uChevronGlow.w, d)));
   alpha *= vOpacity;
-  if (alpha < 0.004) discard;
+  if (alpha < uDiscard) discard;
   gl_FragColor = vec4(col, alpha);
 }
 `;

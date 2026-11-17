@@ -94,6 +94,8 @@ const EXAMPLE_FAMILY: Record<string, string> = {
   sample:
     'It is close to the family Tree: a hierarchy of parts, with a few relations across it and hubs with many leaves.',
   'random-10k': 'It is close to the family Random by size: a random spanning tree plus random relations.',
+  'classes-and-perspectives':
+    'It belongs to no generator family: an invented family whose relations all run through interfaces, with classes and pair types.',
 };
 
 const familyName = (f: Family) => FAMILIES.find((x) => x.id === f)?.name ?? f;

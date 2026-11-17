@@ -1,25 +1,26 @@
 // The scene draws the model (specification 5.5 and section 6). It listens to the model, turns its
 // state into instanced attributes, eases from one state to the next, and conducts the camera, the
-// hulls and the labels. It reads the model and never changes it.
-import { keyId, tokens, type Key } from '../core/index.ts';
+// hulls and the labels. It reads the model and its settings and never changes them.
+import { keyId, type Key } from '../core/index.ts';
 import type { Aspect, Inspected } from '../model/contracts.ts';
 import type { GraphModel } from '../model/model.ts';
 import type { V3 } from '../model/picking.ts';
 import { paletteOf } from '../model/typeRegistry.ts';
-import { allocate, step } from './buffers.ts';
+import { allocate, emphasize, statics, step } from './buffers.ts';
 import { CameraRig, type Nudge } from './camera.ts';
-import { ease, FrameState } from './frame.ts';
+import { FrameState } from './frame.ts';
 import { LOOK } from './geometry.ts';
 import type { Gpu } from './gpu.ts';
 import { HullLayer } from './hullLayer.ts';
 import { LabelLayer } from './labelLayer.ts';
 import { PUBLIC_LOOKS, type Looks } from './looks.ts';
 import { pickAt } from './picker.ts';
+import { drawColours, drawRules } from './rules.ts';
 import { sceneSnapshot, type SceneSnapshot } from './snapshot.ts';
 
 export type { SceneSnapshot };
 
-const DURATION = 450;
+const ENDS = ['aPrevA', 'aNextA', 'aPrevB', 'aNextB', 'aStateA', 'aStateB'];
 
 export class Scene {
   reducedMotion = false;
@@ -55,14 +56,15 @@ export class Scene {
     gpu.controls.addEventListener('change', () => gpu.setHullOpacity(this.hulls.opacity(this.state)));
     gpu.onFrame = () => this.frame();
     gpu.onDraw = () => this.drawLabels();
+    this.engine();
     this.colours();
     this.overrides();
     this.camera.mode(false);
     if (this.model.graph || this.model.refused) this.onChange(new Set<Aspect>(['graph', 'layout']));
   }
 
-  detach() {
-    this.stopListening();
+  /** Lets go of the renderer, as when it is built again, and keeps following the model. */
+  release() {
     if (this.gpu) {
       this.gpu.onFrame = null;
       this.gpu.onDraw = null;
@@ -71,10 +73,22 @@ export class Scene {
     this.state.gpu = null;
     this.camera.gpu = null;
     this.labels = null;
+    this.uploaded = false;
+  }
+
+  detach() {
+    this.stopListening();
+    this.release();
   }
 
   private onChange(a: ReadonlySet<Aspect>) {
     const m = this.model;
+    if (a.has('settings')) this.settings();
+    // Another drawing draws other chevrons and shapes: the buffers start again, and nothing moves.
+    if (a.has('settings') && !a.has('graph') && m.changedSettings.some((k) => k.startsWith('drawing.'))) {
+      this.redraw();
+      return;
+    }
     if (a.has('graph')) {
       this.ready = false;
       this.allocate();
@@ -95,29 +109,85 @@ export class Scene {
     if (a.has('layout')) {
       this.hulls.measure(this.state);
       this.apply(false);
-      this.camera.fit();
+      if (m.settings.get('camera.fitOnLoad')) this.camera.fit();
       this.ready = true;
       this.settle();
       return;
     }
-    if (a.has('root') && m.root !== null) this.camera.centreOn(m.index.get(keyId(m.root))!);
-    if (a.has('mode') || a.has('root') || a.has('paths') || a.has('filters')) this.apply(true);
+    if (a.has('root') && m.root !== null && m.settings.get('camera.followRoot'))
+      this.camera.centreOn(m.index.get(keyId(m.root))!);
+    if (a.has('mode') || a.has('root') || a.has('paths') || a.has('filters') || a.has('scope')) this.apply(true);
     else if (a.has('inspect')) this.mark();
-    if (a.has('types') || a.has('display')) this.hulls.refresh(this.state);
+    if (a.has('selection') || a.has('highlight')) this.emphasize();
+    if (a.has('types') || a.has('display') || a.has('settings')) this.hulls.refresh(this.state);
   }
 
-  /** The units with an ink outline: the root, the path's target and the inspected unit. */
+  /** A change of settings: the drawing rules, colours, statics, outlines and the camera follow at once. */
+  private settings() {
+    const s = this.state;
+    s.rules = drawRules(this.model);
+    s.forget();
+    this.engine();
+    this.colours();
+    if (this.model.graph && this.uploaded) {
+      statics(s);
+      this.mark();
+      this.emphasize();
+      this.gpu?.touch('lines', ['aStatic']);
+      this.gpu?.touch('chevrons', ['aChev']);
+    }
+    this.camera.mode(false);
+  }
+
+  /** The renderer's settings: the shaders' numbers, the controls, the field of view and the draw order. */
+  private engine() {
+    const g = this.gpu;
+    if (!g) return;
+    const s = this.model.settings;
+    g.setRules(this.state.rules);
+    g.setControls({
+      damping: s.get('camera.damping'),
+      screenSpacePanning: s.get('camera.screenSpacePanning'),
+      zoomSpeed: s.get('camera.zoomSpeed'),
+      rotateSpeed: s.get('camera.rotateSpeed'),
+      panSpeed: s.get('camera.panSpeed'),
+      zoomToCursor: s.get('camera.zoomToCursor'),
+      minDistance: s.get('camera.minDistance'),
+      maxDistance: s.get('camera.maxDistance'),
+      minPolarAngle: s.get('camera.minPolarAngle'),
+      maxPolarAngle: s.get('camera.maxPolarAngle'),
+    });
+    g.setFov(s.get('camera.fov'));
+    g.setOrder(s.get('renderer.drawOrder'));
+  }
+
+  /** The units with an outline: those the setting names, of the root, the path's end, the inspected unit and the path. */
   private marks(): string[] {
     const m = this.model;
-    return [m.root, m.target, m.inspected?.kind === 'unit' ? m.inspected.key : null]
+    const which = m.settings.get('units.outline.marks');
+    return [
+      which.includes('root') ? m.root : null,
+      which.includes('target') ? m.target : null,
+      which.includes('inspected') && m.inspected?.kind === 'unit' ? m.inspected.key : null,
+      ...(which.includes('path') ? (m.activePath() ?? []) : []),
+    ]
       .filter((k): k is Key => k !== null)
       .map(keyId);
   }
 
+  /** Highlights change at once; nothing moves (6.20). */
+  private emphasize() {
+    if (!this.model.graph || !this.uploaded) return;
+    emphasize(this.state);
+    this.gpu?.touch('units', ['look']);
+    this.gpu?.touch('lines', ['aEmph']);
+    this.gpu?.touch('chevrons', ['aEmph']);
+  }
+
   /** Outlines change at once; nothing moves. */
   private mark() {
-    const marks = this.marks();
-    this.model.ids.forEach((id, i) => (this.state.u.look[4 * i + LOOK.marked] = marks.includes(id) ? 1 : 0));
+    const marks = new Set(this.marks());
+    this.model.ids.forEach((id, i) => (this.state.u.look[4 * i + LOOK.marked] = marks.has(id) ? 1 : 0));
     this.gpu?.touch('units', ['look']);
   }
 
@@ -128,29 +198,39 @@ export class Scene {
     this.labelLayer.clear();
   }
 
+  /** The graph drawn again from the start, where it stands, with the camera where it is. */
+  private redraw() {
+    const m = this.model;
+    this.allocate();
+    if (!m.graph || !m.laidOut) return;
+    this.hulls.measure(this.state);
+    this.apply(false);
+  }
+
   private upload() {
     const m = this.model;
     const s = this.state;
-    this.gpu?.setData(s.u, m.ids.length, s.l, m.relations.length, s.c, m.chevrons.length, s.looks.shapes);
+    this.gpu?.setData(
+      s.u,
+      m.ids.length,
+      s.l,
+      m.relations.length,
+      s.c,
+      s.chevrons.length,
+      s.looks.shapes,
+      m.types.look.slots,
+    );
     this.palettes();
   }
 
   private palettes() {
     const m = this.model;
-    this.gpu?.setPalette('unit', paletteOf(m.types.unit, m.theme));
-    this.gpu?.setPalette('keypair', paletteOf(m.types.keypair, m.theme));
+    this.gpu?.setPalette('unit', paletteOf(m.types.unit, m.types.look));
+    this.gpu?.setPalette('keypair', paletteOf(m.types.keypair, m.types.look));
   }
 
   private colours() {
-    const t = tokens[this.model.theme];
-    this.gpu?.setColours({
-      surface: t.surface,
-      ink: t['ink-1'],
-      context: t.context,
-      neutral: t.ring,
-      path: t.path,
-      issue: t.issue,
-    });
+    this.gpu?.setColours(drawColours(this.model));
   }
 
   private overrides() {
@@ -168,15 +248,15 @@ export class Scene {
     if (!this.model.graph) return;
     const first = !this.uploaded;
     step(this.state, first, this.marks());
+    emphasize(this.state);
     const gpu = this.gpu;
     if (first) {
       this.upload();
       this.uploaded = true;
     } else if (gpu) {
-      const ends = ['aPrevA', 'aNextA', 'aPrevB', 'aNextB', 'aStateA', 'aStateB'];
-      gpu.touch('units', ['posPrev', 'posNext', 'currentDegree', 'isOnActivePath', 'filterState', 'look', ...ends]);
-      gpu.touch('lines', [...ends, 'aLine', 'aLine2']);
-      gpu.touch('chevrons', [...ends, 'aChevState', 'aAbove']);
+      gpu.touch('units', ['posPrev', 'posNext', 'currentDegree', 'isOnActivePath', 'filterState', 'look', ...ENDS]);
+      gpu.touch('lines', [...ENDS, 'aLine', 'aLine2', 'aEmph']);
+      gpu.touch('chevrons', [...ENDS, 'aChevState', 'aAbove', 'aEmph']);
     }
     if (gpu) {
       const f = this.state.flags;
@@ -185,14 +265,15 @@ export class Scene {
       gpu.uniforms.uDepth.value.set(f.depth[0], f.depth[1]);
     }
     this.start = performance.now();
-    this.setT(animate && !this.reducedMotion && !first ? 0 : 1);
+    const still = this.reducedMotion || this.state.rules.duration <= 0;
+    this.setT(animate && !still && !first ? 0 : 1);
     if (this.state.t >= 1) this.settle();
   }
 
   private setT(t: number) {
     this.state.t = t;
     if (this.gpu) {
-      this.gpu.uniforms.uT.value = ease(t);
+      this.gpu.uniforms.uT.value = this.state.ease(t);
       this.gpu.request();
     }
   }
@@ -200,9 +281,9 @@ export class Scene {
   /** Called before each frame: advances transitions, the camera and the hulls. */
   private frame() {
     if (this.state.t >= 1) return;
-    this.setT((performance.now() - this.start) / DURATION);
-    this.camera.move(ease(this.state.t));
-    if (++this.framesSinceHull >= 4) {
+    this.setT((performance.now() - this.start) / this.state.rules.duration);
+    this.camera.move(this.state.ease());
+    if (++this.framesSinceHull >= this.model.settings.get('hulls.refreshEvery')) {
       this.framesSinceHull = 0;
       this.hulls.refresh(this.state);
     }
@@ -254,12 +335,20 @@ export class Scene {
     if (this.labels) this.labelLayer.draw(this.state, this.labels);
   }
 
-  /** The picture as it is on screen, labels included, with or without the background. */
-  capture(background: boolean): HTMLCanvasElement | null {
+  /** The picture as it is on screen, at a factor of its pixels, with or without its background and labels. */
+  capture(background: boolean, scale = 1, labels = true): HTMLCanvasElement | null {
     const g = this.gpu;
     if (!g) return null;
-    const out = g.capture(background);
-    if (this.labels) out.getContext('2d')!.drawImage(this.labels, 0, 0);
+    const out = g.capture(background, scale);
+    if (labels && this.labels) {
+      if (scale === 1) out.getContext('2d')!.drawImage(this.labels, 0, 0);
+      else {
+        const sharp = document.createElement('canvas');
+        this.labelLayer.draw(this.state, sharp, g.pixelRatio * scale);
+        out.getContext('2d')!.drawImage(sharp, 0, 0);
+        this.drawLabels();
+      }
+    }
     return out;
   }
 

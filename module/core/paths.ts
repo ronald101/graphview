@@ -4,6 +4,8 @@ import { keyId } from './keys.ts';
 import type { Graph, Key, PathLimits, PathSetLength, PathSetResult } from './types.ts';
 
 export const PATH_DEFAULTS = { count: 10000, list: 200, timeMs: 2000, maxExtra: 20 } as const;
+/** The search looks at the clock every this many steps. */
+export const PATH_CLOCK = 1024;
 
 /** Simple paths from one unit to another, lengths d to d + extra, stopping at the limits. */
 export function pathSet(graph: Graph, from: Key, to: Key, extra: number, limits: PathLimits = {}): PathSetResult {
@@ -11,6 +13,7 @@ export function pathSet(graph: Graph, from: Key, to: Key, extra: number, limits:
   const countLimit = limits.count ?? PATH_DEFAULTS.count;
   const listLimit = limits.list ?? PATH_DEFAULTS.list;
   const timeMs = limits.timeMs ?? PATH_DEFAULTS.timeMs;
+  const clockEvery = Math.max(1, Math.floor(limits.clockEvery ?? PATH_CLOCK));
   const result: PathSetResult = {
     from,
     to,
@@ -65,7 +68,7 @@ export function pathSet(graph: Graph, from: Key, to: Key, extra: number, limits:
         return;
       }
       if (u === t) return;
-      if ((++visits & 1023) === 0 && Date.now() > deadline) {
+      if (++visits % clockEvery === 0 && Date.now() > deadline) {
         stoppedBy = 'time';
         return;
       }

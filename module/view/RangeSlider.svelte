@@ -9,11 +9,29 @@
     low: number;
     high: number;
     format?: (v: number) => string;
+    /** The word between the two values, and the words after the label for each knob. */
+    to?: string;
+    lowest?: string;
+    highest?: string;
     disabled?: boolean;
     onchange: (low: number, high: number) => void;
     testid?: string;
   }
-  let { label, min, max, step, low, high, format = String, disabled = false, onchange, testid }: Props = $props();
+  let {
+    label,
+    min,
+    max,
+    step,
+    low,
+    high,
+    format = String,
+    to = 'to',
+    lowest = 'lowest',
+    highest = 'highest',
+    disabled = false,
+    onchange,
+    testid,
+  }: Props = $props();
 
   const span = $derived(max - min || 1);
   const pct = (v: number) => ((Math.min(max, Math.max(min, v)) - min) / span) * 100;
@@ -29,7 +47,7 @@
 <div class="gv-range" role="group" aria-label={label} data-testid={testid}>
   <div class="gv-range-head">
     <span>{label}</span>
-    <span class="gv-num">{format(low)} to {format(high)}</span>
+    <span class="gv-num">{format(low)} {to} {format(high)}</span>
   </div>
   <div class="gv-range-track" class:gv-disabled={disabled}>
     <div class="gv-range-fill" style:left="{pct(low)}%" style:right="{100 - pct(high)}%"></div>
@@ -40,7 +58,7 @@
       {step}
       value={low}
       {disabled}
-      aria-label="{label}, lowest"
+      aria-label="{label}, {lowest}"
       oninput={(e) => setLow(Number((e.target as HTMLInputElement).value))}
     />
     <input
@@ -50,7 +68,7 @@
       {step}
       value={high}
       {disabled}
-      aria-label="{label}, highest"
+      aria-label="{label}, {highest}"
       oninput={(e) => setHigh(Number((e.target as HTMLInputElement).value))}
     />
   </div>

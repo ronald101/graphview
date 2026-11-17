@@ -1,4 +1,4 @@
-// Takes the eighteen screenshots of the visual review, gate G19 (specification 11.5).
+// Takes the twenty-one screenshots of the visual review, gate G19 (specification 11.5).
 // Usage: npm run build:shell, then npx vite preview --config shell/vite.config.ts --port 4173,
 // then node scripts/screenshots.mjs [prefix]. Pictures go to docs/screenshots/.
 import { existsSync, mkdirSync } from 'node:fs';
@@ -76,6 +76,7 @@ const views = [
     async () => {
       const p = await shell('light');
       await example(p, 'broken-mixed');
+      await p.getByTestId('issues-panel').scrollIntoViewIfNeeded();
       return p;
     },
   ],
@@ -122,7 +123,7 @@ const views = [
     '11-shell-800-drawers-light',
     async () => {
       const p = await shell('light', 800, 900);
-      await p.getByRole('button', { name: 'Controls', exact: true }).click();
+      await p.getByRole('button', { name: 'Host', exact: true }).click();
       return p;
     },
   ],
@@ -167,6 +168,9 @@ const views = [
       await p.getByTestId('generate').click();
       await ready;
       await p.getByTestId('section-data').locator('h2 button').click();
+      // The Types section is the viewer's, and starts closed.
+      await p.getByTestId('section-types').locator('h2 button').click();
+      await p.getByTestId('types-panel').scrollIntoViewIfNeeded();
       await settled(p);
       return p;
     },
@@ -211,6 +215,45 @@ const views = [
         const d = 420;
         c.setCamera([u.x + d * 0.45, u.y - d * 0.4, u.z + d * 0.8], [u.x, u.y, u.z]);
       });
+      return p;
+    },
+  ],
+  [
+    '19-perspectives-classes-light',
+    async () => {
+      const p = await shell('light');
+      await example(p, 'classes-and-perspectives');
+      // Close to the teaching between Ada and Algebra: its oval, its class, and the two chevrons.
+      await run(p, () => {
+        const c = window.graphview.canvas();
+        const u = c.getScene().units.find((x) => x.key === 't-ada-algebra');
+        c.setCamera([u.x, u.y, u.z + 650], [u.x, u.y, u.z]);
+      });
+      return p;
+    },
+  ],
+  [
+    '20-scope-selection-light',
+    async () => {
+      const p = await shell('light');
+      await run(p, () => {
+        const m = window.graphview.model;
+        m.showNeighbourhood([7]);
+        m.select([10], 'replace');
+      });
+      await run(p, () => window.graphview.canvas().fit());
+      await p.getByTestId('section-scope').locator('h2 button').click();
+      await p.getByTestId('section-highlights').locator('h2 button').click();
+      await settled(p);
+      return p;
+    },
+  ],
+  [
+    '21-settings-dialog-drawing-dark',
+    async () => {
+      const p = await shell('dark');
+      await p.getByRole('button', { name: 'Settings', exact: true }).click();
+      await p.getByLabel('Filter the settings').fill('drawing.');
       return p;
     },
   ],

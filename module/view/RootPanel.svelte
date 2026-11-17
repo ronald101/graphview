@@ -4,8 +4,10 @@
   import type { GraphModel } from '../model/model.ts';
   import UnitField from './UnitField.svelte';
   import { watch } from './watch.svelte.ts';
+  import { say } from './words.ts';
 
   let { model }: { model: GraphModel } = $props();
+  const t = (text: string, vars?: Record<string, string | number>) => say(model, text, vars);
   const counts = watch(() => model, ['root']);
   let text = $state('');
   let note = $state('');
@@ -25,7 +27,9 @@
   async function set() {
     const k = model.find(text);
     if (k === null) {
-      note = text.trim() ? `No unit has the label or key ${text.trim()}.` : 'Type a label or a key.';
+      note = text.trim()
+        ? t('No unit has the label or key {text}.', { text: text.trim() })
+        : t('Type a label or a key.');
       return;
     }
     note = '';
@@ -40,25 +44,24 @@
     note = '';
   }
 
-  const n = (v: number) => (planes.root ? v.toLocaleString('en') : 'none');
+  const n = (v: number) => (planes.root ? v.toLocaleString(model.settings.get('words.locale')) : t('none'));
 </script>
 
 <div class="gv-panel-body" data-testid="root-panel">
-  <UnitField id="gv-root" label="Root" bind:value={text} onset={set} onreset={reset} />
+  <UnitField id="gv-root" label={t('Root')} {model} bind:value={text} onset={set} onreset={reset} />
   {#if note}<p class="gv-note" role="status">{note}</p>{/if}
   <dl class="gv-dl gv-planes">
-    <dt>First plane</dt>
+    <dt>{t('First plane')}</dt>
     <dd class="gv-num" data-testid="plane-first">{n(planes.first)}</dd>
-    <dt>Second plane</dt>
+    <dt>{t('Second plane')}</dt>
     <dd class="gv-num" data-testid="plane-second">{n(planes.second)}</dd>
-    <dt>Third plane</dt>
+    <dt>{t('Third plane')}</dt>
     <dd class="gv-num" data-testid="plane-third">{n(planes.third)}</dd>
-    <dt>Far back planes</dt>
+    <dt>{t('Far back planes')}</dt>
     <dd class="gv-num" data-testid="plane-far">{n(planes.farBack)}</dd>
   </dl>
   <p>
-    Deepest plane at degree: <span class="gv-num" data-testid="deepest"
-      >{planes.deepest === null ? 'none' : planes.deepest}</span
-    >
+    {t('Deepest plane at degree:')}
+    <span class="gv-num" data-testid="deepest">{planes.deepest === null ? t('none') : planes.deepest}</span>
   </p>
 </div>

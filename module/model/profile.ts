@@ -2,7 +2,8 @@
 // kinds of unit, a unit's class, complementary pairs of keypair types, checks of its own, what
 // else supersedes a unit, the pair type of each perspective, and the graph the viewer shows. The
 // model takes one; the public profile has the interface kind and nothing else.
-import type { Graph, Key, UnitInfo } from '../core/index.ts';
+import type { Graph, Key, KeypairInfo, UnitInfo } from '../core/index.ts';
+import type { Perspective } from './contracts.ts';
 import type { Kinds } from './kinds.ts';
 import type { Relation } from './topology.ts';
 
@@ -45,6 +46,18 @@ export interface Profile {
   perspective?: (g: Graph, iface: Key, from: Key, to: Key) => string | null;
   /** The graph the viewer shows, made from the stored graph: a projection, such as interfaces folded into lines. */
   project?: (g: Graph, kinds: Kinds) => Graph;
+  /** Whether a unit is a class unit, which the perspective drawing shows as a box (3.9, 6.18). */
+  classUnit?: (info: UnitInfo | undefined, key: Key) => boolean;
+  /** An interface's member pair and its perspectives, as its row holds them (3.9). */
+  pairOf?: (info: UnitInfo | undefined) => { type: string | null; perspectives: Perspective[] } | null;
+  /** A keypair's pair type: the type of the perspective it belongs to (3.9). */
+  pairTypeOf?: (info: KeypairInfo | undefined) => string | null;
+  /** The attribute that holds a keypair's type when keypairs carry it, ahead of the type field the schema finds (6.6). */
+  keypairTypeField?: string;
+  /** An interface with one end, a unit's self-relation: allowed, or an interface-ends issue (3.8). Default "issue". */
+  selfRelations?: 'allowed' | 'issue';
+  /** Two plain units related directly: allowed, or a direct-relation issue (3.8). Default "allowed". */
+  directRelations?: 'allowed' | 'issue';
 }
 
 /** The interface kind of the public version: a row with "interface": true. */

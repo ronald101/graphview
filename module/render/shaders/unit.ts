@@ -1,10 +1,9 @@
 // The units: one shape per unit, a disc unless its kind says otherwise, sized, faded and moved
 // back by the depth rules.
-import { MAX_TYPES } from '../../model/typeRegistry.ts';
 import { shapesGlsl, UNIT_SHAPES, type UnitShape } from '../shapes.ts';
 import { DEPTH_GLSL, END_ATTRIBUTES } from './common.ts';
 
-export const UNIT_VS = /* glsl */ `
+export const unitVs = (slots: number) => /* glsl */ `
 ${DEPTH_GLSL}
 ${END_ATTRIBUTES}
 attribute vec3 posPrev;
@@ -17,7 +16,9 @@ attribute vec4 look;
 uniform float uSize;
 uniform float uSizeScale;
 uniform float uOpacityScale;
-uniform vec3 uUnitPalette[${MAX_TYPES}];
+uniform vec2 uUnitGlow; // reach past the disc, opacity at its edge
+uniform vec2 uHighlight; // size of highlighted units, opacity of the rest
+uniform vec3 uUnitPalette[${slots}];
 varying vec2 vUv;
 varying vec3 vColor;
 varying vec3 vColor2;
@@ -57,30 +58,40 @@ void main() {
   vec4 st = stateMix(currentDegree, isOnActivePath);
   vec3 p = mix(posPrev, posNext, uT);
   p.z += st.x;
-  float halo = 1.0 + 0.9 * st.w;
+  float halo = 1.0 + uUnitGlow.x * st.w;
+  // Highlighted units grow and carry the outline; while a group is on, the rest dims.
+  float grow = look.w > 0.5 ? uHighlight.x : 1.0;
+  float rest = look.w < -0.5 ? uHighlight.y : 1.0;
   vec4 mv = modelViewMatrix * vec4(p, 1.0);
-  mv.xy += position.xy * 2.0 * uSize * uSizeScale * st.y * halo;
+  mv.xy += position.xy * 2.0 * uSize * uSizeScale * st.y * halo * grow;
   gl_Position = projectionMatrix * mv;
   vUv = position.xy * 2.0 * halo;
   vColor = uUnitPalette[int(halves.x + 0.5)];
   vColor2 = uUnitPalette[int(halves.y + 0.5)];
-  vOpacity = st.z * mix(filterState.x, filterState.y, uT) * look.y * uOpacityScale;
+  vOpacity = st.z * mix(filterState.x, filterState.y, uT) * look.y * uOpacityScale * rest;
   vGlow = st.w;
-  vMarked = look.x;
+  vMarked = max(look.x, step(0.5, look.w));
   vHalo = halo;
   vShape = look.z;
   // Shapes other than the disc may divide the unit between its two ends.
   vSplit = look.z > 0.5 ? split(p) : vec2(0.0);
   // Nothing to draw: move the quad past the far plane, so that it costs no fragments.
-  if (vOpacity < 0.002) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+  if (vOpacity < uCull) gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
 }
 `;
 
 /** The fragment shader, with every shape the units may take. */
 export const unitFs = (shapes: readonly UnitShape[] = UNIT_SHAPES) => /* glsl */ `
-uniform vec3 uInk;
 uniform vec3 uSurface;
-uniform vec3 uPathColour;
+uniform vec3 uRingColour;
+uniform vec3 uOutlineColour;
+uniform vec3 uGlowColour;
+uniform vec3 uCutColour;
+uniform vec2 uRing; // where the ring starts, its strength
+uniform float uOutlineFrom;
+uniform vec2 uUnitGlow;
+uniform vec2 uCut; // half the width of an interface's cut, its strength
+uniform float uDiscard;
 varying vec2 vUv;
 varying vec3 vColor;
 varying vec3 vColor2;
@@ -96,20 +107,20 @@ void main() {
   float d = unitShape(vShape, vUv, col);
   float aa = max(fwidth(d), 1e-4);
   float core = 1.0 - smoothstep(1.0 - aa, 1.0 + aa, d);
-  // A thin ring in the surface colour separates the unit from the lines behind it.
-  float sep = smoothstep(0.82 - aa, 0.82 + aa, d) * core;
-  col = mix(col, uSurface, sep * 0.9);
-  // The root, the path's ends and the inspected unit carry an ink outline: state by shape, not hue.
-  if (vMarked > 0.5) col = mix(col, uInk, smoothstep(0.58 - aa, 0.58 + aa, d) * (1.0 - sep));
+  // A thin ring separates the unit from the lines behind it.
+  float sep = smoothstep(uRing.x - aa, uRing.x + aa, d) * core;
+  col = mix(col, uRingColour, sep * uRing.y);
+  // Marked units carry an outline: state by shape, not hue.
+  if (vMarked > 0.5) col = mix(col, uOutlineColour, smoothstep(uOutlineFrom - aa, uOutlineFrom + aa, d) * (1.0 - sep));
   float alpha = core;
-  // Glow: a soft halo in the path colour outside the disc, for units on the active path.
+  // Glow: a soft halo outside the disc, for units on the active path.
   if (vGlow > 0.0 && core < 0.999) {
     float g = vGlow * (1.0 - smoothstep(1.0, vHalo, d));
-    col = mix(col, uPathColour, 1.0 - core);
-    alpha = max(alpha, g * 0.55);
+    col = mix(col, uGlowColour, 1.0 - core);
+    alpha = max(alpha, g * uUnitGlow.y);
   }
   alpha *= vOpacity;
-  if (alpha < 0.004) discard;
+  if (alpha < uDiscard) discard;
   gl_FragColor = vec4(col, alpha);
 }
 `;

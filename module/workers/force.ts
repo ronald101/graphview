@@ -2,6 +2,47 @@
 import Graph from 'graphology';
 import forceAtlas2 from 'graphology-layout-forceatlas2';
 
+/** The force layout's settings (the group "Layout"); the defaults give the layout of specification 6.1. */
+export interface ForceSettings {
+  /** Iterations between two checks for a settled layout. */
+  batch: number;
+  /** The layout settles when the mean step per iteration falls below this share of its size. */
+  tolerance: number;
+  maxIterations: number;
+  /** Above this many units the Barnes–Hut approximation is used. */
+  barnesHutFrom: number;
+  barnesHutTheta: number;
+  /** Above `from` units, these replace maxIterations and barnesHutTheta. */
+  large: { from: number; maxIterations: number; barnesHutTheta: number };
+  gravity: number;
+  strongGravityMode: boolean;
+  scalingRatio: number;
+  /** Null for one plus the natural log of the units. */
+  slowDown: number | null;
+  linLogMode: boolean;
+  outboundAttractionDistribution: boolean;
+  adjustSizes: boolean;
+  edgeWeightInfluence: number;
+}
+
+export const FORCE_DEFAULTS: ForceSettings = {
+  batch: 25,
+  tolerance: 2e-4,
+  maxIterations: 1500,
+  barnesHutFrom: 500,
+  barnesHutTheta: 0.5,
+  // A coarser Barnes–Hut grid for large graphs: about a third of the time per iteration (specification 6.1).
+  large: { from: 2000, maxIterations: 300, barnesHutTheta: 1 },
+  gravity: 0.05,
+  strongGravityMode: true,
+  scalingRatio: 10,
+  slowDown: null,
+  linLogMode: false,
+  outboundAttractionDistribution: false,
+  adjustSizes: false,
+  edgeWeightInfluence: 1,
+};
+
 export interface ForceInput {
   units: string[];
   /** Relations as pairs of unit indexes, each once. */
@@ -9,7 +50,7 @@ export interface ForceInput {
   start: { x: number; y: number }[];
   /** Indexes of pinned units, which never move. */
   pinned: number[];
-  settings: Record<string, number | string | boolean>;
+  settings: Partial<ForceSettings>;
 }
 
 export interface ForceOutput {
@@ -30,22 +71,22 @@ export function forceLayout(input: ForceInput): ForceOutput {
     if (!g.hasEdge(ia, ib)) g.addEdge(ia, ib);
   }
   const n = input.units.length;
+  const f = { ...FORCE_DEFAULTS, ...input.settings };
+  const large = n > f.large.from;
   const settings = {
-    ...forceAtlas2.inferSettings(g),
-    barnesHutOptimize: n > 500,
-    // A coarser Barnes–Hut grid for large graphs: about a third of the time per iteration (specification 6.1).
-    ...(n > 2000 ? { barnesHutTheta: 1 } : {}),
-    ...pick(input.settings, [
-      'gravity',
-      'scalingRatio',
-      'slowDown',
-      'strongGravityMode',
-      'linLogMode',
-      'barnesHutTheta',
-    ]),
+    linLogMode: f.linLogMode,
+    outboundAttractionDistribution: f.outboundAttractionDistribution,
+    adjustSizes: f.adjustSizes,
+    edgeWeightInfluence: f.edgeWeightInfluence,
+    scalingRatio: f.scalingRatio,
+    strongGravityMode: f.strongGravityMode,
+    gravity: f.gravity,
+    slowDown: f.slowDown ?? 1 + Math.log(n),
+    barnesHutOptimize: n > f.barnesHutFrom,
+    barnesHutTheta: large ? f.large.barnesHutTheta : f.barnesHutTheta,
   };
-  const maxIterations = Number(input.settings.maxIterations ?? (n > 2000 ? 300 : 1500));
-  const batch = 25;
+  const maxIterations = large ? f.large.maxIterations : f.maxIterations;
+  const batch = Math.max(1, f.batch);
   let iterations = 0;
   let prev = snapshot(g, input.units);
   while (iterations < maxIterations) {
@@ -66,7 +107,7 @@ export function forceLayout(input: ForceInput): ForceOutput {
     }
     prev = next;
     const size = Math.max(maxX - minX, maxY - minY, 1e-9);
-    if (move / Math.max(1, n) / batch < size * 2e-4) break;
+    if (move / Math.max(1, n) / batch < size * f.tolerance) break;
   }
   // ForceAtlas2 keeps positions as 32-bit floats; pinned units keep their exact places.
   for (const i of input.pinned) prev[i] = { ...input.start[i] };
@@ -78,10 +119,4 @@ function snapshot(g: Graph, units: string[]) {
     const a = g.getNodeAttributes(id);
     return { x: a.x as number, y: a.y as number };
   });
-}
-
-function pick(o: Record<string, unknown>, keys: string[]): Record<string, number | boolean> {
-  const out: Record<string, number | boolean> = {};
-  for (const k of keys) if (typeof o[k] === 'number' || typeof o[k] === 'boolean') out[k] = o[k] as number | boolean;
-  return out;
 }

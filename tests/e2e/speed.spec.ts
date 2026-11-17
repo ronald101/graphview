@@ -25,6 +25,8 @@ test('§6.16 Speed (G17): the path set of the complete graph of nine is answered
 test('§6.16 Speed (G17): first pictures and zoom frames, measured by the bench page', async ({ page }) => {
   test.setTimeout(300000);
   await page.goto('./#bench');
+  // The page starts after the router loads, so the hook may come a moment after the navigation.
+  await page.waitForFunction(() => (window as any).bench);
   const rows = await page.evaluate(() => (window as any).bench.run());
   const [sample, random] = rows;
   numbers.bench = rows;

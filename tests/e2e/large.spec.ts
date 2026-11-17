@@ -51,14 +51,14 @@ test('§6.16 Speed: the random graph of 10,000 units loads at its given position
   await release(page);
 });
 
-test('§6.9 Hulls: with types on 10,000 units, hulls start off; the switch in the top bar turns them on', async ({
+test("§6.9 Hulls: with types on 10,000 units, hulls start off; the switch in the viewer's bar turns them on", async ({
   page,
 }) => {
   test.setTimeout(240000);
   await open(page);
   await page.evaluate(() => (window as any).graphview.loadExample('random-10k', true));
   await settled(page);
-  const toggle = page.getByRole('banner').getByLabel('Hulls');
+  const toggle = page.getByRole('toolbar', { name: 'View' }).getByLabel('Hulls');
   await expect(toggle).not.toBeChecked();
   expect((await snap(page)).hulls).toEqual([]);
   await toggle.check();

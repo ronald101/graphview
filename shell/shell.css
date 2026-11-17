@@ -1,5 +1,5 @@
-/* The shell's layout: a top bar, controls on the left, the canvas, panels on the right. Colours are
-   the module's tokens, which App.svelte sets as --gv-* properties for the theme in use. */
+/* The shell's layout: a top bar, the host tools on the left, and the viewer filling the rest. Colours
+   are the viewer's tokens, which the shell sets as --gv-* properties for the viewer's theme. */
 @import '@fontsource/atkinson-hyperlegible-next/400.css';
 @import '@fontsource/atkinson-hyperlegible-next/600.css';
 @import '@fontsource/atkinson-hyperlegible-next/700.css';
@@ -68,24 +68,6 @@ button:hover:not(:disabled) {
 .toggle[aria-expanded='true'] {
   border-color: var(--gv-ink-2);
 }
-.modes {
-  display: inline-flex;
-}
-.modes button {
-  border-radius: 0;
-}
-.modes button:first-child {
-  border-radius: 4px 0 0 4px;
-}
-.modes button:last-child {
-  margin-left: -1px;
-  border-radius: 0 4px 4px 0;
-}
-.modes button[aria-pressed='true'] {
-  position: relative;
-  font-weight: 700;
-  border-color: var(--gv-ink-1);
-}
 .headline {
   margin: 0 0 0 auto;
   overflow: hidden;
@@ -94,14 +76,7 @@ button:hover:not(:disabled) {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.banner {
-  margin: 0;
-  padding: 6px 16px;
-  background: var(--gv-panel);
-  border-bottom: 2px dashed var(--gv-issue);
-}
-
-/* The body: sidebars that open and close around the canvas. */
+/* The body: the host tools, which open and close, and the viewer. */
 .body {
   position: relative;
   display: flex;
@@ -119,10 +94,6 @@ button:hover:not(:disabled) {
 .left {
   width: 300px;
   border-right: 1px solid var(--gv-hairline);
-}
-.right {
-  width: 360px;
-  border-left: 1px solid var(--gv-hairline);
 }
 .main {
   flex: 1 1 auto;
@@ -143,9 +114,6 @@ button:hover:not(:disabled) {
   }
   .left {
     left: 0;
-  }
-  .right {
-    right: 0;
   }
 }
 

@@ -1,6 +1,6 @@
 # graphview: decisions
 
-**Each entry records a choice the specification leaves open: the choice, the reason, and the alternative.** Decisions D1 to D54, made while building release 1 and the 3D viewer, are folded into docs/specifications.md. The entries below were made in the order the work met them: D55 to D64 while settling the discrepancies of docs/spec_discrepancies.md, and D65 to D78 while adding interface graphs and the extension points of version 3.0.
+**Each entry records a choice the specification leaves open: the choice, the reason, and the alternative.** Decisions D1 to D54, made while building release 1 and the 3D viewer, are folded into docs/specifications.md. The entries below were made in the order the work met them: D55 to D64 while settling the discrepancies of docs/spec_discrepancies.md, D65 to D78 while adding interface graphs and the extension points of version 3.0, and D79 on for version 4.0.
 
 ## D55. A file's saved settings reach every part of the picture
 
@@ -145,3 +145,237 @@
 - **Choice.** Every kind that joins units has ends and the two interface checks, with the interface's words. An interface's perspectives run from its first end to its second and back; one end gives one perspective.
 - **Reason.** A family with several classes of interface keeps them as classes of one kind; a separate joining kind is still an interface in every rule.
 - **Alternative.** Codes per kind, such as `<kind>-ends`. More codes, and more words, for one rule.
+
+## D79. Setting classes name their control; the view maps controls to components
+
+- **Choice.** Each class of setting carries the name of its control, such as `slider`. module/view/settings/ holds one Svelte component per control, and `SettingControl` picks the component by that name.
+- **Reason.** Settings sit below the model (5.1): the model reads layout, path and hull settings, and must not import Svelte components. The relation between a setting and its component stays one table in the view.
+- **Alternative.** Each setting holds its component. The settings layer would then import the view, and the model with it.
+
+## D80. The settings file holds flat keys and only the values that differ
+
+- **Choice.** The file holds `format`, `revision`, `values` keyed by the setting's dotted key, and `pinned`. A value equal to its default is left out.
+- **Reason.** A file stays valid when settings are added or renamed defaults change; the defaults stay in one place, the code; a host's database stores one small document.
+- **Alternative.** The nested file of the settings analysis, or a snapshot of every value. Each would freeze the defaults of the day it was written.
+
+## D81. Display factors and hulls stay in a graph's view, as a layer over the settings
+
+- **Choice.** `meta.view` still carries the display factors and hulls. While that graph is open its values lie over the stored settings; a person who changes one writes the setting, and the graph's layer for that key ends.
+- **Reason.** Saved files and links keep working as before, a graph opens as it was left, and a graph's values never leak into the person's settings.
+- **Alternative.** Move them out of `meta.view`. Saved graphs would lose their look.
+
+## D82. Two shell builds: static for Pages, with a server for tests and settings
+
+- **Choice.** `build:shell` writes the static demo into dist/shell; `build:server` writes the app with its server into dist/server, and the browser tests run against it.
+- **Reason.** The Pages workflow publishes dist/shell and may not change (1.3). The settings route needs a server, as a host's does.
+- **Alternative.** One static build with a development-only settings route. The tests would then never run the route a host runs.
+
+## D83. The perspective drawing keeps the chevrons that point into the interface
+
+- **Choice.** For a relation between A and B through i, the drawing keeps the chevrons of (A, i) and (B, i). The one on A's side points toward B and carries B's perspective; the one on B's side carries A's.
+- **Reason.** The request reads: two chevrons per relation, pointing at each other, each pointing at the unit whose perspective it is. These two chevrons already point that way in the keypair drawing, so their places, picking and fading carry over unchanged.
+- **Alternative.** Chevrons beside the unit they point at, pointing away from each other. This reading is wrong if the host's drawing places them so; then only the places change.
+
+## D84. The scope hides units, and the loaded graph keeps one layout
+
+- **Choice.** Units outside the scope go as filtered units do, and every unit keeps its place. Lay out scope runs the force layout on the scope alone, on request.
+- **Reason.** Nothing moves while a person grows or shrinks the scope, so units stay where they were found; no layout runs per step.
+- **Alternative.** Lay out every scope afresh. Units would jump at each Expand.
+
+## D85. Settings save half a second after the last change
+
+- **Choice.** The registry reports each change; the store writes the file 500 milliseconds after the last one, and the dialog shows "Saving…", "Saved" or why it was not saved.
+- **Reason.** A person cannot forget to save, and a slider's drag writes once.
+- **Alternative.** A Save button. Changes would be lost on a reload before it.
+
+## D86. Named defaults move under the settings; their old modules export them still
+
+- **Choice.** The constants that hold defaults, such as `DEPTH_RULES`, `SPACING`, `CHEVRON_AT`, `TYPE_PALETTE` and `HULL_LIMIT`, now live in module/settings/defaults.ts; the modules that held them export them as before. `tokens` and `PATH_DEFAULTS` stay in the core. The registry takes its defaults from these constants, and the code reads the registry's live value wherever it used a constant. Literals in shaders and panels became settings whose default is written in the setting.
+- **Reason.** The settings sit below the model (5.1), so they cannot import the model's or the renderer's constants. The exports of 5.6 and the gates keep their meaning, and each default is written once.
+- **Alternative.** Leave the constants where they were and let the settings import upward. That breaks the order of the layers.
+
+## D87. The shell's links load whole pages, as before
+
+- **Choice.** The shell's container carries `data-sveltekit-reload`, so SvelteKit's router takes over no link. The share link reaches the address bar through the router's `goto`, as a shallow change.
+- **Reason.** The shell reads its share link and its fragment once, when the page loads (8.13, 8.17). A link that did not reload the page would leave the page as it was.
+- **Alternative.** Let the router handle links, and read the address again after each navigation.
+
+## D88. SvelteKit's options live in the shell's Vite configuration; the mode picks the adapter
+
+- **Choice.** shell/vite.config.ts passes the options to the `sveltekit` plugin: the shell's folder, the base path /graphview and the adapter. The mode `static` builds with adapter-static into dist/shell; any other mode builds with adapter-node into dist/server.
+- **Reason.** SvelteKit 3 reads no svelte.config.js. A mode works on every system, where an environment variable set in a script does not.
+- **Alternative.** An environment variable, or a second Vite configuration.
+
+## D89. The settings handler lives in the settings layer
+
+- **Choice.** `createSettingsHandler` is module/settings/handler.ts, beside the file's rules; no folder of the module is called server.
+- **Reason.** SvelteKit refuses to let browser code import any module inside a folder named server, and module/index.ts serves the browser and the server alike. The handler uses only `Request` and `Response`, so it is safe in both.
+- **Alternative.** Two entry points, one for servers. A host would then import from two places, and G16 allows the shell one.
+
+## D90. The shell keeps one settings file per browser
+
+- **Choice.** The shell's route names each browser with a cookie at its first visit and keeps that browser's file at data/settings/<name>.json. The handler hands the route's request event to `read` and `write`, so that a host can tell people apart the same way.
+- **Reason.** A host such as the one the shell simulates keeps settings per person. One shared file would also let the browser tests, which run side by side, change each other's settings.
+- **Alternative.** One file for every visitor, as 5.10 first said. Tests would need to reset it, and could not run in parallel.
+
+## D91. A save that meets another revision merges its own changes
+
+- **Choice.** The viewer remembers the keys and pins it changed since its last save. When the store answers with another revision, the viewer puts those changes over the stored file, saves that, and takes the result, so that both viewers' changes stay.
+- **Reason.** Two tabs of one person save to one file. Refusing the second would lose its changes; overwriting would lose the first tab's.
+- **Alternative.** The last save wins, or the person chooses. The first loses changes; the second asks a question for a case a merge settles.
+
+## D92. Panel texts pass through the setting "Panel texts"
+
+- **Choice.** Every fixed text of the module's panels, bar, dialog and inspector goes through `say(model, text)`, which looks the English text up in the setting `words.panels` and fills in its braces. The issues, the live region, the refusals, the canvas's name and its hint have settings of their own.
+- **Reason.** A host can change any wording, or the language, without editing the module, and texts the setting does not name stay as written.
+- **Alternative.** Keys for every text. A translator would then need a list of keys, and the code would lose its readable texts.
+
+## D93. Inventory items that are not settings
+
+- **Choice.** The settings leave out what belongs to a graph (the root, the target, the path, the inspected part, the camera, type names and colours, the filters' window), what is fixed when the code is built (the font files' weights), the core's limits that the gates fix (the path search's most extra steps), and the parts of the extension points that are code (checks, perspectives, projections, shapes' GLSL, inspector sections). The declarative parts of the profile come with version 4.0's profile from JSON (5.7).
+- **Reason.** A graph's own state travels in its `meta.view`; build-time values cannot change while the viewer runs; the gates fix the core's limits; code cannot live in a JSON file.
+- **Alternative.** Settings for them too. They would either do nothing or break the rules above.
+
+## D94. The shell reads files and addresses itself; examples reach the viewer as sources
+
+- **Choice.** The shell serves each example at /graphview/examples/<id>.json, written at build time, and hands GraphView a `JsonFileSource` of it; when types or interfaces are added, a source of the shell's reads that file and prepares the document on the way. A file or an address the shell reads itself, converts rows (3.7), and hands over as a `DocumentSource`.
+- **Reason.** The words about files and addresses ("The file … is not valid JSON.", "The server at … refused the request, or sent no JSON.") are the host's, and a file that cannot be read leaves the viewer's graph as it was. The examples take the path a host's data module takes.
+- **Alternative.** Hand every file and address to the viewer as a `JsonFileSource`. A file that failed would then replace the graph with the refusal "source", and the shell would lose its messages.
+
+## D95. The shell attaches to GraphView's model once it is on the page
+
+- **Choice.** The shell takes GraphView's `model` and `getCanvas()` from the component after it mounts. It follows the model's aspects for the headline and the page's colours, and it hands graphs to GraphView only through its props.
+- **Reason.** GraphView makes its own model and needs nothing from its host but a graph (7.9); the shell plays such a host.
+- **Alternative.** A `model` prop. Every host would then build and own a model, which 7.9 keeps inside the viewer.
+
+## D96. The hook's look is a base value
+
+- **Choice.** `setLook({ theme, motion })` sets GraphView's `theme` and `motion` props, the base values of `theme.scheme` and `motion.enabled`.
+- **Reason.** A test's look stays out of the person's settings file, and the Settings dialog shows no change the person did not make.
+- **Alternative.** Set the person's values. Each test would write its look into the settings file.
+
+## D97. GraphView applies the narrow-page rule to its own side bar
+
+- **Choice.** On a page 900 pixels wide or less, GraphView starts its side bar closed and draws it as a drawer over the canvas.
+- **Reason.** 8.1's rule covers the viewer's side bar, which the host does not lay out; the viewer keeps the rule in any host.
+- **Alternative.** A prop for whether the side bar starts open. Each host would repeat the rule.
+
+## D98. Only the newest graph reports ready
+
+- **Choice.** GraphView calls `onready` for the newest `graph` or `source` it was given, after the canvas settles, and not for a load that a newer one overtook.
+- **Reason.** A load that finishes while a newer one runs would otherwise tell the host that the newer graph is shown; the shell's hook waits on these calls.
+- **Alternative.** Report every finished load with its source, and let hosts match them.
+
+## D99. The setting "Profile" is read at each load
+
+- **Choice.** When `extensions.profile` holds a profile as JSON, each load builds the model's profile from it; when it is empty, the profile given to the model serves. The rules of 3.8 that a profile may change act where the kinds are found, so the issues follow the profile of the load.
+- **Reason.** The profile decides the kinds, the issues and the superseded units of the stored graph, which a load computes; the setting applies with the next graph, as its mark says.
+- **Alternative.** Recompute the kinds of the open graph at once. That would repeat the load's work outside a load.
+
+## D100. The drawing chooses among the model's chevrons
+
+- **Choice.** The model keeps one chevron per keypair, as 5.2 says. A pure function, `drawnChevrons` in module/model/drawing.ts, gives the chevrons a drawing draws, each with its keypair, the unit it points at and, by perspectives, the perspective it carries; the renderer's buffers, picking and snapshot read that list.
+- **Reason.** The drawing is a way of looking at the same graph: the paths, filters, issues and inspector keep working on keypairs, and a switch rebuilds only the picture.
+- **Alternative.** A second set of chevrons in the model for each drawing. Every listener would then need to know which set is current.
+
+## D101. What the perspective drawing leaves to the keypairs
+
+- **Choice.** A relation between two interfaces, and an interface with no end or more than two ends, draw by keypairs; an interface with one end keeps only the chevron of (i, A), and draws none when that keypair is missing.
+- **Reason.** A perspective runs between the two ends of one interface; these cases have no such pair, and they are the issues of 3.8, which the keypairs show as they are.
+- **Alternative.** Guess a perspective for broken interfaces. The picture would then show relations the data does not have.
+
+## D102. A profile may name the keypairs' type field
+
+- **Choice.** `Profile.keypairTypeField` names the attribute that holds a keypair's type; when any keypair carries it, it replaces the type field the schema finds. A profile from JSON names its pair type field.
+- **Reason.** In the form of 3.9 the pair type is the keypair's type: it colours the chevrons in both drawings, fills the Types panel and pairs the complements, through the same type registry as before.
+- **Alternative.** A second registry for pair types. The panel, the inspector and the colours would then each need two sources of types.
+
+## D103. Every profile's perspectives fall back to the keypair's type
+
+- **Choice.** `perspectiveType(interface, from, to)` is the profile's perspective type, else the type of the keypair from that end into the interface, for any profile.
+- **Reason.** 3.9 states the fallback for data; it applies just as well to graphs that carry only keypair types, so that their perspective drawing is named and coloured.
+- **Alternative.** Only a profile from JSON falls back. The public profile's perspectives would then stay unnamed.
+
+## D104. The box is a rounded square and the oval half as high as a disc
+
+- **Choice.** `box` measures `(x⁴ + y⁴)^¼`, a square with rounded corners; `oval` measures `length(x, 2y)`, as wide as a disc and half as high. Both fit the unit's square, so its size, reach and picking stay those of a disc.
+- **Reason.** Both measures grow evenly from the centre, so the ring, the outline and the glow follow their edges as they follow a disc's.
+- **Alternative.** A wider quad for ovals. The unit shader, the picker and the labels would then each need the shape's proportions.
+
+## D105. The shell opens the invented family with base values
+
+- **Choice.** The shell gives the viewer `extensions.profile` and `drawing.relations` as base values with the examples of shell/lib/twin.ts, and none with other graphs.
+- **Reason.** A host with interface graphs sets its profile and drawing as base values; the shell simulates such a host for that family, while the fixtures keep the public profile, whose types come from their type field.
+- **Alternative.** One profile for every graph. A profile from JSON reads classes from `class`, so the fixtures would lose their types.
+
+## D106. The drawing's settings form a group of their own
+
+- **Choice.** The group Drawing, after Root and depth, holds the drawing, the two shapes and the class labels: 28 groups in all.
+- **Reason.** The drawing touches units, lines and labels alike, so none of their groups is its home; its key names the group.
+- **Alternative.** Put the drawing under Units or Chevrons. A person would look for it in the other.
+
+## D107. Filter rules and the scope ride on the filter states
+
+- **Choice.** A unit's filter state is the time window's 1 or 0, times its share by the rules (1, `filters.fadeOpacity` or 0), times 0 outside the scope; a keypair's is the lesser of its units' and of the rules that name it; a line's the most of its keypairs'. The shaders already multiply these states into opacity, and picking already skips units below `pointer.minFilter`.
+- **Reason.** Fading, hiding and the scope then ease over the transition like the time window, and a faded unit answers no click without a rule of its own.
+- **Alternative.** Separate attributes for rules and scope. The shaders, picking, labels and hulls would each need to read them.
+
+## D108. Highlights live in the unit's free look slot and a new pair of attributes
+
+- **Choice.** The unit's fourth look value marks it highlighted (1), dimmed (−1) or neither (0), with the size and dim factors as shader inputs; lines and chevrons gain `aEmph`: whole or dimmed, and for chevrons the direction's colour. Highlights change at once, without a transition. A line or chevron stays whole when it touches a highlighted unit. Picking reads none of it.
+- **Reason.** Units already use 14 of 16 vertex attributes (D71); the free look value fits. A selected unit's relations stay readable, and its direction colours stay visible.
+- **Alternative.** Dim every line not between two highlighted units. One selected unit would then sit alone, its coloured chevrons dimmed.
+
+## D109. The group Search results holds what a person highlights
+
+- **Choice.** A result's Highlight button adds that unit to the group Search results and turns the group on; typing a search changes no group.
+- **Reason.** 6.19 says Highlight adds the result to the group; a group that followed every keystroke would light half the graph while a person types.
+- **Alternative.** The group holds every current result.
+
+## D110. Search ranks keys, classes and types with attribute values
+
+- **Choice.** Exact matches are a label, a key as JSON text, or a text key without its quotes; keys, classes and types that only contain the text rank with attribute values, fifth.
+- **Reason.** A person types a key as it reads, without quotes; a key or class that merely contains the text is as weak a match as an attribute value.
+- **Alternative.** Index only the JSON text of keys. Text keys would then never match exactly.
+
+## D111. How the scope grows, shrinks and lays out
+
+- **Choice.** Expand adds the neighbours of the chosen units, those with more relations first, while the scope holds fewer than `scope.limit`; Hide without a scope makes one of every other unit; a scope lists its units in file order; Lay out scope runs the force layout on the scope's units alone and scales the result back to the box they had.
+- **Reason.** The limit keeps a scope readable however it grows; file order makes the scope the same however it was reached; keeping the box leaves the camera and the other units where they are.
+- **Alternative.** No limit for Expand, and a free layout. A few clicks could then show the whole graph, and the scope would jump away from the rest.
+
+## D112. Direction colours are on by default
+
+- **Choice.** `highlight.direction` starts on.
+- **Reason.** It acts only while exactly one unit is selected, when the direction of its keypairs is what a person looks for.
+- **Alternative.** Off, with the switch in the Highlights section to turn it on.
+
+## D113. The live region speaks for search, selection and scope
+
+- **Choice.** Besides 6.19's words for the search, it says "2 units selected", "Selection cleared", "Showing 7 units around unit_7" and "Showing all units"; inspection words go first when inspecting a unit also grows the scope.
+- **Reason.** Every change a person makes is said in words (6.14); the inspection is what a click is about.
+- **Alternative.** Silence for the selection and the scope.
+
+## D114. Enter in the search field shows the first result
+
+- **Choice.** Enter shows the first result's neighbourhood and opens it in the inspector, as its Show button and the inspector together would.
+- **Reason.** "Show" is the word 6.19 uses for a result's neighbourhood; the inspector names what was shown.
+- **Alternative.** Enter inspects the first result only. The view would then not change.
+
+## D115. Search, highlights and scope have settings groups of their own
+
+- **Choice.** The groups Search, Highlights and Scope follow Filters: 31 groups in all.
+- **Reason.** Each answers its own section of the side bar, where a person looks for it.
+- **Alternative.** One group for all three.
+
+## D116. The narrowing state lives beside the model
+
+- **Choice.** module/model/narrowing.ts holds the selection, the groups, the search, the rules and the scope; the model owns one and offers the methods and fields of 5.2, which emit the aspects. Pure functions in filterRules.ts, search.ts and reach.ts do the work.
+- **Reason.** model.ts was already the largest file; the narrowing has a state and rules of its own that tests can reach directly.
+- **Alternative.** All of it in model.ts.
+
+## D117. The package is the module's sources, finished by a script
+
+- **Choice.** `npm run package` runs svelte-package on module/ with tsconfig.package.json, which turns on `rewriteRelativeImportExtensions`, so that every import names the built .js file. scripts/package.mjs then points the workers' `new URL(…)` addresses at their .js files, removes the module's build configuration, and fails if any import still names a .ts file. package.json names dist/package in `exports`, `svelte` and `types`; the package stays private, for hosts that depend on it by git or path.
+- **Reason.** A SvelteKit host compiles the components itself, with its own Svelte; svelte, three and graphology stay its dependencies. TypeScript rewrites imports but not the workers' addresses, which are strings.
+- **Alternative.** Publish the bundled library of dist/module. A host would then get compiled components and a second copy of the CSS, and could not tree-shake the panels it leaves out.

@@ -3,23 +3,52 @@
 // gives the new next value. The shaders then ease from one to the other, which also gives the
 // fade-in, fade-out and trails of moving units (specification 6.10).
 import { keyId, keypairId, type Key } from '../core/index.ts';
-import { CHEVRON_AT } from '../model/depth.ts';
+import { drawnChevrons } from '../model/drawing.ts';
+import { keypairShare, unitShares } from '../model/filterRules.ts';
 import { keypairPasses, lineWeight, unitPasses, weightOf } from '../model/filters.ts';
 import type { GraphModel } from '../model/model.ts';
 import type { Relation } from '../model/topology.ts';
-import { OTHER } from '../model/typeRegistry.ts';
 import type { FrameState } from './frame.ts';
 import { LOOK, type EndBuffers } from './geometry.ts';
 import { halvesOf, lookOf } from './looks.ts';
-import { SUPERSEDED } from './rules.ts';
 import { shapeSlot } from './shapes.ts';
+
+/**
+ * The shapes and halves of the drawing (6.18): by perspectives, an interface takes the interface shape
+ * in its own type's colour, and a class unit the class shape; otherwise each unit's look decides.
+ */
+function drawUnits(s: FrameState) {
+  const m = s.model;
+  const g = m.graph;
+  const shapes = s.looks.shapes;
+  s.u.halves = halvesOf(m, s.looks);
+  s.shapes = m.ids.map((id, i) => {
+    let name = lookOf(s.looks, m.kinds.of[i]).shape;
+    if (g && s.drawing === 'perspectives') {
+      if (m.kinds.ends.has(i)) {
+        name = m.settings.get('drawing.interfaceShape');
+        s.u.halves[2 * i] = s.u.halves[2 * i + 1] = m.types.unitSlot[i] ?? m.types.other;
+      } else if (m.profile.classUnit?.(g.unitInfo.get(id), g.units[i])) name = m.settings.get('drawing.classShape');
+    }
+    // A shape the shader does not hold draws as the first one.
+    return shapes[shapeSlot(name, shapes)]?.name ?? name;
+  });
+  s.shapes.forEach((name, i) => (s.u.look[4 * i + LOOK.shape] = shapeSlot(name, shapes)));
+}
 
 /** New attribute arrays for the model's graph, with the values that do not change over transitions. */
 export function allocate(s: FrameState) {
   const m = s.model;
+  const kinds = m.settings.get('extensions.looks');
+  s.looks = kinds ? { ...s.baseLooks, kinds: { ...s.baseLooks.kinds, ...kinds } } : s.baseLooks;
+  s.drawing = m.settings.get('drawing.relations');
+  s.chevrons = m.graph
+    ? drawnChevrons(m.graph, m.relations, m.chevrons, m.kinds, s.drawing, (i, a, b) => m.perspectiveType(i, a, b))
+    : [];
   const n = m.ids.length;
   const r = m.relations.length;
-  const k = m.chevrons.length;
+  const k = s.chevrons.length;
+  const whole = (count: number) => Float32Array.from({ length: 2 * count }, (_, j) => (j % 2 ? 0 : 1));
   const ends = (count: number) => ({
     aPrevA: new Float32Array(3 * count),
     aNextA: new Float32Array(3 * count),
@@ -35,7 +64,7 @@ export function allocate(s: FrameState) {
     currentDegree: new Float32Array(2 * n),
     isOnActivePath: new Float32Array(2 * n),
     filterState: new Float32Array(2 * n).fill(1),
-    halves: halvesOf(m, s.looks),
+    halves: new Float32Array(2 * n),
     look: new Float32Array(4 * n),
   };
   s.l = {
@@ -43,50 +72,69 @@ export function allocate(s: FrameState) {
     aLine: new Float32Array(4 * r),
     aLine2: new Float32Array(4 * r),
     aStatic: new Float32Array(2 * r),
+    aEmph: whole(r),
   };
   s.c = {
     ...ends(k),
     aChev: new Float32Array(4 * k),
     aChevState: new Float32Array(4 * k),
     aAbove: new Float32Array(2 * k),
+    aEmph: whole(k),
   };
   const g = m.graph;
   s.relationsPer = new Uint32Array(n);
+  drawUnits(s);
   if (g) {
-    g.units.forEach((_, i) => {
-      s.u.look[4 * i + LOOK.fade] = m.superseded[i] ? SUPERSEDED : 1;
-      s.u.look[4 * i + LOOK.shape] = shapeSlot(lookOf(s.looks, m.kinds.of[i]).shape, s.looks.shapes);
-    });
+    // A perspective's chevron takes the colour of its pair type; a keypair's, its keypair's type.
+    const slotOf = new Map(m.types.keypair.map((t) => [t.id, t.slot]));
     m.relations.forEach((rel, i) => {
       s.relationsPer[rel.a]++;
       s.relationsPer[rel.b]++;
-      s.l.aStatic[2 * i] = relationFade(m, rel);
       s.l.aStatic[2 * i + 1] = rel.ab && rel.ba ? 0 : rel.ab ? 2 : 1;
     });
-    m.chevrons.forEach((ch, i) => {
-      const rel = m.relations[ch.rel];
-      const [from, to] = ch.forward ? [rel.ka, rel.kb] : [rel.kb, rel.ka];
-      s.c.aChev[4 * i] = ch.forward ? CHEVRON_AT.forward : CHEVRON_AT.backward;
+    s.chevrons.forEach((ch, i) => {
+      const type = ch.perspective?.type;
       s.c.aChev[4 * i + 1] = ch.forward ? 1 : -1;
-      s.c.aChev[4 * i + 2] = m.types.keypairSlot.get(keypairId(from, to)) ?? OTHER;
-      s.c.aChev[4 * i + 3] = keypairFade(m, from, to);
+      s.c.aChev[4 * i + 2] = ch.perspective
+        ? ((type != null ? slotOf.get(type) : undefined) ?? m.types.other)
+        : (m.types.keypairSlot.get(keypairId(ch.from, ch.to)) ?? m.types.other);
     });
   }
+  statics(s);
   s.flags = { root: [0, 0], path: [0, 0], depth: [0, 0] };
   s.forget();
 }
 
+/** The values that change only with the settings: the fades of superseded parts and the chevrons' places. */
+export function statics(s: FrameState) {
+  const m = s.model;
+  const g = m.graph;
+  if (!g) return;
+  const fade = s.rules.superseded;
+  const at = s.rules.chevrons.at;
+  g.units.forEach((_, i) => (s.u.look[4 * i + LOOK.fade] = m.superseded[i] ? fade : 1));
+  m.relations.forEach((rel, i) => (s.l.aStatic[2 * i] = relationFade(m, rel, fade)));
+  s.chevrons.forEach((ch, i) => {
+    s.c.aChev[4 * i] = ch.forward ? at.forward : at.backward;
+    s.c.aChev[4 * i + 3] = keypairFade(m, ch.from, ch.to, fade);
+  });
+  s.forget();
+}
+
 /** A keypair fades when it, or one of its units, is superseded. */
-function keypairFade(m: GraphModel, a: Key, b: Key): number {
+function keypairFade(m: GraphModel, a: Key, b: Key, fade: number): number {
   const unitGone = (k: Key) => m.superseded[m.index.get(keyId(k))!] === 1;
   const gone = unitGone(a) || unitGone(b) || m.graph!.keypairInfo.get(keypairId(a, b))?.superseded;
-  return gone ? SUPERSEDED : 1;
+  return gone ? fade : 1;
 }
 
 /** A relation's line fades when every keypair it has fades. */
-function relationFade(m: GraphModel, rel: Relation): number {
-  const fades = [rel.ab ? keypairFade(m, rel.ka, rel.kb) : null, rel.ba ? keypairFade(m, rel.kb, rel.ka) : null];
-  return fades.every((f) => f === null || f < 1) ? SUPERSEDED : 1;
+function relationFade(m: GraphModel, rel: Relation, fade: number): number {
+  const fades = [
+    rel.ab ? keypairFade(m, rel.ka, rel.kb, fade) : null,
+    rel.ba ? keypairFade(m, rel.kb, rel.ka, fade) : null,
+  ];
+  return fades.every((f) => f === null || f < 1) ? fade : 1;
 }
 
 /**
@@ -111,11 +159,21 @@ export function step(s: FrameState, first: boolean, marks: string[]) {
       flowOf.set(keypairId(seq[i + 1], seq[i]), -1);
     }
   }
+  // How much of each unit and keypair shows: the time window, the filter rules and the scope (6.7, 6.21).
   const f = m.filters;
-  const pass = new Uint8Array(n);
-  g.units.forEach((k, i) => (pass[i] = unitPasses(g, k, f) ? 1 : 0));
-  const keypairShows = (a: Key, b: Key) =>
-    keypairPasses(g, a, b, f) && pass[m.index.get(keyId(a))!] === 1 && pass[m.index.get(keyId(b))!] === 1;
+  const rules = m.schema.rules;
+  const facts = m.ruleFacts();
+  const pass = unitShares(n, m.rules, facts, s.rules.fade);
+  const inside = m.inScope();
+  s.outside = m.outside();
+  g.units.forEach((k, i) => {
+    if (!unitPasses(g, k, f, rules) || (inside && !inside[i])) pass[i] = 0;
+  });
+  const keypairShows = (a: Key, b: Key) => {
+    if (!keypairPasses(g, a, b, f, rules)) return 0;
+    const units = Math.min(pass[m.index.get(keyId(a))!], pass[m.index.get(keyId(b))!]);
+    return keypairShare(m.rules, facts, a, b, units, s.rules.fade);
+  };
   const span = m.fieldRange(f.weightField, 'weight');
   const pair = (arr: Float32Array, i: number, next: number) => {
     arr[2 * i] = first ? next : arr[2 * i + 1];
@@ -160,7 +218,8 @@ export function step(s: FrameState, first: boolean, marks: string[]) {
   for (const [i, e] of m.kinds.ends) if (e.length) copyEnds(u, i, e[0], e[e.length > 1 ? 1 : 0]);
   m.relations.forEach((rel, i) => {
     copyEnds(s.l, i, rel.a, rel.b);
-    const visible = (rel.ab && keypairShows(rel.ka, rel.kb)) || (rel.ba && keypairShows(rel.kb, rel.ka));
+    // A line shows as much as its most shown keypair.
+    const visible = Math.max(rel.ab ? keypairShows(rel.ka, rel.kb) : 0, rel.ba ? keypairShows(rel.kb, rel.ka) : 0);
     const w = lineWeight(
       rel.ab ? weightOf(g, rel.ka, rel.kb, f.weightField) : null,
       rel.ba ? weightOf(g, rel.kb, rel.ka, f.weightField) : null,
@@ -178,18 +237,37 @@ export function step(s: FrameState, first: boolean, marks: string[]) {
     L2[4 * i + 2] = first ? onPathRel[i] : L2[4 * i + 3];
     L2[4 * i + 3] = onPathRel[i];
   });
-  m.chevrons.forEach((ch, i) => {
+  s.chevrons.forEach((ch, i) => {
     const rel = m.relations[ch.rel];
     copyEnds(s.c, i, rel.a, rel.b);
-    const [from, to] = ch.forward ? [rel.ka, rel.kb] : [rel.kb, rel.ka];
     const S = s.c.aChevState;
-    const flow = flowOf.get(keypairId(from, to)) ?? 0;
+    const flow = flowOf.get(keypairId(ch.from, ch.to)) ?? 0;
     S[4 * i] = first ? flow : S[4 * i + 1];
     S[4 * i + 1] = flow;
-    const shows = +keypairShows(from, to);
+    const shows = keypairShows(ch.from, ch.to);
     S[4 * i + 2] = first ? shows : S[4 * i + 3];
     S[4 * i + 3] = shows;
     s.c.aAbove[2 * i] = s.l.aLine[4 * ch.rel + 2];
     s.c.aAbove[2 * i + 1] = s.l.aLine[4 * ch.rel + 3];
   });
+}
+
+/**
+ * The highlights (6.20), at once and without a transition: units of the groups that are on grow and
+ * carry the outline while every other unit dims, and so does every line and chevron that touches no
+ * highlighted unit. With one unit selected, its chevrons take the direction's colours.
+ */
+export function emphasize(s: FrameState) {
+  const m = s.model;
+  const on = m.emphasis();
+  const whole = (a: number, b: number) => (on === null || on[a] || on[b] ? 1 : 0);
+  for (let i = 0; i < m.ids.length; i++) s.u.look[4 * i + LOOK.emphasis] = on === null ? 0 : on[i] ? 1 : -1;
+  m.relations.forEach((rel, i) => (s.l.aEmph[2 * i] = whole(rel.a, rel.b)));
+  const one = s.rules.highlight.direction && m.selection.length === 1 ? keyId(m.selection[0]) : null;
+  s.chevrons.forEach((ch, i) => {
+    const rel = m.relations[ch.rel];
+    s.c.aEmph[2 * i] = whole(rel.a, rel.b);
+    s.c.aEmph[2 * i + 1] = one === null ? 0 : keyId(ch.from) === one ? 1 : keyId(ch.to) === one ? 2 : 0;
+  });
+  s.forget();
 }

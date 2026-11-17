@@ -2,22 +2,33 @@
 // profile's classes and declared pairs; paired into complementary keypair types, labelled and
 // coloured. People may rename and recolour them.
 import { keyId, keypairId, tokens, type Graph, type Key, type Theme } from '../core/index.ts';
+import { BACKWARD_TINT, MAX_TYPES, OTHER, TYPE_PALETTE } from '../settings/defaults.ts';
 import type { TypeInfo, TypePair } from './contracts.ts';
 import { PUBLIC_PROFILE, type Profile } from './profile.ts';
 import { typeText, type Schema } from './schema.ts';
 
-/** The shaders' palettes have this many slots; the last one serves types past the palette. */
-export const MAX_TYPES = 64;
-export const OTHER = MAX_TYPES - 1;
+export { MAX_TYPES, OTHER, TYPE_PALETTE };
 
-/** Categorical type colours: the validated order of the data-visualisation palette, red left out for issues. */
-export const TYPE_PALETTE = {
-  light: ['#2A78D6', '#EB6834', '#1BAF7A', '#EDA100', '#E87BA4', '#008300', '#6250D6'],
-  dark: ['#3987E5', '#D95926', '#199E70', '#C98500', '#D55181', '#008300', '#9085E9'],
-} as const;
+/** How types are coloured: the settings of the group "Types", for one theme (6.6). */
+export interface TypeLook {
+  palette: readonly string[];
+  /** The colour of types past the palette, and of parts without a type. */
+  other: string;
+  surface: string;
+  /** How far a complement's colour moves toward the surface. */
+  tint: number;
+  /** Palette slots in the shaders; the last one serves every further type. */
+  slots: number;
+}
 
-/** How far a backward keypair type's colour moves toward the surface: same hue, other direction. */
-const BACKWARD_TINT = 0.42;
+/** The look of the defaults, for a theme. */
+export const typeLook = (theme: Theme): TypeLook => ({
+  palette: TYPE_PALETTE[theme],
+  other: tokens[theme].context,
+  surface: tokens[theme].surface,
+  tint: BACKWARD_TINT,
+  slots: MAX_TYPES,
+});
 
 /** Labels and colours a person set, by type id. */
 export type Custom = Map<string, { label?: string; colour?: string }>;
@@ -34,6 +45,10 @@ export interface TypeRegistry {
   unitSlot: Float32Array;
   /** The palette slot of each keypair, by keypair id. */
   keypairSlot: Map<string, number>;
+  /** The slot of types past the palette, and of parts without a type. */
+  other: number;
+  /** The look the colours came from. */
+  look: TypeLook;
 }
 
 export const EMPTY_TYPES: TypeRegistry = {
@@ -43,6 +58,8 @@ export const EMPTY_TYPES: TypeRegistry = {
   unitOf: [],
   unitSlot: new Float32Array(0),
   keypairSlot: new Map(),
+  other: OTHER,
+  look: typeLook('light'),
 };
 
 const hex = (n: number) =>
@@ -122,17 +139,17 @@ export function withDeclared(inferred: TypePair[], declared: [string, string][],
   return out;
 }
 
-/** Builds the registry of a graph's types, with default colours for the theme and any custom ones. */
+/** Builds the registry of a graph's types, with colours from the look for the theme and any custom ones. */
 export function buildTypes(
   g: Graph,
   schema: Schema,
   theme: Theme,
   custom: { unit: Custom; keypair: Custom },
   profile: Pick<Profile, 'classOf' | 'pairs'> = PUBLIC_PROFILE,
+  look: TypeLook = typeLook(theme),
 ): TypeRegistry {
-  const palette = TYPE_PALETTE[theme];
-  const context = tokens[theme].context;
-  const surface = tokens[theme].surface;
+  const { palette, other: context, surface } = look;
+  const last = look.slots - 1;
   const uf = schema.unitTypeField;
   const kf = schema.keypairTypeField;
   const { classOf } = profile;
@@ -148,10 +165,10 @@ export function buildTypes(
     colour: c.get(id)?.colour ?? colour,
   });
   const unit = byFrequency(unitTypes).map(({ id, count }, i) =>
-    info(id, count, Math.min(i, OTHER), i < palette.length ? palette[i] : context, custom.unit),
+    info(id, count, Math.min(i, last), i < palette.length ? palette[i] : context, custom.unit),
   );
   const unitSlotOf = new Map(unit.map((t) => [t.id, t.slot]));
-  const unitSlot = Float32Array.from(unitTypes, (t) => (t === null ? OTHER : (unitSlotOf.get(t) ?? OTHER)));
+  const unitSlot = Float32Array.from(unitTypes, (t) => (t === null ? last : (unitSlotOf.get(t) ?? last)));
 
   const keypairTypes = g.keypairs.map(([a, b]) =>
     kf ? typeText(g.keypairInfo.get(keypairId(a, b))?.attrs?.[kf]) : null,
@@ -162,11 +179,11 @@ export function buildTypes(
   const keypair: TypeInfo[] = [];
   pairs.forEach((p, i) => {
     const base = i < palette.length ? palette[i] : context;
-    const slot = () => Math.min(keypair.length, OTHER);
+    const slot = () => Math.min(keypair.length, last);
     keypair.push(info(p.forward, counts.get(p.forward) ?? 0, slot(), base, custom.keypair));
     if (p.backward !== null && p.backward !== p.forward) {
       // The complement's default follows its forward type's colour, the person's own one included.
-      const tint = mixColour(custom.keypair.get(p.forward)?.colour ?? base, surface, BACKWARD_TINT);
+      const tint = mixColour(custom.keypair.get(p.forward)?.colour ?? base, surface, look.tint);
       keypair.push(info(p.backward, counts.get(p.backward) ?? 0, slot(), tint, custom.keypair));
     }
   });
@@ -174,15 +191,15 @@ export function buildTypes(
   const keypairSlot = new Map(
     g.keypairs.map(([a, b], i) => {
       const t = keypairTypes[i];
-      return [keypairId(a, b), t === null ? OTHER : (keypairSlotOf.get(t) ?? OTHER)] as [string, number];
+      return [keypairId(a, b), t === null ? last : (keypairSlotOf.get(t) ?? last)] as [string, number];
     }),
   );
-  return { unit, keypair, pairs, unitOf: unitTypes, unitSlot, keypairSlot };
+  return { unit, keypair, pairs, unitOf: unitTypes, unitSlot, keypairSlot, other: last, look };
 }
 
-/** The palette a shader needs: one colour per slot, the context colour elsewhere. */
-export function paletteOf(types: TypeInfo[], theme: Theme): string[] {
-  const out = Array.from({ length: MAX_TYPES }, () => tokens[theme].context);
-  for (const t of types) if (t.slot < OTHER) out[t.slot] = t.colour;
+/** The palette a shader needs: one colour per slot, the colour past the palette elsewhere. */
+export function paletteOf(types: TypeInfo[], look: TypeLook): string[] {
+  const out = Array.from({ length: look.slots }, () => look.other);
+  for (const t of types) if (t.slot < look.slots - 1) out[t.slot] = t.colour;
   return out;
 }
